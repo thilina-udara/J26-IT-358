@@ -1,0 +1,90 @@
+# ==============================================================================
+# Git Ignore Configuration - Project J26-IT-358
+# ==============================================================================
+
+# --- Notes, Docs & Learning Files ---
+docs/
+notes/
+scratch/
+temp/
+tmp/
+*.tmp
+learning_notes/
+*.scratch.md
+*.draft.md
+
+# --- Environment Variables & Secrets (NEVER COMMIT) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+secrets/
+
+# --- Python & Virtual Environments ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Jupyter Notebooks ---
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# --- Node / Next.js / Frontend ---
+node_modules/
+.next/
+out/
+build/
+.turbo/
+npm-debug.log*
+yarn-debug.log*
+
+# --- Database & Container Storage ---
+postgres_data/
+pgdata/
+redis_data/
+*.sqlite3
+*.db
+
+# --- Large Raw Datasets & Raster Dumps ---
+data/raw/
+data/cache/
+data/temp/
+*.tif
+*.tiff
+*.nc
+*.nc4
+*.grib
+*.grb2
+*.geotiff
+
+# --- Machine Learning Models & Heavy Artifacts ---
+*.joblib
+*.pkl.gz
+*.h5
+*.ckpt
+*.pt
+*.pth
+
+# --- OS & IDE Specific ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+.gemini/
+README.md
+

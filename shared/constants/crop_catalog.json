@@ -1,0 +1,92 @@
+{
+  "project": "J26-IT-358",
+  "version": "1.0.0",
+  "description": "Master Candidate Crop Catalog for Sri Lanka Agricultural Decision System",
+  "crops": [
+    {
+      "crop_id": "CR_MAIZE",
+      "name_en": "Maize",
+      "name_si": "ඉරිඟු (Bada Iringu)",
+      "category": "Grain",
+      "growth_duration_days": 110,
+      "primary_zones": [
+        "Dry Zone",
+        "Intermediate Zone"
+      ],
+      "default_unit": "kg"
+    },
+    {
+      "crop_id": "CR_CHILLI",
+      "name_en": "Chilli",
+      "name_si": "මිරිස් (Miris)",
+      "category": "Condiment",
+      "growth_duration_days": 120,
+      "primary_zones": [
+        "Dry Zone",
+        "Intermediate Zone"
+      ],
+      "default_unit": "kg"
+    },
+    {
+      "crop_id": "CR_MUNG_BEAN",
+      "name_en": "Green Gram / Mung Bean",
+      "name_si": "මුං ඇට (Mung Ata)",
+      "category": "Legume",
+      "growth_duration_days": 75,
+      "primary_zones": [
+        "Dry Zone",
+        "Intermediate Zone"
+      ],
+      "default_unit": "kg"
+    },
+    {
+      "crop_id": "CR_TOMATO",
+      "name_en": "Tomato",
+      "name_si": "තක්කාලි (Thakkali)",
+      "category": "Vegetable",
+      "growth_duration_days": 90,
+      "primary_zones": [
+        "Upcountry",
+        "Intermediate Zone",
+        "Low Country"
+      ],
+      "default_unit": "kg"
+    },
+    {
+      "crop_id": "CR_BRINJAL",
+      "name_en": "Brinjal (Eggplant)",
+      "name_si": "වම්බටු (Wambatu)",
+      "category": "Vegetable",
+      "growth_duration_days": 130,
+      "primary_zones": [
+        "Low Country Dry Zone",
+        "Intermediate Zone"
+      ],
+      "default_unit": "kg"
+    },
+    {
+      "crop_id": "CR_OKRA",
+      "name_en": "Okra (Lady's Finger)",
+      "name_si": "බණ්ඩක්කා (Bandakka)",
+      "category": "Vegetable",
+      "growth_duration_days": 85,
+      "primary_zones": [
+        "Low Country Dry Zone",
+        "Intermediate Zone"
+      ],
+      "default_unit": "kg"
+    },
+    {
+      "crop_id": "CR_PUMPKIN",
+      "name_en": "Pumpkin",
+      "name_si": "වට්ටක්කා (Wattakka)",
+      "category": "Vegetable",
+      "growth_duration_days": 110,
+      "primary_zones": [
+        "Dry Zone",
+        "Intermediate Zone"
+      ],
+      "default_unit": "kg"
+    }
+  ]
+}

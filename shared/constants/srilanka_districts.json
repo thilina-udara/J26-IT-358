@@ -1,0 +1,31 @@
+{
+  "country": "Sri Lanka",
+  "total_districts": 25,
+  "districts": [
+    { "id": "LK-11", "name": "Colombo", "zone": "Wet Zone", "latitude": 6.9271, "longitude": 79.8612 },
+    { "id": "LK-12", "name": "Gampaha", "zone": "Wet Zone", "latitude": 7.0840, "longitude": 80.0098 },
+    { "id": "LK-13", "name": "Kalutara", "zone": "Wet Zone", "latitude": 6.5854, "longitude": 79.9607 },
+    { "id": "LK-21", "name": "Kandy", "zone": "Upcountry Wet Zone", "latitude": 7.2906, "longitude": 80.6337 },
+    { "id": "LK-22", "name": "Matale", "zone": "Intermediate Zone", "latitude": 7.4675, "longitude": 80.6234 },
+    { "id": "LK-23", "name": "Nuwara Eliya", "zone": "Upcountry Wet Zone", "latitude": 6.9497, "longitude": 80.7891 },
+    { "id": "LK-31", "name": "Galle", "zone": "Wet Zone", "latitude": 6.0535, "longitude": 80.2210 },
+    { "id": "LK-32", "name": "Matara", "zone": "Wet / Intermediate Zone", "latitude": 5.9549, "longitude": 80.5550 },
+    { "id": "LK-33", "name": "Hambantota", "zone": "Dry Zone", "latitude": 6.1429, "longitude": 81.1212 },
+    { "id": "LK-41", "name": "Jaffna", "zone": "Dry Zone", "latitude": 9.6615, "longitude": 80.0255 },
+    { "id": "LK-42", "name": "Kilinochchi", "zone": "Dry Zone", "latitude": 9.3803, "longitude": 80.3770 },
+    { "id": "LK-43", "name": "Mannar", "zone": "Dry Zone", "latitude": 8.9810, "longitude": 79.9044 },
+    { "id": "LK-44", "name": "Vavuniya", "zone": "Dry Zone", "latitude": 8.7542, "longitude": 80.4982 },
+    { "id": "LK-45", "name": "Mullaitivu", "zone": "Dry Zone", "latitude": 9.2671, "longitude": 80.8142 },
+    { "id": "LK-51", "name": "Batticaloa", "zone": "Dry Zone", "latitude": 7.7310, "longitude": 81.6747 },
+    { "id": "LK-52", "name": "Ampara", "zone": "Dry Zone", "latitude": 7.2975, "longitude": 81.6720 },
+    { "id": "LK-53", "name": "Trincomalee", "zone": "Dry Zone", "latitude": 8.5874, "longitude": 81.2152 },
+    { "id": "LK-61", "name": "Kurunegala", "zone": "Intermediate / Dry Zone", "latitude": 7.4863, "longitude": 80.3623 },
+    { "id": "LK-62", "name": "Puttalam", "zone": "Dry Zone", "latitude": 8.0408, "longitude": 79.8394 },
+    { "id": "LK-71", "name": "Anuradhapura", "zone": "Dry Zone", "latitude": 8.3114, "longitude": 80.4037 },
+    { "id": "LK-72", "name": "Polonnaruwa", "zone": "Dry Zone", "latitude": 7.9403, "longitude": 81.0188 },
+    { "id": "LK-81", "name": "Badulla", "zone": "Intermediate / Upcountry", "latitude": 6.9934, "longitude": 81.0550 },
+    { "id": "LK-82", "name": "Monaragala", "zone": "Dry Zone", "latitude": 6.8728, "longitude": 81.3507 },
+    { "id": "LK-91", "name": "Ratnapura", "zone": "Wet Zone", "latitude": 6.6828, "longitude": 80.4034 },
+    { "id": "LK-92", "name": "Kegalle", "zone": "Wet Zone", "latitude": 7.2513, "longitude": 80.3464 }
+  ]
+}

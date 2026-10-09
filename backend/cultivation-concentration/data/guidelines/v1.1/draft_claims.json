@@ -1,0 +1,1044 @@
+{
+  "dataset_version": "1.1.0",
+  "claims": [
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 5,
+      "claim": "- **Best Planting Seasons:**",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 6,
+      "claim": "- **Maha Season:** Early September to early October.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 7,
+      "claim": "- **Yala Season:** April to early May. [[1](https://www.youtube.com/watch?v=ehAEbUeCYSI)]",
+      "supplied_citations": [
+        "https://www.youtube.com/watch?v=ehAEbUeCYSI"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 8,
+      "claim": "- **Soil Requirements:** Well-drained sandy loam or loamy soil with a neutral pH of 5.5 to 7.0. It is highly sensitive to waterlogging. [[1](https://www.facebook.com/100063480910301/videos/-okra-%E0%B6%B6%E0%B6%AB%E0%B7%8A%E0%B6%A9%E0%B6%9A%E0%B7%8A%E0%B6%9A%E0%B7%8F-cultivation-complete-guide/912194128012291/), [2](https://www.facebook.com/shady.juniortembo/posts/comprehensive-okra-production-guidefield-production-for-commercial-and-small-sca/4294654184185289/)]",
+      "supplied_citations": [
+        "https://www.facebook.com/100063480910301/videos/-okra-%E0%B6%B6%E0%B6%AB%E0%B7%8A%E0%B6%A9%E0%B6%9A%E0%B7%8A%E0%B6%9A%E0%B7%8F-cultivation-complete-guide/912194128012291/",
+        "https://www.facebook.com/shady.juniortembo/posts/comprehensive-okra-production-guidefield-production-for-commercial-and-small-sca/4294654184185289/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 9,
+      "claim": "- **Recommended Varieties:** High-yielding and disease-tolerant local varieties include **Haritha** (mosaic virus resistant), **MI5**, **MI7**, and **OKH1**. [[1](https://doa.gov.lk/hordi-variety-okra/), [2](https://doa.gov.lk/sinhala-hordi-crop-okra/)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/hordi-variety-okra/",
+        "https://doa.gov.lk/sinhala-hordi-crop-okra/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 15,
+      "claim": "- **Seed Rate:** Approximately **4.5 kg of seeds per hectare**. [[1](https://doa.gov.lk/sinhala-hordi-crop-okra/)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/sinhala-hordi-crop-okra/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 16,
+      "claim": "- **Seed Treatment:** Soak the seeds in water for **24 hours** prior to sowing. This softens the seed coat to accelerate uniform germination. [[1](https://doa.gov.lk/hordi-crop-okra/)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/hordi-crop-okra/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 17,
+      "claim": "- **Spacing & Direct Seeding:**",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 18,
+      "claim": "- Prepare pits or raised beds mixed with well-decomposed organic manure.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 19,
+      "claim": "- Recommended commercial spacing is **90 cm between rows and 60 cm between plants**. For smaller plots, a spacing of 45 cm × 30 cm can be adopted.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 20,
+      "claim": "- Plant **3–4 seeds per pit** directly at a depth of 2–3 cm. [[1](https://openknowledge.fao.org/bitstreams/c679724c-a0e5-439d-b266-d144fcdffcda/download), [2](https://www.facebook.com/shady.juniortembo/posts/comprehensive-okra-production-guidefield-production-for-commercial-and-small-sca/4294654184185289/)]",
+      "supplied_citations": [
+        "https://openknowledge.fao.org/bitstreams/c679724c-a0e5-439d-b266-d144fcdffcda/download",
+        "https://www.facebook.com/shady.juniortembo/posts/comprehensive-okra-production-guidefield-production-for-commercial-and-small-sca/4294654184185289/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 21,
+      "claim": "- **Thinning Out:** Two weeks after seedling emergence, thin out the plants to leave only the **2 healthiest, strongest seedlings per pit**. [[1](https://doa.gov.lk/hordi-crop-okra/)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/hordi-crop-okra/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 29,
+      "claim": "| **Timing**                                     | **Organic Matter / Compost** | **Urea (kg/ha)** | **TSP (kg/ha)** | **MOP (kg/ha)** |",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 31,
+      "claim": "| **Basal Application** (2–3 days before sowing) | 10 Tons/ha                   | 50 kg            | 195 kg          | 25 kg           |",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 32,
+      "claim": "| **Top Dressing 1** (2 weeks after planting)    | —                            | 50 kg            | —               | 25 kg           |",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 33,
+      "claim": "| **Top Dressing 2** (5 weeks after planting)    | —                            | 100 kg           | —               | 50 kg           |",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 34,
+      "claim": "| **Top Dressing 3** (8 weeks after planting)    | —                            | 100 kg           | —               | 50 kg           |",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 40,
+      "claim": "- **Watering:** Irrigate twice a day until seeds fully germinate. Afterward, water every 3–4 days depending on soil moisture levels, taking extra care to avoid dry soil during flowering and pod development.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 41,
+      "claim": "- **Weed Control:** Hand weed early—ideally within the first 3 to 4 weeks—to prevent weeds from stealing vital soil nutrients. [[1](https://www.facebook.com/shady.juniortembo/posts/comprehensive-okra-production-guidefield-production-for-commercial-and-small-sca/4294654184185289/), [2](https://www.facebook.com/100063480910301/videos/-okra-%E0%B6%B6%E0%B6%AB%E0%B7%8A%E0%B6%A9%E0%B6%9A%E0%B7%8A%E0%B6%9A%E0%B7%8F-cultivation-complete-guide/912194128012291/)]",
+      "supplied_citations": [
+        "https://www.facebook.com/shady.juniortembo/posts/comprehensive-okra-production-guidefield-production-for-commercial-and-small-sca/4294654184185289/",
+        "https://www.facebook.com/100063480910301/videos/-okra-%E0%B6%B6%E0%B6%AB%E0%B7%8A%E0%B6%A9%E0%B6%9A%E0%B7%8A%E0%B6%9A%E0%B7%8F-cultivation-complete-guide/912194128012291/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 47,
+      "claim": "- **Okra Yellow Vein Mosaic Virus:** This is the most critical threat, turning leaves pale yellow and stunting growth. It is spread by whiteflies.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 48,
+      "claim": "- *Control:* Select mosaic-tolerant varieties like **Haritha**, manage insect vectors early, and rogue (uproot and burn) infected plants immediately. [[1](https://doa.gov.lk/hordi-variety-okra/), [2](https://www.facebook.com/shady.juniortembo/posts/comprehensive-okra-production-guidefield-production-for-commercial-and-small-sca/4294654184185289/)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/hordi-variety-okra/",
+        "https://www.facebook.com/shady.juniortembo/posts/comprehensive-okra-production-guidefield-production-for-commercial-and-small-sca/4294654184185289/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 49,
+      "claim": "- **Pests (Pod Borers, Leafhoppers, Aphids):**",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 50,
+      "claim": "- *Control:* Monitor plants closely; introduce Integrated Pest Management (IPM) practices or targeted eco-friendly sprays if numbers cross threshold levels. [[1](https://doa.gov.lk/hordi-crop-okra/)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/hordi-crop-okra/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 56,
+      "claim": "- **Maturity:** Harvesting typically begins **50–60 days after planting**.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 57,
+      "claim": "- **Frequency:** Harvest pods **every 2 days** to maintain continuous pod production. Leaving pods on the plant too long makes them tough, woody, and unmarketable.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 58,
+      "claim": "- **Quality Indicator:** Pick pods when they are tender and bright green, roughly **7–10 cm long**.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Bandakka",
+      "draft_line": 59,
+      "claim": "- **Expected Yield:** A well-managed commercial cultivation yields between **10 to 20 metric tonnes per hectare&#x20;**",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 65,
+      "claim": "- **Climate:** Warm-season crop; ideal day temperature is 22–30°C and night temperature is 18–24°C.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 66,
+      "claim": "- **Soil:** Well-drained sandy loam or clay loam with a pH of 5.5 to 6.8 is best. Avoid waterlogged or salty soils. [[1](https://palaplast.com/2025/05/23/melitzana-odigos-kalliergeias-amp-ardeysis/), [2](https://agriculture.vikaspedia.in/viewcontent/agriculture/crop-production/package-of-practices/vegetables-1/brinjal?lgn=en), [3](https://www.scribd.com/document/514799053/Brinjal), [4](https://www.bighaat.com/kisan-vedika/blogs/topics/crops/cultivation-practices/vegetable-crops/brinjal)]",
+      "supplied_citations": [
+        "https://palaplast.com/2025/05/23/melitzana-odigos-kalliergeias-amp-ardeysis/",
+        "https://agriculture.vikaspedia.in/viewcontent/agriculture/crop-production/package-of-practices/vegetables-1/brinjal?lgn=en",
+        "https://www.scribd.com/document/514799053/Brinjal",
+        "https://www.bighaat.com/kisan-vedika/blogs/topics/crops/cultivation-practices/vegetable-crops/brinjal"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 70,
+      "claim": "- **Bed Preparation:** Prepare raised nursery beds (about 3m x 1m or 4–5 feet wide) mixed with well-decomposed cow dung or compost.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 71,
+      "claim": "- **Sowing:** Sow seeds about 0.5 inches deep in rows.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 72,
+      "claim": "- **Duration:** Keep seedlings in the nursery for 25 to 35 days until they reach 10 to 15 cm tall with 3–4 true leaves. [[1](https://doa.gov.lk/hordi-crop-brinjal/), [2](https://www.bighaat.com/kisan-vedika/blogs/brinjal-eggplant-cultivation-guide), [3](https://www.growtechsol.com/brinjal.html), [4](https://palaplast.com/2025/05/23/melitzana-odigos-kalliergeias-amp-ardeysis/)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/hordi-crop-brinjal/",
+        "https://www.bighaat.com/kisan-vedika/blogs/brinjal-eggplant-cultivation-guide",
+        "https://www.growtechsol.com/brinjal.html",
+        "https://palaplast.com/2025/05/23/melitzana-odigos-kalliergeias-amp-ardeysis/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 76,
+      "claim": "- **Plowing:** Plough the main field 4 to 5 times and incorporate 20 to 30 tons of Farmyard Manure (FYM) or compost per hectare. [[1](https://www.scribd.com/presentation/654655803/brinjal), [2](https://www.scribd.com/document/514799053/Brinjal)]",
+      "supplied_citations": [
+        "https://www.scribd.com/presentation/654655803/brinjal",
+        "https://www.scribd.com/document/514799053/Brinjal"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 77,
+      "claim": "- **Spacing:**",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 78,
+      "claim": "- Long-fruited varieties: 60 x 60 cm or 75 x 60 cm",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 79,
+      "claim": "- Round or hybrid varieties: 90 x 60 cm [[1](https://www.bighaat.com/kisan-vedika/blogs/brinjal-eggplant-cultivation-guide), [2](https://www.researchgate.net/publication/343836750_Cultivation_Practices_of_Brinjal), [3](https://doa.gov.lk/hordi-crop-brinjal/), [4](https://www.scribd.com/presentation/654655803/brinjal)]",
+      "supplied_citations": [
+        "https://www.bighaat.com/kisan-vedika/blogs/brinjal-eggplant-cultivation-guide",
+        "https://www.researchgate.net/publication/343836750_Cultivation_Practices_of_Brinjal",
+        "https://doa.gov.lk/hordi-crop-brinjal/",
+        "https://www.scribd.com/presentation/654655803/brinjal"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 80,
+      "claim": "- **Transplanting:** Plant healthy 30-day-old seedlings into the prepared ridges or holes. [[1](https://doa.gov.lk/hordi-crop-brinjal/), [2](https://www.bighaat.com/kisan-vedika/blogs/brinjal-eggplant-cultivation-guide)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/hordi-crop-brinjal/",
+        "https://www.bighaat.com/kisan-vedika/blogs/brinjal-eggplant-cultivation-guide"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 84,
+      "claim": "- **Fertilizer:** Apply a balanced NPK dose (e.g., base dressing of full phosphorus/potassium and split applications of nitrogen at 30 and 45 days after transplanting, or follow local hybrid guidelines like 100:80:60 kg/ha). [[1](https://www.scribd.com/presentation/654655803/brinjal), [2](https://www.researchgate.net/publication/343836750_Cultivation_Practices_of_Brinjal)]",
+      "supplied_citations": [
+        "https://www.scribd.com/presentation/654655803/brinjal",
+        "https://www.researchgate.net/publication/343836750_Cultivation_Practices_of_Brinjal"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 85,
+      "claim": "- **Irrigation:** Water every 3 to 4 days in summer and every 12 to 15 days in winter. Use drip or furrow irrigation to keep roots moist but not soggy. [[1](https://www.researchgate.net/publication/343836750_Cultivation_Practices_of_Brinjal)]",
+      "supplied_citations": [
+        "https://www.researchgate.net/publication/343836750_Cultivation_Practices_of_Brinjal"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 89,
+      "claim": "- **Staking:** Stake plants once they reach about 30 cm in height to support heavy fruit.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 90,
+      "claim": "- **Weeding:** Perform regular shallow manual weeding or use recommended pre-emergence herbicides.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 91,
+      "claim": "- **Pests/Diseases:** Watch out for shoot and fruit borers, hadda beetle, and bacterial wilt; apply neem oil or biological controls early. [[1](https://www.bighaat.com/kisan-vedika/blogs/topics/crops/cultivation-practices/vegetable-crops/brinjal), [2](https://palaplast.com/2025/05/23/melitzana-odigos-kalliergeias-amp-ardeysis/), [3](https://www.scribd.com/presentation/654655803/brinjal), [4](https://www.researchgate.net/publication/343836750_Cultivation_Practices_of_Brinjal)]",
+      "supplied_citations": [
+        "https://www.bighaat.com/kisan-vedika/blogs/topics/crops/cultivation-practices/vegetable-crops/brinjal",
+        "https://palaplast.com/2025/05/23/melitzana-odigos-kalliergeias-amp-ardeysis/",
+        "https://www.scribd.com/presentation/654655803/brinjal",
+        "https://www.researchgate.net/publication/343836750_Cultivation_Practices_of_Brinjal"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 95,
+      "claim": "- **Timing:** First harvest starts about 55 to 60 days after transplanting (or \\~90–100 days from seed).",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Brinjal",
+      "draft_line": 96,
+      "claim": "- **Method:** Pick fruits while they are tender, firm, and have a glossy surface every 4 to 5 days. Frequent picking encourages the plant to set more flowers",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 102,
+      "claim": "- **Sunlight:** Choose a location that receives 6 to 8 hours of direct sunlight daily.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 103,
+      "claim": "- **Soil Type:** Use loose, fertile, well-drained sandy loam or loamy soil rich in organic matter.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 104,
+      "claim": "- **Soil pH:** Maintain a pH between **5.5 and 6.8** (ideal is around 6.0–6.8).",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 105,
+      "claim": "- **Bed Layout:** Make circular mounds about **1 meter wide and 30 cm high** (or hills 3 feet wide), spacing them **3 meters (9 to 10 feet) apart** to allow vines room to sprawl. Mix a half-bucket of well-rotted manure or compost and **100g of agricultural lime** into each mound. [[1](https://www.youtube.com/watch?v=2XzNZE9Cm0o\\&vl=en\\&t=31), [2](https://www.youtube.com/watch?v=iCydE_fL2_E), [3](https://agriculture.gov.tt/wp-content/uploads/2017/11/how-to-grow-pumpkin.pdf), [4](https://www.scribd.com/document/463438757/Pumpkin-pdf), [5](https://bonnieplants.com/blogs/how-to-grow/growing-pumpkins)]",
+      "supplied_citations": [
+        "https://www.youtube.com/watch?v=2XzNZE9Cm0o\\&vl=en\\&t=31",
+        "https://www.youtube.com/watch?v=iCydE_fL2_E",
+        "https://agriculture.gov.tt/wp-content/uploads/2017/11/how-to-grow-pumpkin.pdf",
+        "https://www.scribd.com/document/463438757/Pumpkin-pdf",
+        "https://bonnieplants.com/blogs/how-to-grow/growing-pumpkins"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 109,
+      "claim": "- **Sowing Time:** Plant seeds directly in warm soil after the last frost (or in tropical/local regions, during dry-to-wet seasonal transitions like February–March or May–June). [[1](https://www.scribd.com/document/463438757/Pumpkin-pdf), [2](https://www.youtube.com/watch?v=iCydE_fL2_E)]",
+      "supplied_citations": [
+        "https://www.scribd.com/document/463438757/Pumpkin-pdf",
+        "https://www.youtube.com/watch?v=iCydE_fL2_E"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 110,
+      "claim": "- **Seed Depth:** Plant seeds about **2.5 cm (1 inch) deep**. Put 3 to 5 seeds per mound. [[1](https://www.youtube.com/watch?v=ric_eIG0uUc\\&t=4), [2](https://agriculture.gov.tt/wp-content/uploads/2017/11/how-to-grow-pumpkin.pdf), [3](https://www.youtube.com/watch?v=iCydE_fL2_E)]",
+      "supplied_citations": [
+        "https://www.youtube.com/watch?v=ric_eIG0uUc\\&t=4",
+        "https://agriculture.gov.tt/wp-content/uploads/2017/11/how-to-grow-pumpkin.pdf",
+        "https://www.youtube.com/watch?v=iCydE_fL2_E"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 111,
+      "claim": "- **Thinning:** Once true leaves appear and seedlings are established, thin each mound down to the **2 strongest seedlings** (or 1–2 plants depending on space). [[1](https://www.bighaat.com/kisan-vedika/blogs/pumpkin-cultivation-guide-from-seed-to-harvest), [2](https://www.youtube.com/watch?v=iCydE_fL2_E)]",
+      "supplied_citations": [
+        "https://www.bighaat.com/kisan-vedika/blogs/pumpkin-cultivation-guide-from-seed-to-harvest",
+        "https://www.youtube.com/watch?v=iCydE_fL2_E"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 115,
+      "claim": "- **Watering:** Irrigate daily until germination finishes, then provide deep watering about once a week (roughly 1 inch of water per week). Apply water directly to the root zone and keep leaves dry to prevent fungal diseases like powdery mildew. [[1](https://doa.gov.lk/hordi-crop-pumpkin/), [2](https://www.bighaat.com/kisan-vedika/blogs/pumpkin-cultivation-guide-from-seed-to-harvest), [3](https://www.almanac.com/plant/pumpkins)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/hordi-crop-pumpkin/",
+        "https://www.bighaat.com/kisan-vedika/blogs/pumpkin-cultivation-guide-from-seed-to-harvest",
+        "https://www.almanac.com/plant/pumpkins"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 116,
+      "claim": "- **Fertilizer Schedule:**",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 117,
+      "claim": "- **Basal / Early Stage (1 week):** Apply standard NPK or a balanced organic fertilizer.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 118,
+      "claim": "- **Vegetative Growth (4–5 weeks):** Top-dress with nitrogen or Calcium Nitrate/NPK when vines start to run.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 119,
+      "claim": "- **Flowering & Fruiting (8–9 weeks):** Switch to a higher phosphorus and potassium fertilizer (such as 12:12:17+2) to support fruit enlargement. [[1](https://www.almanac.com/plant/pumpkins), [2](https://doa.gov.lk/hordi-crop-pumpkin/), [3](https://agriculture.gov.tt/wp-content/uploads/2017/11/how-to-grow-pumpkin.pdf)]",
+      "supplied_citations": [
+        "https://www.almanac.com/plant/pumpkins",
+        "https://doa.gov.lk/hordi-crop-pumpkin/",
+        "https://agriculture.gov.tt/wp-content/uploads/2017/11/how-to-grow-pumpkin.pdf"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 120,
+      "claim": "- **Mulching:** Apply a straw or organic mulch 3 weeks after germination to suppress weeds and retain soil moisture. Place cardboard or sand under developing fruit to stop bottom rot. [[1](https://www.bighaat.com/kisan-vedika/blogs/pumpkin-cultivation-guide-from-seed-to-harvest), [2](https://doa.gov.lk/hordi-crop-pumpkin/), [3](https://www.youtube.com/watch?v=ric_eIG0uUc\\&t=4), [4](https://www.youtube.com/watch?v=l8G5o3RmpTY\\&t=77)]",
+      "supplied_citations": [
+        "https://www.bighaat.com/kisan-vedika/blogs/pumpkin-cultivation-guide-from-seed-to-harvest",
+        "https://doa.gov.lk/hordi-crop-pumpkin/",
+        "https://www.youtube.com/watch?v=ric_eIG0uUc\\&t=4",
+        "https://www.youtube.com/watch?v=l8G5o3RmpTY\\&t=77"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 124,
+      "claim": "- **Common Pests:** Watch out for thrips, squash bugs, aphids, and cucumber worms. Manage them using insecticidal soaps, organic sprays, or beneficial insects.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 125,
+      "claim": "- **Diseases:** Prevent powdery mildew and gummy stem blight by ensuring good airflow between vines and avoiding overhead leaf wetting. [[1](https://autumnprairiepumpkins.com/blogs/growing-guides/raised-bed-pumpkin-growing-layout-and-soil-guide), [2](https://agriculture.gov.tt/wp-content/uploads/2017/11/how-to-grow-pumpkin.pdf), [3](https://www.youtube.com/watch?v=2XzNZE9Cm0o\\&vl=en\\&t=31)]",
+      "supplied_citations": [
+        "https://autumnprairiepumpkins.com/blogs/growing-guides/raised-bed-pumpkin-growing-layout-and-soil-guide",
+        "https://agriculture.gov.tt/wp-content/uploads/2017/11/how-to-grow-pumpkin.pdf",
+        "https://www.youtube.com/watch?v=2XzNZE9Cm0o\\&vl=en\\&t=31"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 129,
+      "claim": "- **Maturity Timeline:** Most varieties mature in **90 to 120 days** (local/tropical varieties often harvest around 3.5 to 4 months, or 40–60 days post-flowering depending on the cultivar). [[1](https://doa.gov.lk/hordi-crop-pumpkin/), [2](https://www.youtube.com/watch?v=iCydE_fL2_E), [3](https://agriculture.gov.tt/wp-content/uploads/2017/11/how-to-grow-pumpkin.pdf)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/hordi-crop-pumpkin/",
+        "https://www.youtube.com/watch?v=iCydE_fL2_E",
+        "https://agriculture.gov.tt/wp-content/uploads/2017/11/how-to-grow-pumpkin.pdf"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 130,
+      "claim": "- **Harvest Signs:** Cut the fruit from the vine using a sharp knife, leaving a **2-inch stem attached**. Harvest when the skin turns hard, the color is deep and dull, and the fruit develops a powdery film or the stem withers. [[1](https://bonnieplants.com/blogs/how-to-grow/growing-pumpkins), [2](https://www.youtube.com/watch?v=ric_eIG0uUc\\&t=4), [3](https://doa.gov.lk/hordi-crop-pumpkin/)]",
+      "supplied_citations": [
+        "https://bonnieplants.com/blogs/how-to-grow/growing-pumpkins",
+        "https://www.youtube.com/watch?v=ric_eIG0uUc\\&t=4",
+        "https://doa.gov.lk/hordi-crop-pumpkin/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Pumpkin",
+      "draft_line": 131,
+      "claim": "- **Yield:** Average yields range between **15,000 to 20,000 kg/ha** (roughly 5 to 7 fruits per mound)",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 137,
+      "claim": "- **Temperature:** Warm climate with optimal soil temperatures between 18°C and 30°C (64°F–86°F).",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 138,
+      "claim": "- **Soil:** Deep, well-drained loamy or sandy-loam soil with a pH of 5.5 to 7.0.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 139,
+      "claim": "- **Sunlight:** Full sun exposure (at least 6–8 hours daily). [[1](https://www.researchgate.net/publication/394267882_Baby_Corn_Cultivation_Plan), [2](https://eos.com/blog/how-to-grow-corn/), [3](https://www.fertri.com/en/blog-fertri/corn-cultivation-guide-recommendations-care/20251104094744003689.html)]",
+      "supplied_citations": [
+        "https://www.researchgate.net/publication/394267882_Baby_Corn_Cultivation_Plan",
+        "https://eos.com/blog/how-to-grow-corn/",
+        "https://www.fertri.com/en/blog-fertri/corn-cultivation-guide-recommendations-care/20251104094744003689.html"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 143,
+      "claim": "- **Tillage:** Ploughed well to retain moisture, followed by leveling or creating ridge-and-furrow systems.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 144,
+      "claim": "- **Planting Depth:** Plant seeds 3 to 5 cm (1.2 to 2 inches) deep.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 145,
+      "claim": "- **Spacing:** Space rows 60 to 80 cm (24 to 30 inches) apart, with 20 to 30 cm (8 to 12 inches) between individual plants. Plant in blocks or squares rather than a single long row to ensure good wind pollination.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 146,
+      "claim": "- **Seed Rate:** Approximately 5 kg of hybrid seed per acre. [[1](https://www.youtube.com/watch?v=-i_SToRB0Ac\\&t=93), [2](https://openknowledge.fao.org/bitstreams/929ced9f-1463-49cc-8be7-033a9813f28e/download), [3](https://www.researchgate.net/publication/394267882_Baby_Corn_Cultivation_Plan), [4](https://www.fertri.com/en/blog-fertri/corn-cultivation-guide-recommendations-care/20251104094744003689.html), [5](https://www.youtube.com/watch?v=j-6YK70HH_U), [6](https://extension.umd.edu/resource/growing-sweet-corn-home-garden)]",
+      "supplied_citations": [
+        "https://www.youtube.com/watch?v=-i_SToRB0Ac\\&t=93",
+        "https://openknowledge.fao.org/bitstreams/929ced9f-1463-49cc-8be7-033a9813f28e/download",
+        "https://www.researchgate.net/publication/394267882_Baby_Corn_Cultivation_Plan",
+        "https://www.fertri.com/en/blog-fertri/corn-cultivation-guide-recommendations-care/20251104094744003689.html",
+        "https://www.youtube.com/watch?v=j-6YK70HH_U",
+        "https://extension.umd.edu/resource/growing-sweet-corn-home-garden"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 150,
+      "claim": "- **Basal Dose:** Apply organic compost (10–15 bags/acre) alongside a balanced mix of nitrogen, phosphorus, and potassium (such as urea, TSP/DAP, and MOP) during land prep.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 151,
+      "claim": "- **Side-Dressing:** Top-dress with nitrogen fertilizer when plants reach about 30 cm in height or around 20–40 days after sowing.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 152,
+      "claim": "- **Watering:** Keep soil consistently moist, with peak water requirements during the flowering and grain-filling stages. [[1](https://openknowledge.fao.org/bitstreams/929ced9f-1463-49cc-8be7-033a9813f28e/download), [2](https://www.researchgate.net/publication/394267882_Baby_Corn_Cultivation_Plan), [3](https://www.fertri.com/en/blog-fertri/corn-cultivation-guide-recommendations-care/20251104094744003689.html)]",
+      "supplied_citations": [
+        "https://openknowledge.fao.org/bitstreams/929ced9f-1463-49cc-8be7-033a9813f28e/download",
+        "https://www.researchgate.net/publication/394267882_Baby_Corn_Cultivation_Plan",
+        "https://www.fertri.com/en/blog-fertri/corn-cultivation-guide-recommendations-care/20251104094744003689.html"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 156,
+      "claim": "- **Weeding:** Perform manual or mechanical weed control during the first 30 days while plants are young; minimize soil disturbance later.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 157,
+      "claim": "- **Pests:** Scout regularly for common threats like fall armyworms, stem borers, and aphids, managing them via targeted biological treatments, neem, or approved insecticides. [[1](https://www.youtube.com/watch?v=y6udX04r1co\\&t=253), [2](https://www.fertri.com/en/blog-fertri/corn-cultivation-guide-recommendations-care/20251104094744003689.html), [3](https://openknowledge.fao.org/bitstreams/929ced9f-1463-49cc-8be7-033a9813f28e/download)]",
+      "supplied_citations": [
+        "https://www.youtube.com/watch?v=y6udX04r1co\\&t=253",
+        "https://www.fertri.com/en/blog-fertri/corn-cultivation-guide-recommendations-care/20251104094744003689.html",
+        "https://openknowledge.fao.org/bitstreams/929ced9f-1463-49cc-8be7-033a9813f28e/download"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 161,
+      "claim": "- **Baby Corn:** Harvested early when silks emerge before fertilization (approx. 50–60 days).",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 162,
+      "claim": "- **Green / Sweet Corn:** Ready at 10–12 weeks when silks turn brown and kernels reach the \"milk\" stage.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Corn",
+      "draft_line": 163,
+      "claim": "- **Mature Field Corn:** Ready at 14–16 weeks when husks dry out and grain moisture drops to 20–25%.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Mung Beans",
+      "draft_line": 169,
+      "claim": "- **Main Seasons:** Grown during the Yala and Maha seasons, or as a short-duration mid-season crop (*Ipanelle Wagawa*) planted directly on paddy stubble (*pani/ipanella*) immediately after the rice harvest.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Mung Beans",
+      "draft_line": 170,
+      "claim": "- **Key Districts:** Anuradhapura, Polonnaruwa, Vavuniya, Kurunegala, Puttalam, Kilinochchi, Mullaitivu, Batticaloa, and Jaffna.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Mung Beans",
+      "draft_line": 171,
+      "claim": "- **Duration:** Typically ready for harvest in **60 to 65 days** (or around 45–50 days for stubble/mid-season practices). [[1](https://doa.gov.lk/field-crops-mungbean-si/), [2](https://www.facebook.com/NewsfirstSL/posts/mahaweli-to-cultivate-1000-acres-of-mung-beansdetails-slnews-news1st-srilanka-lk/5671930046200540/), [3](https://www.redcross.lk/main-news/45-days-of-magic-green-gram-cultivation-during-the-mid-season/), [4](https://tare.sljol.info/articles/4851/files/submission/proof/4851-1-17218-1-10-20121026.pdf)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/field-crops-mungbean-si/",
+        "https://www.facebook.com/NewsfirstSL/posts/mahaweli-to-cultivate-1000-acres-of-mung-beansdetails-slnews-news1st-srilanka-lk/5671930046200540/",
+        "https://www.redcross.lk/main-news/45-days-of-magic-green-gram-cultivation-during-the-mid-season/",
+        "https://tare.sljol.info/articles/4851/files/submission/proof/4851-1-17218-1-10-20121026.pdf"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Mung Beans",
+      "draft_line": 175,
+      "claim": "- **Temperature:** Thrives in warm weather between 20°C and 40°C, with an optimum range of 30°C–35°C.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Mung Beans",
+      "draft_line": 176,
+      "claim": "- **Soil:** Prefers well-drained loamy or sandy soils; avoids heavy clay or waterlogged soils.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Mung Beans",
+      "draft_line": 177,
+      "claim": "- **Water:** Drought-tolerant, though water stress during flowering and pod development can reduce yields by 40%–60%. [[1](https://shepherdgrain.com.au/2024/10/24/mung-beans-complete-farmers-guide/), [2](https://www.pgia.ac.lk/files/Annual_congress/journel/v20/40_Extendabstrat1_45.pdf)]",
+      "supplied_citations": [
+        "https://shepherdgrain.com.au/2024/10/24/mung-beans-complete-farmers-guide/",
+        "https://www.pgia.ac.lk/files/Annual_congress/journel/v20/40_Extendabstrat1_45.pdf"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Mung Beans",
+      "draft_line": 181,
+      "claim": "- Common local and improved varieties released by the [**Department of Agriculture, Sri Lanka**](https://www.google.com/url?sa=i\\&source=web\\&rct=j\\&url=https://doa.gov.lk\\&ved=2ahUKEwihiNjCtKqXAxXyieEIHWvRPLkQy_kOegoIAggACAAIGBAD\\&opi=89978449\\&cd\\&psig=AOvVaw1yUo4ewNPecTVcqAyPgFMZ\\&ust=1791548537529000) include **MI-5**, **Ari**, and **Harsha**.",
+      "supplied_citations": [
+        "https://www.google.com/url?sa=i\\&source=web\\&rct=j\\&url=https://doa.gov.lk\\&ved=2ahUKEwihiNjCtKqXAxXyieEIHWvRPLkQy_kOegoIAggACAAIGBAD\\&opi=89978449\\&cd\\&psig=AOvVaw1yUo4ewNPecTVcqAyPgFMZ\\&ust=1791548537529000"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Mung Beans",
+      "draft_line": 182,
+      "claim": "- Features of improved seeds: Green, lustrous, uniform shape, with high consumer preference for boiled or split preparations. [[1](https://tare.sljol.info/articles/4833/files/submission/proof/4833-1-17143-1-10-20121026.pdf)]",
+      "supplied_citations": [
+        "https://tare.sljol.info/articles/4833/files/submission/proof/4833-1-17143-1-10-20121026.pdf"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Mung Beans",
+      "draft_line": 186,
+      "claim": "- **Standard Land Preparation:** Ploughing and leveling the field, or zero-tillage stubble planting (*Ipanelle Wagawa*), where seeds are broadcast or sown directly into paddy stubble right before/after the rice harvest utilizing residual moisture. [[1](https://www.redcross.lk/main-news/45-days-of-magic-green-gram-cultivation-during-the-mid-season/), [2](https://www.facebook.com/NewsfirstSL/posts/mahaweli-to-cultivate-1000-acres-of-mung-beansdetails-slnews-news1st-srilanka-lk/5671930046200540/)]",
+      "supplied_citations": [
+        "https://www.redcross.lk/main-news/45-days-of-magic-green-gram-cultivation-during-the-mid-season/",
+        "https://www.facebook.com/NewsfirstSL/posts/mahaweli-to-cultivate-1000-acres-of-mung-beansdetails-slnews-news1st-srilanka-lk/5671930046200540/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Mung Beans",
+      "draft_line": 187,
+      "claim": "- **Yield Expectation:** Average yields range from **1.0 to 1.5 tons per hectare** under proper management, though rain-fed systems can vary. [[1](https://en.wikipedia.org/wiki/Mung_bean), [2](https://doa.gov.lk/field-crops-mungbean-si/)]",
+      "supplied_citations": [
+        "https://en.wikipedia.org/wiki/Mung_bean",
+        "https://doa.gov.lk/field-crops-mungbean-si/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Mung Beans",
+      "draft_line": 188,
+      "claim": "- **Soil Enrichment:** As a legume, mung bean fixes atmospheric nitrogen via root nodules, naturally enriching the soil and reducing the need for synthetic nitrogen fertilizers for subsequent crops",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 194,
+      "claim": "- **Temperature:** Thrives best between **20°C and 30°C**; yields drop if temperatures fall below 15°C.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 195,
+      "claim": "- **Soil:** Well-drained sandy-loam, clay-loam, or loam soils rich in organic matter.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 196,
+      "claim": "- **Soil pH:** Ideal range is **5.5 to 6.8** (avoid strongly acidic soils).",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 197,
+      "claim": "- **Rainfall:** Requires moderate annual rainfall (25–30 inches); waterlogging or heavy flooding damages the crop. [[1](https://www.scribd.com/document/530585699/chilli-converted), [2](https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/)]",
+      "supplied_citations": [
+        "https://www.scribd.com/document/530585699/chilli-converted",
+        "https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 205,
+      "claim": "- **Open-Pollinated Varieties (OPVs):** MI-1, MI-2, KA-2, Arunalu, MI-Hot, MI Green, Galkiriyagama Selection, MI Waraniya 1, MICH 3, and MIPC 1. [[1](https://lakpura.com/nl/pages/chilli), [2](https://www.lakpura.com/pages/chilli)]",
+      "supplied_citations": [
+        "https://lakpura.com/nl/pages/chilli",
+        "https://www.lakpura.com/pages/chilli"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 206,
+      "claim": "- **Hybrid Variety:** **MICH HY 1** (Sri Lanka's first locally developed hybrid released by the DOA, offering significantly higher yield potential of up to 32 tonnes/ha as green chili). [[1](https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/), [2](https://www.lakpura.com/pages/chilli)]",
+      "supplied_citations": [
+        "https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/",
+        "https://www.lakpura.com/pages/chilli"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 212,
+      "claim": "- **Ploughing:** Give the land 3 to 4 deep ploughings, followed by harrowing to achieve a fine tilth.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 213,
+      "claim": "- **Raised Beds / Ridges:** Essential during wet or rainy periods to ensure good root aeration and water drainage.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 214,
+      "claim": "- **Organic Matter:** Mix well-decomposed cow dung, poultry manure, or compost into the soil.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 215,
+      "claim": "- **pH Adjustment:** Apply agricultural lime if the soil is too acidic. [[1](https://www.scribd.com/document/530585699/chilli-converted), [2](https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/)]",
+      "supplied_citations": [
+        "https://www.scribd.com/document/530585699/chilli-converted",
+        "https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 221,
+      "claim": "- **Seedlings:** Use healthy, certified, disease-free nursery plants.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 222,
+      "claim": "- **Spacing:** Space plants about **45 cm apart** in rows.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 223,
+      "claim": "- **Irrigation:** Use water-efficient systems like **drip irrigation** combined with fertigation (delivering fertilizers through the drip system). Water 2–3 times per week depending on dry conditions. [[1](https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/)]",
+      "supplied_citations": [
+        "https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 229,
+      "claim": "- **Basal Fertilizer:** Apply a mix of organic compost along with chemical fertilizers (Urea, Triple Super Phosphate [TSP], and Muriate of Potash [MOP]) before or at planting. [[1](https://doa.gov.lk/fcrdi-rardckilinochchi-crops/), [2](https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/)]",
+      "supplied_citations": [
+        "https://doa.gov.lk/fcrdi-rardckilinochchi-crops/",
+        "https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 230,
+      "claim": "- **Top Dressing:** Apply small doses of Urea and MOP every 3 to 4 weeks. [[1](https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/)]",
+      "supplied_citations": [
+        "https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 231,
+      "claim": "- **Liquid/Foliar Feeds:** Use seaweed extract, fish amino acid, or fermented cow dung tea every 2 weeks, plus foliar sprays of calcium nitrate to prevent fruit drop. [[1](https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/)]",
+      "supplied_citations": [
+        "https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 237,
+      "claim": "- **Mulching:** Use black-and-silver polythene mulch or organic straw mulch to conserve soil moisture and suppress weeds.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 238,
+      "claim": "- **Integrated Pest Management (IPM):** Watch out for the leaf curl complex and anthracnose; use neem oil or biological sprays rather than overusing heavy chemical pesticides.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 239,
+      "claim": "- **Pruning:** Prune lower leaves and branches to improve air circulation and boost pod formation.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 240,
+      "claim": "- **Crop Rotation:** Rotate with non-solanaceous crops (like legumes) to prevent soil-borne diseases. [[1](https://sapp.lk/chillie-cultivation/), [2](https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/), [3](https://www.lakpura.com/pages/chilli)]",
+      "supplied_citations": [
+        "https://sapp.lk/chillie-cultivation/",
+        "https://www.facebook.com/A.Park.Sri.Lanka/posts/chilli-cultivation-vavuniyaasmp-apark-agriculture-newtechnology-modernagricultur/243473248238216/",
+        "https://www.lakpura.com/pages/chilli"
+      ],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 246,
+      "claim": "- **First Harvest:** Begins around **60 to 75 days** after transplanting.",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    },
+    {
+      "crop_name": "Chillies",
+      "draft_line": 247,
+      "claim": "- **Frequency:** Pick green or red pods every **7 to 10 days** for continuous production. these are the plans",
+      "supplied_citations": [],
+      "status": "unverified_user_draft",
+      "planning_activation": false
+    }
+  ]
+}

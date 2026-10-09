@@ -1,0 +1,97 @@
+{
+  "dataset_version": "1.1.0",
+  "comparisons": [
+    {
+      "crop_name": "Bandakka",
+      "checked_official_source": "https://doa.gov.lk/hordi-crop-okra/",
+      "planning_activation": false,
+      "corroborated": [
+        "Maha/Yala windows",
+        "4.5 kg/ha seed",
+        "24-hour soaking",
+        "90x60 cm",
+        "3?4 seeds/pit",
+        "emergence-relative thinning",
+        "chemical fertilizer table",
+        "two-day harvest interval"
+      ],
+      "unverified_or_different": [
+        "45x30 cm alternative, sowing depth, numerical pH, 3?4-day irrigation and 7?10 cm pods not established on checked crop page",
+        "Draft 10?20 t/ha differs from general DOA 10?15; OKH1 is separately 30",
+        "Draft first-harvest50?60 is not equivalent to DOA50?100 harvest window"
+      ]
+    },
+    {
+      "crop_name": "Brinjal",
+      "checked_official_source": "https://doa.gov.lk/hordi-crop-brinjal/",
+      "planning_activation": false,
+      "corroborated": [
+        "25?30-day nursery seedlings,90x60 cm spacing"
+      ],
+      "unverified_or_different": [
+        "Draft25?35 nursery range extends source",
+        "Draft55?60-day first harvest and4?5-day picking differ from DOA10?12 weeks after transplant and weekly picking",
+        "Draft pH, manure, NPK and summer/winter watering not established as Sri Lankan site guidance"
+      ]
+    },
+    {
+      "crop_name": "Pumpkin",
+      "checked_official_source": "https://doa.gov.lk/hordi-crop-pumpkin/",
+      "planning_activation": false,
+      "corroborated": [
+        "Daily-to-weekly irrigation frequency",
+        "Mulch three weeks after germination",
+        "15,000?20,000 kg/ha yield",
+        "Variety-specific flowering-to-harvest timing"
+      ],
+      "unverified_or_different": [
+        "Frost/February?March/May?June dates,100g lime,one-inch water,stem length and90?120-day sowing duration not established",
+        "Generic fertilizer stages do not resolve DOA conflicting table scopes",
+        "Do not turn40/60-day flowering offsets into planting offsets"
+      ]
+    },
+    {
+      "crop_name": "Corn",
+      "checked_official_source": "https://doa.gov.lk/field-crops-maize-si/",
+      "planning_activation": false,
+      "corroborated": [
+        "Direct sowing, drainage and early weed control"
+      ],
+      "unverified_or_different": [
+        "Draft5kg/acre=12.3552690735kg/ha, approximately but not exactly DOA hybrid12kg/ha",
+        "Baby/sweet/grain products have different harvest definitions; do not apply generic times across products",
+        "DOA variety grain duration differs from broad draft14?16-week statement",
+        "Compost bags lack bag mass; unspecified depth/spacing/fertilizer values remain unapproved"
+      ]
+    },
+    {
+      "crop_name": "Mung Beans",
+      "checked_official_source": "https://doa.gov.lk/field-crops-mungbean-si/",
+      "planning_activation": false,
+      "corroborated": [
+        "Maha/Yala and mid-season stubble cultivation",
+        "MI5/Ari listed;60?65-day duration applies to those examples"
+      ],
+      "unverified_or_different": [
+        "Draft temperature optimum30?35 differs from source25?32",
+        "DOA permits heavier soil with improved drainage; blanket avoidance is not equivalent",
+        "45?50-day stubble timing and1?1.5t/ha universal yield are not general cultivar defaults",
+        "Harsha not established by checked crop-page variety list; cited papers not checked here"
+      ]
+    },
+    {
+      "crop_name": "Chillies",
+      "checked_official_source": "https://doa.gov.lk/field-crops-chilli-si/",
+      "planning_activation": false,
+      "corroborated": [
+        "Several listed OPV/hybrid names and need for drainage/vector management"
+      ],
+      "unverified_or_different": [
+        "45cm spacing alone omits row distance and plants/hill",
+        "Draft60?75-day transplant harvest and7?10-day picking need corroboration; DOA planting anchor remains ambiguous",
+        "Repeated foliar/fermented feeds,pruning,2?3 irrigations/week and3?4-week fertilizer cycles not established",
+        "Do not combine fresh/dry yields or treat32t/ha hybrid estimate as universal"
+      ]
+    }
+  ]
+}

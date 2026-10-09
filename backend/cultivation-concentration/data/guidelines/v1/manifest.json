@@ -1,0 +1,15 @@
+{
+  "dataset_version": "1.0.0",
+  "checked_on": "2026-10-08",
+  "farmer_facing_enabled": false,
+  "publication_and_revision_dates": null,
+  "sources": {
+    "Bandakka": "https://doa.gov.lk/hordi-crop-okra/",
+    "Brinjal": "https://doa.gov.lk/hordi-crop-brinjal/",
+    "Pumpkin": "https://doa.gov.lk/hordi-crop-pumpkin/",
+    "Corn": "https://doa.gov.lk/field-crops-maize-si/",
+    "Mung Beans": "https://doa.gov.lk/field-crops-mungbean-si/",
+    "Chillies": "https://doa.gov.lk/field-crops-chilli-si/"
+  },
+  "draft_comparison": "pending: supplied draft text inaccessible"
+}

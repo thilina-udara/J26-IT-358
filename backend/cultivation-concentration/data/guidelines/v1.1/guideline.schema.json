@@ -1,0 +1,324 @@
+{
+  "$defs": {
+    "Range": {
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "title": "Min",
+          "type": "number"
+        },
+        "max": {
+          "title": "Max",
+          "type": "number"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "title": "Range",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "entry_id": {
+      "title": "Entry Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "crop_name": {
+      "enum": [
+        "Bandakka",
+        "Brinjal",
+        "Pumpkin",
+        "Corn",
+        "Mung Beans",
+        "Chillies"
+      ],
+      "title": "Crop Name",
+      "type": "string"
+    },
+    "variety": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Variety"
+    },
+    "district_applicability": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "District Applicability"
+    },
+    "season": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Season"
+    },
+    "guideline_category": {
+      "title": "Guideline Category",
+      "type": "string"
+    },
+    "activity_name": {
+      "title": "Activity Name",
+      "type": "string"
+    },
+    "timing_reference": {
+      "enum": [
+        "direct_sowing",
+        "nursery_sowing",
+        "transplanting",
+        "emergence",
+        "flowering",
+        "stage_condition",
+        "unspecified"
+      ],
+      "title": "Timing Reference",
+      "type": "string"
+    },
+    "days_offset": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Range"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "quantity": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Range"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "unit": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Unit"
+    },
+    "rate_per_hectare": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Range"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Url"
+    },
+    "source_type": {
+      "enum": [
+        "official_DOA_web",
+        "missing_draft",
+        "missing_evidence",
+        "user_draft"
+      ],
+      "title": "Source Type",
+      "type": "string"
+    },
+    "verification_status": {
+      "enum": [
+        "source_checked",
+        "unverified",
+        "conflicting_or_ambiguous"
+      ],
+      "title": "Verification Status",
+      "type": "string"
+    },
+    "notes": {
+      "title": "Notes",
+      "type": "string"
+    },
+    "source_section": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Section"
+    },
+    "publication_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Publication Version"
+    },
+    "publication_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Publication Date"
+    },
+    "source_revision_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Revision Date"
+    },
+    "historical_available_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Historical Available At"
+    },
+    "checked_on": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Checked On"
+    },
+    "source_language": {
+      "anyOf": [
+        {
+          "enum": [
+            "en",
+            "si"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Language"
+    },
+    "repeat_interval_days": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Repeat Interval Days"
+    },
+    "max_occurrences": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Occurrences"
+    },
+    "planning_activation": {
+      "const": false,
+      "default": false,
+      "title": "Planning Activation",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "entry_id",
+    "crop_name",
+    "guideline_category",
+    "activity_name",
+    "timing_reference",
+    "source_type",
+    "verification_status",
+    "notes"
+  ],
+  "title": "Entry",
+  "type": "object"
+}

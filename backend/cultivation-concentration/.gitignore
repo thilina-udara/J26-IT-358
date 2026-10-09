@@ -3,3 +3,51 @@
 __pycache__/
 .env
 *.pyc
+
+# Keep the supervisor entry point and the named, evidence-backed model bundles.
+!README.md
+
+# New runs/intermediate scratch outputs must use these explicit local directories.
+ml/work/
+models/intermediate/
+logs/
+*.log
+*.tmp
+*.temp
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+venv/
+env/
+.env.*
+!.env.example
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+*.cert
+*.sqlite
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.db
+*.db-journal
+storage/*
+!storage/.gitignore
+# Identifiable live-registration exports are not research reference datasets.
+data/private/
+data/registrations/
+snapshots/
+exports/farmer/
+docs/private/
+
+# Private externally supplied research inputs; catalog is safe metadata.
+models/experimental/
+models/reproducibility/
+models/local/
+data/farmer/*.csv
+data/legacy/*.csv
+*.zip
+data/research/

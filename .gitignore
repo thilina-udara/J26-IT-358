@@ -88,3 +88,7 @@ desktop.ini
 .gemini/
 README.md
 
+# Component 02 research documentation only; other components retain their rules.
+!/backend/cultivation-concentration/docs/
+!/backend/cultivation-concentration/docs/**
+

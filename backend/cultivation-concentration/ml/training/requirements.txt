@@ -1,0 +1,7 @@
+# Install into the backend virtual environment for reproducible comparison.
+numpy==2.5.3
+pandas
+scikit-learn==1.9.1
+xgboost==3.4.1
+catboost==1.2.10
+lightgbm==4.7.0

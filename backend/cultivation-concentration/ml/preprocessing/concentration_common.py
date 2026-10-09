@@ -3,6 +3,7 @@
 Retrospective planting-date cutoffs cannot verify registration availability.
 Research concentration labels are not independently verified market outcomes.
 """
+import hashlib
 from pathlib import Path
 import numpy as np
 import pandas as pd

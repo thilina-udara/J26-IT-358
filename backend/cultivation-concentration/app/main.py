@@ -209,11 +209,12 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
     @application.post('/api/farmer-workflow/plans',status_code=201,response_model=WorkflowSubmitResponse,
                       responses=error_responses(401,403,409,422,503))
     def workflow_submit(value: WorkflowPlan,identity=Depends(farmer),repository=Depends(store)):
-        from app.services.farmer_workflow import run, unavailable_report
+        from app.services.farmer_workflow import run, unavailable_report, season_context
         if value.planting_date<=datetime.now(timezone.utc).date():
             raise HTTPException(422,'Planting must be in the future')
         _,registry=planning_configuration()
         fields=value.model_dump(exclude={'season'})
+        fields['farmer_declared_season']=value.season
         saved=repository.save(PlanInput(**fields,farmer_id=identity),identity)
         try:
             report=run(repository,identity,saved['plan'].plan_id,value.season,registry,historical_predictor=historical_predictor,production_registry=production_registry)
@@ -224,7 +225,7 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
             logging.getLogger(__name__).warning('Post-save workflow analysis unavailable (%s)', type(exc).__name__)
             report=unavailable_report(saved['plan'].plan_id,
                 'Analysis unavailable; the cultivation plan was saved. Retry analysis using the saved plan ID.',
-                failed=True, season=value.season)
+                failed=True, season=value.season, context=season_context(saved['plan'].model_dump(),value.season))
         return dict(plan=saved['plan'],workflow=report)
 
     @application.post('/api/farmer-workflow/analyze',response_model=WorkflowReportResponse,

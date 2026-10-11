@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 District = Literal['Matara', 'Hambantota']
 Crop = Literal['Mung Beans', 'Corn', 'Bandakka', 'Brinjal', 'Pumpkin', 'Chillies']
+Season = Literal['Maha', 'Yala']
 
 
 class PlanInput(BaseModel):
@@ -16,6 +17,8 @@ class PlanInput(BaseModel):
     land_size_acres: float = Field(gt=0, allow_inf_nan=False)
     planting_date: date
     expected_harvest_date: date
+    farmer_declared_season: Season | None = Field(default=None,
+        description='Farmer declaration only; not an independently verified statistical season')
     status: Literal['active', 'cancelled'] = 'active'
 
     @field_validator('region')

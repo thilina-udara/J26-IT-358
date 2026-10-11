@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 from app.main import create_app
-from app.migrations import migrate
+from app.migrations import migrate, MIGRATIONS
 from app.schemas.auth import RegisterInput
 from app.schemas.cultivation_plan import PlanInput
 from app.services import farmer_auth
@@ -220,7 +220,7 @@ def test_migration_preserves_existing_plans_and_history(tmp_path):
     migrate(path)
     with repository.connection() as db:
         after = {table: [tuple(row) for row in db.execute('SELECT * FROM ' + table)] for table in tables}
-        assert db.execute('SELECT COUNT(*) FROM component02_schema_migrations').fetchone()[0] == 1
+        assert db.execute('SELECT COUNT(*) FROM component02_schema_migrations').fetchone()[0] == len(MIGRATIONS)
         assert db.execute('SELECT COUNT(*) FROM farmer_accounts').fetchone()[0] == 0
     assert after == before
     client = TestClient(create_app(path, {'research': 'fictional-legacy'}))

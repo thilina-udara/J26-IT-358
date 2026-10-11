@@ -1,7 +1,7 @@
 """Stable outer response contracts; variable evidence payloads remain intact."""
 from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict
-from app.schemas.cultivation_plan import Plan, Crop
+from app.schemas.cultivation_plan import Plan, Crop, Season
 
 
 class CompatibleResponse(BaseModel):
@@ -88,7 +88,18 @@ class SavedPersonalizedPlanResponse(CompatibleResponse):
     stale: bool
 
 
+class SeasonContext(BaseModel):
+    farmer_declared_season: Season | None
+    requested_season: Season | None
+    effective_analysis_season: Season | None
+    source: Literal['analysis_request', 'farmer_declaration', 'unknown']
+    conflict: bool
+    independently_verified_statistical_season: None = None
+    interpretation: str
+
+
 class WorkflowReportResponse(CompatibleResponse):
+    season_context: SeasonContext | None = None
     status: str
     analysis_status: str
     missing_evidence: list[str]

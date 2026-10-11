@@ -261,3 +261,37 @@ inputs. These changes do not activate a validated risk classifier, automatic
 High-risk recommendations, or unapproved guideline activities. Offset pagination
 has a bounded but growing cost for deep pages. SQLite concurrency and deployment
 abuse controls still require operational review.
+## Farmer-declared season
+
+Existing cultivation-plan POST and PUT bodies accept the optional field
+`"farmer_declared_season": "Maha"` (or `"Yala"`, or `null`). Plan responses,
+owned list items, and workflow retrieval include it. Existing clients may omit it:
+creation remains unknown, and updates preserve the current declaration. Explicit
+`null` clears it. Unsupported values return 422. Ownership/session errors retain
+their existing 401/403/404 behavior.
+
+Workflow submission continues accepting the existing `season` field and now stores
+it as `farmer_declared_season`. Analysis requests still accept `season`. A supplied
+analysis season takes precedence for that analysis only; otherwise the declaration
+from the plan version available at `as_of` is used. Neither operation infers a
+season from dates or writes an analysis override to plan history.
+
+Workflow reports add `season_context`, for example:
+
+```json
+{
+  "farmer_declared_season": "Maha",
+  "requested_season": "Yala",
+  "effective_analysis_season": "Yala",
+  "source": "analysis_request",
+  "conflict": true,
+  "independently_verified_statistical_season": null,
+  "interpretation": "Analysis context only; independent statistical-season/year mapping and evidence approvals remain required"
+}
+```
+
+The verified statistical-season field remains null in this context: independent
+mapping evidence is managed separately, and no declaration is promoted to verified
+evidence. Current concentration analysis still makes no season-specific population
+filtering claim. Risk, historical model compatibility, coverage, and guideline
+approval gates remain unchanged.

@@ -142,3 +142,9 @@ private bundles, models, databases and tokens. Previously tracked historical far
 CSV is removed from the new index only, preserved locally and in the private input
 bundle. Its old Git history is not rewritten; removing tracking does not erase
 past exposure. Review repository visibility if that history is sensitive.
+## Declared-season migration
+
+Apply [migration 002](database_migrations.md) with the existing migration command
+before serving traffic. It preserves plans, histories, and timestamps and leaves
+legacy seasons NULL. No additional environment variables or private artifacts are
+required. After migration, verify with `.venv\Scripts\python.exe -B -m pytest -q`.

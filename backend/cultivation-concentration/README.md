@@ -44,3 +44,12 @@ before startup; cross-origin access defaults to disabled. Run the database migra
 command before serving traffic. `/health` remains liveness; `/ready` checks essential
 database/authentication/runtime dependencies and reports optional research capabilities
 without asserting model or agricultural validation.
+## Versioned farmer declarations
+
+Cultivation plans now retain optional `farmer_declared_season` (`Maha`, `Yala`, or
+null), including revisions and cancellation. Workflow submission retains its
+existing `season` input. Analysis overrides are explicit and do not edit saved
+declarations. These are unverified context, not statistical-season evidence or
+validated live risk. Run the existing migration command before startup; see
+[additive migration details](docs/database_migrations.md) and
+[workflow examples](docs/farmer_workflow.md).

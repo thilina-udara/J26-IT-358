@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MODEL_CATALOG = ROOT / 'models/artifact_catalog.json'
 GUIDELINE_FILE = ROOT / 'data/guidelines/v1.1/verified_entries.json'
 REQUIRED_COLUMNS = {
-    'cultivation_plans': 'plan_id,farmer_id,district,region,crop,land_size_acres,planting_date,expected_harvest_date,submitted_at,updated_at,status',
+    'cultivation_plans': 'plan_id,farmer_id,district,region,crop,land_size_acres,planting_date,expected_harvest_date,submitted_at,updated_at,status,farmer_declared_season',
     'cultivation_plan_versions': 'version_id,plan_id,recorded_at,payload',
     'personalized_plan_versions': 'revision_id,plan_id,farmer_id,saved_at,payload',
     'farmer_accounts': 'farmer_id,login_identifier,password_hash,created_at,disabled',

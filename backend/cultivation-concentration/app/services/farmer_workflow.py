@@ -10,12 +10,23 @@ from app.schemas.alternatives import AlternativeRequest
 import json
 
 
-def unavailable_report(plan_id, reason, *, failed=False, season=None, cutoff=None):
+def season_context(owned, requested):
+    declared = owned.get('farmer_declared_season')
+    return dict(farmer_declared_season=declared, requested_season=requested,
+        effective_analysis_season=requested if requested is not None else declared,
+        source='analysis_request' if requested is not None else 'farmer_declaration' if declared else 'unknown',
+        conflict=requested is not None and declared is not None and requested != declared,
+        independently_verified_statistical_season=None,
+        interpretation='Analysis context only; independent statistical-season/year mapping and evidence approvals remain required')
+
+
+def unavailable_report(plan_id, reason, *, failed=False, season=None, cutoff=None, context=None):
     """Preserve the workflow envelope without claiming analysis was performed."""
     cutoff = cutoff or datetime.now(timezone.utc)
     missing = [reason]
     empty = dict(status='insufficient_evidence', risk_level=None, missing_evidence=missing)
     return dict(workflow_version='1', plan_id=plan_id, as_of=cutoff.isoformat(),
+        season_context=context or season_context({}, season),
         status='analysis_unavailable' if failed else 'insufficient_evidence',
         analysis_status='failed' if failed else 'not_applicable', missing_evidence=missing,
         historical_prediction=dict(empty), current_plan_risk=dict(empty),
@@ -60,8 +71,10 @@ def run(repository,identity,plan_id,season,evidence,as_of=None,historical_predic
         if version and version['farmer_id']==identity and version['status']=='active' and (
                 date.fromisoformat(version['planting_date'])<=cutoff.date()
                 or date.fromisoformat(version['expected_harvest_date'])<=cutoff.date()):
-            return unavailable_report(plan_id, 'Historical or already-started cultivation is not eligible for current pre-planting analysis; the record is preserved.', season=season, cutoff=cutoff)
+            return unavailable_report(plan_id, 'Historical or already-started cultivation is not eligible for current pre-planting analysis; the record is preserved.', season=season, cutoff=cutoff, context=season_context(version,season))
         raise HTTPException(404,'Active available future plan not found')
+    context_season=season_context(owned,season)
+    season=context_season['effective_analysis_season']
     indicators=prepare_indicators(repository,cutoff,owned['district'],owned['region'],owned['crop'],
         season or 'unspecified',date.fromisoformat(owned['expected_harvest_date']),prepared_snapshot=records)
     assessment=explain(indicators)
@@ -94,6 +107,7 @@ def run(repository,identity,plan_id,season,evidence,as_of=None,historical_predic
     from app.services.production_reference import evaluate as reference_evaluate, farmer_response as reference_response
     reference_assessment=reference_response(reference_evaluate(records,owned,season,cutoff,production_registry))
     return dict(workflow_version='1',plan_id=plan_id,as_of=cutoff.isoformat(),historical_prediction=historical,
+        season_context=context_season,
         status='insufficient_evidence' if assessment.get('risk_level') is None else assessment['status'],
         analysis_status='completed', missing_evidence=assessment['missing_evidence'],
         current_plan_risk=farmer_view(evaluate(indicators)),

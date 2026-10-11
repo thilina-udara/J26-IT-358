@@ -161,3 +161,31 @@ classification evidence, verified production/yield, historical baselines, season
 coverage, suitability and approved agricultural claims remain explicit. Optional
 models are not asserted healthy or validated. No yield, price, profit or demand
 claims are fabricated.
+## Persistent declared season
+
+The existing workflow submission `season` now persists as
+`plan.farmer_declared_season`. A fictional farmer may submit:
+
+```json
+{
+  "district": "Matara", "region": "north", "crop": "Corn",
+  "land_size_acres": 2, "planting_date": "2030-01-01",
+  "expected_harvest_date": "2030-04-01", "season": "Maha"
+}
+```
+
+POST this to `/api/farmer-workflow/plans` with the farmer's bearer session. Retrieval
+and listing retain the declaration. POST `{"plan_id":"<owned-plan-id>"}` to
+`/api/farmer-workflow/analyze` to use the cutoff-available stored declaration. Add
+`"season":"Yala"` to analyze a different context: the response reports a conflict
+and leaves the saved Maha declaration unchanged. Explicit season changes belong in
+PUT `/api/cultivation-plans/<owned-plan-id>` using `farmer_declared_season` and the
+existing required plan fields. This creates a revision and makes earlier saved
+personalized results stale.
+
+Personalized planning retains its explicit request `season` and approval matching.
+Saving a personalized plan preserves the base declaration rather than replacing it
+with planning context. Existing records remain unknown; no dates imply a season.
+Neither a stored declaration nor an override verifies a statistical season/year,
+enables a model, or approves agricultural guidance. See
+[API contract](frontend_api.md) and [migration details](database_migrations.md).

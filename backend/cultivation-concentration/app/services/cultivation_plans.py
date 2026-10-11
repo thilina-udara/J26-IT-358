@@ -6,12 +6,16 @@ from pathlib import Path
 from uuid import uuid4
 from fastapi import HTTPException
 from app.schemas.cultivation_plan import Plan
+from app.migrations import migrate
 
 
 class PlanStore:
     def __init__(self, path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        # Season storage is independent of account provisioning. Preserve the
+        # existing plan-only bootstrap and readiness requirement for auth setup.
+        migrate(self.path, versions={2})
         with self.connection() as db:
             db.executescript('''
                 CREATE TABLE IF NOT EXISTS cultivation_plans (
@@ -124,6 +128,8 @@ class PlanStore:
                     raise HTTPException(409,'Plan changed; regenerate before saving')
                 identity = plan_id or str(uuid4())
                 fields = value.model_dump(mode='json')
+                if old and 'farmer_declared_season' not in value.model_fields_set:
+                    fields['farmer_declared_season'] = old.farmer_declared_season
                 fields.update(plan_id=identity,submitted_at=old.submitted_at.isoformat() if old else now,updated_at=now)
                 if old:
                     db.execute('UPDATE cultivation_plans SET '+','.join(c+'=?' for c in fields if c!='plan_id')+' WHERE plan_id=?',

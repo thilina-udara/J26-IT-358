@@ -3,10 +3,11 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-MIGRATIONS = ((1, '001_farmer_accounts.sql'),)
+MIGRATIONS = ((1, '001_farmer_accounts.sql'), (2, '002_farmer_declared_season.sql'))
 
 
-def migrate(database_path):
+def migrate(database_path, *, versions=None):
+    """Apply all migrations, or an independent subset for repository bootstrap."""
     path = Path(database_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(path, timeout=10)
@@ -18,6 +19,8 @@ def migrate(database_path):
                 version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL
             )''')
             for version, name in MIGRATIONS:
+                if versions is not None and version not in versions:
+                    continue
                 existing = db.execute(
                     'SELECT name FROM component02_schema_migrations WHERE version=?', (version,)
                 ).fetchone()

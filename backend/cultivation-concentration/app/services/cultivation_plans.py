@@ -29,6 +29,14 @@ class PlanStore:
                     WHERE status='active';
                 CREATE INDEX IF NOT EXISTS plan_overlap ON cultivation_plans
                     (district,region,crop,status,expected_harvest_date);
+                CREATE INDEX IF NOT EXISTS plan_owner_listing ON cultivation_plans
+                    (farmer_id,submitted_at DESC,plan_id DESC);
+                CREATE INDEX IF NOT EXISTS plan_owner_status_listing ON cultivation_plans
+                    (farmer_id,status,submitted_at DESC,plan_id DESC);
+                CREATE INDEX IF NOT EXISTS plan_owner_crop_listing ON cultivation_plans
+                    (farmer_id,crop,submitted_at DESC,plan_id DESC);
+                CREATE INDEX IF NOT EXISTS plan_owner_district_listing ON cultivation_plans
+                    (farmer_id,district,submitted_at DESC,plan_id DESC);
                 CREATE TABLE IF NOT EXISTS cultivation_plan_versions (
                     version_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     plan_id TEXT NOT NULL, recorded_at TEXT NOT NULL,
@@ -82,6 +90,27 @@ class PlanStore:
         with self.connection() as db:
             db.execute('BEGIN')
             return self.response(db,self.get(db,plan_id,farmer))
+
+    def list_owned(self, farmer, limit=20, offset=0, status=None, crop=None, district=None):
+        conditions = ['farmer_id=?']
+        values = [farmer]
+        # Column names come only from this fixed map; caller values are parameters.
+        for column, value in (('status', status), ('crop', crop), ('district', district)):
+            if value is not None:
+                conditions.append(column + '=?')
+                values.append(value)
+        where = ' AND '.join(conditions)
+        with self.connection() as db:
+            # Count and page refer to the same database snapshot.
+            db.execute('BEGIN')
+            total = db.execute('SELECT COUNT(*) FROM cultivation_plans WHERE ' + where, values).fetchone()[0]
+            rows = db.execute('SELECT * FROM cultivation_plans WHERE ' + where +
+                              ' ORDER BY submitted_at DESC,plan_id DESC LIMIT ? OFFSET ?',
+                              [*values, limit, offset]).fetchall()
+        items = [Plan.model_validate(dict(row)) for row in rows]
+        has_more = offset + len(items) < total
+        return dict(items=items, total=total, limit=limit, offset=offset, has_more=has_more,
+                    next_offset=offset + limit if has_more else None)
 
     def save(self, value, farmer, plan_id=None, expected_updated_at=None, personalized=None):
         if value.farmer_id != farmer:

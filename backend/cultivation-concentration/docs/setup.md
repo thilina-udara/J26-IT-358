@@ -61,18 +61,57 @@ remain disclosed. Use a new output directory; never overwrite existing artifacts
 ## Backend and configuration
 
 ```powershell
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+$env:CULTIVATION_CORS_ORIGINS = '["http://localhost:5173","http://127.0.0.1:5173"]'
+.venv\Scripts\python.exe -B -m app.migrations
+.venv\Scripts\python.exe -B -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-`GET /health` should return 200. No real credentials ship with this project.
+`GET /health` should return 200. `GET /ready` returns 200 only when the core
+database schema, account migration ledger, database write access, authentication
+configuration and clustering runtime are available. No real credentials ship with this project.
 Use `.env.example` as a key reference; the application reads environment variables,
 it does not automatically load that file. Set `CULTIVATION_FARMER_TOKENS`,
 `CULTIVATION_ANALYSIS_TOKENS`, `CULTIVATION_ADMIN_TOKENS` and
 `CULTIVATION_REVIEWER_TOKENS` with newly generated development-only tokens as needed.
-An empty token configuration permits health checks but not authenticated operations.
+Empty role registries still permit farmer account registration and login. Static
+research users remain supported; account sessions do not grant analyst/admin/reviewer roles.
 `CULTIVATION_PLAN_DB` and `CULTIVATION_REFERENCE_DB` select new local SQLite files;
 default files are under ignored `storage/`. Evidence/approval paths are deployment
 inputs, never team member credentials or existing farmer databases.
+
+See [the registered farmer workflow](farmer_workflow.md) for exact requests,
+historical-record policy, recoverable submission and end-to-end verification.
+
+The additive account migration uses the same `CULTIVATION_PLAN_DB`. Back up any
+existing operational database before deploying. It creates account/session/throttle
+tables and a migration ledger, without changing plans, history, or their ownership.
+Authentication lazily applies pending migrations for local development; production
+should run the explicit migration command before accepting traffic. Health and
+OpenAPI checks do not initialize the database.
+
+The migration CLI also reuses the existing `PlanStore` bootstrap to initialize plan
+tables and owner-listing indexes. It preserves existing plan data and versioning
+semantics, including the existing current-version backfill for pre-versioning rows.
+`/ready` never creates a database or applies migrations; its write-access probe is
+rolled back without changing rows. A cold, uninitialized database returns 503.
+
+`CULTIVATION_SESSION_TTL_SECONDS` defaults to 3600 (allowed: 60-86400).
+`CULTIVATION_LEGACY_FARMER_TOKENS_ENABLED` defaults to `true` for compatibility;
+set it to `false` for account-only farmer authentication. Existing analyst/admin/
+reviewer tokens are unaffected. See [the authentication API](authentication.md)
+for JSON payloads, logout behavior, limits, and deployment requirements.
+
+`CULTIVATION_CORS_ORIGINS` is a JSON array of explicit HTTP(S) origins, default `[]`.
+Paths, trailing slashes, wildcard origins and invalid values are rejected at startup.
+Restart after changing origins. Allowed headers include Authorization and Content-Type;
+GET/POST/PUT/DELETE and preflight OPTIONS are supported. The bearer API does not enable
+credential cookies. See [frontend integration examples](frontend_api.md) for pagination,
+filtering, response contracts, and error handling.
+
+Optional model artifacts, guideline documents and injected research predictors are
+reported separately by `/ready`. Missing optional inputs do not block basic account
+and plan operations; ready does not mean risk levels, recommendations or agronomic
+guidelines have been validated or activated.
 
 Guidelines preserve checked source URLs and unverified draft claims. Unverified
 entries remain inactive. Registered-plan calculations, experimental forecasts and

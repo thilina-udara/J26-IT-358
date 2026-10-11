@@ -1,13 +1,20 @@
 import json
 import os
 import secrets
+import logging
 from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response
 from datetime import date, datetime, timezone
 from typing import Literal
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.schemas.cultivation_plan import PlanInput, PlanResponse
+from app.schemas.cultivation_plan import PlanInput, PlanResponse, PlanSubmission, PlanListResponse, Crop, District
 from app.services.cultivation_plans import PlanStore
+from app.services.farmer_auth import AuthStore, SESSION_PREFIX, unauthorized
+from app.schemas.api_responses import (
+    HealthResponse, ReadinessResponse, RiskAssessmentResponse, AlternativeComparisonResponse,
+    PersonalizedPlanResponse, SavedPersonalizedPlanResponse, WorkflowReportResponse,
+    WorkflowSubmitResponse, WorkflowReadResponse, error_responses,
+)
 
 def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alternative_evidence=None,
                planning_approvals=None, planning_guideline_dir=None, admin_tokens=None,
@@ -18,6 +25,31 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
     # Lazy initialization keeps health checks/tests from creating the live DB.
     database_path = database_path or os.getenv('CULTIVATION_PLAN_DB', str(Path(__file__).resolve().parents[1]/'storage/cultivation_plans.sqlite3'))
     security = HTTPBearer(auto_error=False)
+    from app.cors import allowed_origins
+    frontend_origins = allowed_origins()
+
+    # Prevent credentials from appearing in validation responses or intermediary caches.
+    from fastapi.exceptions import RequestValidationError
+    from fastapi.exception_handlers import request_validation_exception_handler
+    from fastapi.responses import JSONResponse
+
+    @application.exception_handler(RequestValidationError)
+    async def validation_error(request, exc):
+        if request.url.path.startswith('/auth/'):
+            errors = [{key: error[key] for key in ('type', 'loc', 'msg')} for error in exc.errors()]
+            return JSONResponse(status_code=422, content={'detail': errors})
+        return await request_validation_exception_handler(request, exc)
+
+    @application.middleware('http')
+    async def protect_auth_responses(request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith('/auth/'):
+            response.headers['Cache-Control'] = 'no-store'
+            response.headers['Pragma'] = 'no-cache'
+        return response
+
+    def auth_store():
+        return AuthStore(database_path)
 
     def roles():
         try:
@@ -40,18 +72,35 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
         except (ValueError, TypeError) as exc:
             raise HTTPException(503,'Authentication configuration unavailable') from exc
 
-    def farmer(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    def farmer_profile(credentials: HTTPAuthorizationCredentials = Depends(security)):
         tokens, _, _ = roles()
-        if not tokens:
-            raise HTTPException(503,'Farmer authentication is not configured')
         if credentials and credentials.scheme.lower() == 'bearer':
-            for token, identity in tokens.items():
-                if secrets.compare_digest(credentials.credentials,token):
-                    return identity
-        raise HTTPException(401,'Valid farmer credentials required',headers={'WWW-Authenticate':'Bearer'})
+            # Session-looking tokens never fall back to static credentials after expiry/revocation.
+            if credentials.credentials.startswith(SESSION_PREFIX):
+                return auth_store().authenticate(credentials.credentials)
+            legacy = os.getenv('CULTIVATION_LEGACY_FARMER_TOKENS_ENABLED', 'true').lower()
+            if legacy not in ('true', 'false'):
+                raise HTTPException(503, 'Farmer authentication configuration unavailable')
+            if legacy == 'true':
+                for token, identity in tokens.items():
+                    if secrets.compare_digest(credentials.credentials.encode('utf-8'),token.encode('utf-8')):
+                        return dict(farmer_id=identity, login_identifier=None,
+                                    authentication_method='legacy_research_token', created_at=None)
+        raise unauthorized()
+
+    def farmer(profile=Depends(farmer_profile)):
+        return profile['farmer_id']
 
     def store():
         return PlanStore(database_path)
+
+    from app.auth_routes import router as auth_router
+    application.include_router(auth_router(auth_store, farmer_profile, security, roles))
+
+    def verified_plan_input(value, identity):
+        if value.farmer_id is not None and value.farmer_id != identity:
+            raise HTTPException(403, 'farmer_id must match authenticated farmer')
+        return PlanInput(**value.model_dump(exclude={'farmer_id'}), farmer_id=identity)
 
     def analyst(credentials: HTTPAuthorizationCredentials = Depends(security)):
         _, tokens, admins = roles()
@@ -154,23 +203,37 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
 
     from app.schemas.farmer_workflow import WorkflowPlan, WorkflowAnalysis, WorkflowChoice
 
-    @application.post('/api/farmer-workflow/plans',status_code=201)
+    @application.post('/api/farmer-workflow/plans',status_code=201,response_model=WorkflowSubmitResponse,
+                      responses=error_responses(401,403,409,422,503))
     def workflow_submit(value: WorkflowPlan,identity=Depends(farmer),repository=Depends(store)):
-        from app.services.farmer_workflow import run
+        from app.services.farmer_workflow import run, unavailable_report
         if value.planting_date<=datetime.now(timezone.utc).date():
             raise HTTPException(422,'Planting must be in the future')
         _,registry=planning_configuration()
         fields=value.model_dump(exclude={'season'})
         saved=repository.save(PlanInput(**fields,farmer_id=identity),identity)
-        return dict(plan=saved['plan'],workflow=run(repository,identity,saved['plan'].plan_id,value.season,registry,historical_predictor=historical_predictor,production_registry=production_registry))
+        try:
+            report=run(repository,identity,saved['plan'].plan_id,value.season,registry,historical_predictor=historical_predictor,production_registry=production_registry)
+            # Validate before returning: an invalid analysis response must also leave
+            # the committed plan discoverable by its owner.
+            WorkflowReportResponse.model_validate(report)
+        except Exception as exc:
+            logging.getLogger(__name__).warning('Post-save workflow analysis unavailable (%s)', type(exc).__name__)
+            report=unavailable_report(saved['plan'].plan_id,
+                'Analysis unavailable; the cultivation plan was saved. Retry analysis using the saved plan ID.',
+                failed=True, season=value.season)
+        return dict(plan=saved['plan'],workflow=report)
 
-    @application.post('/api/farmer-workflow/analyze')
+    @application.post('/api/farmer-workflow/analyze',response_model=WorkflowReportResponse,
+                      responses=error_responses(401,404,422,503))
     def workflow_analyze(value: WorkflowAnalysis,identity=Depends(farmer),repository=Depends(store)):
         from app.services.farmer_workflow import run
         _,registry=planning_configuration()
         return run(repository,identity,value.plan_id,value.season,registry,value.as_of,historical_predictor,production_registry)
 
-    @application.post('/api/farmer-workflow/select')
+    @application.post('/api/farmer-workflow/select',
+                      response_model=PersonalizedPlanResponse | SavedPersonalizedPlanResponse,
+                      response_model_exclude_unset=True,responses=error_responses(401,404,409,422,503))
     def workflow_select(value: WorkflowChoice,identity=Depends(farmer),repository=Depends(store)):
         from app.services.farmer_workflow import run
         _,registry=planning_configuration()
@@ -186,7 +249,8 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
         request=PlanningRequest.model_validate(value.model_dump(exclude={'save'}))
         return run_planning(request,identity,repository,value.save)
 
-    @application.get('/api/farmer-workflow/plans/{plan_id}')
+    @application.get('/api/farmer-workflow/plans/{plan_id}',response_model=WorkflowReadResponse,
+                     responses=error_responses(401,404,503))
     def workflow_read(plan_id: str,identity=Depends(farmer),repository=Depends(store)):
         from app.services.personalized_planning import retrieve
         result=repository.read(plan_id,identity)
@@ -196,20 +260,24 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
             personalized=None
         return dict(plan=result['plan'],personalized_plan=personalized)
 
-    @application.post('/api/personalized-cultivation-plans/generate')
+    @application.post('/api/personalized-cultivation-plans/generate',response_model=PersonalizedPlanResponse,
+                      response_model_exclude_unset=True,responses=error_responses(401,404,409,422,503))
     def generate_personalized(value: PlanningRequest, identity=Depends(farmer), repository=Depends(store)):
         return run_planning(value, identity, repository)
 
-    @application.post('/api/personalized-cultivation-plans/save')
+    @application.post('/api/personalized-cultivation-plans/save',response_model=SavedPersonalizedPlanResponse,
+                      response_model_exclude_unset=True,responses=error_responses(401,404,409,422,503))
     def save_personalized(value: PlanningRequest, identity=Depends(farmer), repository=Depends(store)):
         return run_planning(value, identity, repository, True)
 
-    @application.get('/api/personalized-cultivation-plans/{plan_id}')
+    @application.get('/api/personalized-cultivation-plans/{plan_id}',response_model=SavedPersonalizedPlanResponse,
+                     responses=error_responses(401,404,503))
     def read_personalized(plan_id: str, identity=Depends(farmer), repository=Depends(store)):
         from app.services.personalized_planning import retrieve
         return retrieve(repository, plan_id, identity)
 
-    @application.post('/api/cultivation-analysis/alternatives')
+    @application.post('/api/cultivation-analysis/alternatives',response_model=AlternativeComparisonResponse,
+                      responses=error_responses(401,404,422,503))
     def alternatives(value: AlternativeRequest,identity=Depends(farmer),repository=Depends(store)):
         from app.services.alternatives import compare_alternatives
         try:
@@ -223,7 +291,7 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
         from app.services.privacy import farmer_view
         return farmer_view(compare_alternatives(repository,value,identity,registry))
 
-    @application.get('/api/cultivation-analysis/clusters')
+    @application.get('/api/cultivation-analysis/clusters',responses=error_responses(403,422,503))
     def clustering(district: Literal['Matara','Hambantota'],
                    as_of: datetime | None = None,
                    k: int = Query(3,ge=1,le=10),
@@ -241,7 +309,8 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
         from app.services.privacy import analyst_view
         return analyst_view(result)
 
-    @application.get('/api/cultivation-plans/{plan_id}/risk-assessment')
+    @application.get('/api/cultivation-plans/{plan_id}/risk-assessment',response_model=RiskAssessmentResponse,
+                     responses=error_responses(401,404,422,503))
     def owned_assessment(plan_id: str, season: Literal['Maha','Yala'], as_of: datetime | None = None,
                          identity=Depends(farmer),repository=Depends(store)):
         from app.services.plan_clustering import snapshot
@@ -256,11 +325,15 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
         cutoff=cutoff.astimezone(timezone.utc)
         plan=next((p for p in snapshot(repository,cutoff) if p['plan_id']==plan_id and p['farmer_id']==identity),None)
         if plan is None:
-            raise HTTPException(404,'Active available plan not found')
+            from app.services.farmer_workflow import run
+            from app.schemas.alternatives import EvidenceRegistry
+            report=run(repository,identity,plan_id,season,EvidenceRegistry(),cutoff)
+            return dict(report['assessment'], indicators={}, explanations={},
+                interpretation='Historical records are preserved; current pre-planting risk is not evaluated.')
         return farmer_view(assess(repository,cutoff,plan['district'],plan['region'],plan['crop'],season,
                                  date.fromisoformat(plan['expected_harvest_date'])))
 
-    @application.get('/api/cultivation-analysis/risk-indicators')
+    @application.get('/api/cultivation-analysis/risk-indicators',responses=error_responses(403,422,503))
     def risk_indicators(district: Literal['Matara','Hambantota'],
                         region: str = Query(min_length=1,max_length=100),
                         crop: Literal['Mung Beans','Corn','Bandakka','Brinjal','Pumpkin','Chillies'] = Query(),
@@ -277,7 +350,8 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
         except ValueError as exc:
             raise HTTPException(422,str(exc)) from exc
 
-    @application.get('/api/cultivation-analysis/risk-assessment')
+    @application.get('/api/cultivation-analysis/risk-assessment',response_model=RiskAssessmentResponse,
+                     responses=error_responses(403,422,503))
     def risk_assessment(district: Literal['Matara','Hambantota'],
                         region: str = Query(min_length=1,max_length=100),
                         crop: Literal['Mung Beans','Corn','Bandakka','Brinjal','Pumpkin','Chillies'] = Query(),
@@ -291,28 +365,70 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
     def root() -> dict[str, str]:
         return {'message': 'Cultivation concentration backend'}
 
-    @application.get('/health')
+    @application.get('/health',response_model=HealthResponse,summary='Application liveness')
     def health_check() -> dict[str, str]:
         return {'status': 'healthy'}
 
-    @application.post('/api/cultivation-plans',response_model=PlanResponse,status_code=201)
-    def create(value: PlanInput, identity=Depends(farmer), repository=Depends(store)):
-        return repository.save(value,identity)
+    @application.get('/ready',response_model=ReadinessResponse,summary='Core dependency readiness',
+                     responses={503: {'model': ReadinessResponse, 'description': 'Required dependency unavailable'}})
+    def readiness(response: Response):
+        from app.services.readiness import report
+        result = report(database_path,roles,
+                        os.getenv('CULTIVATION_LEGACY_FARMER_TOKENS_ENABLED','true').lower(),
+                        historical_predictor,prospective_predictor,planning_guideline_dir)
+        response.headers['Cache-Control'] = 'no-store'
+        if result['status'] != 'ready':
+            response.status_code = 503
+        return result
 
-    @application.get('/api/cultivation-plans/{plan_id}',response_model=PlanResponse)
+    @application.get('/api/cultivation-plans',response_model=PlanListResponse,
+                     summary='List the authenticated farmer\'s current plans',
+                     responses=error_responses(401,422,503))
+    def list_plans(request: Request,response: Response,
+                   limit: int = Query(20,ge=1,le=100),
+                   offset: int = Query(0,ge=0,le=1_000_000),
+                   status: Literal['active','cancelled'] | None = Query(None),
+                   crop: Crop | None = Query(None),district: District | None = Query(None),
+                   identity=Depends(farmer),repository=Depends(store)):
+        allowed = {'limit','offset','status','crop','district'}
+        if any(key not in allowed for key in request.query_params):
+            raise HTTPException(422,'Unsupported plan listing query parameter')
+        if any(len(request.query_params.getlist(key)) != 1 for key in request.query_params):
+            raise HTTPException(422,'Plan listing query parameters must not be repeated')
+        response.headers['Cache-Control'] = 'no-store'
+        return repository.list_owned(identity,limit,offset,status,crop,district)
+
+    @application.post('/api/cultivation-plans',response_model=PlanResponse,status_code=201,
+                      responses=error_responses(401,403,409,422,503))
+    def create(value: PlanSubmission, identity=Depends(farmer), repository=Depends(store)):
+        return repository.save(verified_plan_input(value,identity),identity)
+
+    @application.get('/api/cultivation-plans/{plan_id}',response_model=PlanResponse,
+                     responses=error_responses(401,404,503))
     def read(plan_id: str, identity=Depends(farmer), repository=Depends(store)):
         return repository.read(plan_id,identity)
 
-    @application.put('/api/cultivation-plans/{plan_id}',response_model=PlanResponse)
-    def update(plan_id: str,value: PlanInput, identity=Depends(farmer),repository=Depends(store)):
-        return repository.save(value,identity,plan_id)
+    @application.put('/api/cultivation-plans/{plan_id}',response_model=PlanResponse,
+                     responses=error_responses(401,403,404,409,422,503))
+    def update(plan_id: str,value: PlanSubmission, identity=Depends(farmer),repository=Depends(store)):
+        return repository.save(verified_plan_input(value,identity),identity,plan_id)
 
-    @application.delete('/api/cultivation-plans/{plan_id}',response_model=PlanResponse)
+    @application.delete('/api/cultivation-plans/{plan_id}',response_model=PlanResponse,
+                        responses=error_responses(401,404,503))
     def cancel(plan_id: str,identity=Depends(farmer),repository=Depends(store)):
         return repository.cancel(plan_id,identity)
 
     from app.prospective_routes import router as prospective_router
     application.include_router(prospective_router(farmer,analyst,administrator,store,prospective_predictor))
+
+    # CORS is outside the auth response middleware, so normal error responses also
+    # receive allowlist headers. This bearer API does not use credential cookies.
+    from fastapi.middleware.cors import CORSMiddleware
+    application.add_middleware(CORSMiddleware,allow_origins=frontend_origins,
+                               allow_credentials=False,
+                               allow_methods=['GET','POST','PUT','DELETE','OPTIONS'],
+                               allow_headers=['Authorization','Content-Type','Accept'],
+                               expose_headers=['WWW-Authenticate','Retry-After'])
 
     return application
 

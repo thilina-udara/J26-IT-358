@@ -7,6 +7,27 @@ from app.services.risk_assessment import explain
 from app.services.privacy import farmer_view
 from app.services.alternatives import compare_alternatives
 from app.schemas.alternatives import AlternativeRequest
+import json
+
+
+def unavailable_report(plan_id, reason, *, failed=False, season=None, cutoff=None):
+    """Preserve the workflow envelope without claiming analysis was performed."""
+    cutoff = cutoff or datetime.now(timezone.utc)
+    missing = [reason]
+    empty = dict(status='insufficient_evidence', risk_level=None, missing_evidence=missing)
+    return dict(workflow_version='1', plan_id=plan_id, as_of=cutoff.isoformat(),
+        status='analysis_unavailable' if failed else 'insufficient_evidence',
+        analysis_status='failed' if failed else 'not_applicable', missing_evidence=missing,
+        historical_prediction=dict(empty), current_plan_risk=dict(empty),
+        experimental_production_assessment=dict(empty), experimental_alternatives=[],
+        experimental_reference_assessment=dict(empty), assessment=dict(empty),
+        clustering=dict(status='not_evaluated', algorithms=['K-Means','DBSCAN'],
+            explanation='Descriptive cultivation patterns only; no risk classification.'),
+        recommendations=dict(status='blocked_unvalidated_risk', alternatives=[]),
+        next_step='retry_saved_plan_analysis' if failed else 'retain_historical_record',
+        planning_status='not_evaluated',
+        recovery=dict(plan_saved=True, retryable=failed, method='POST',
+            endpoint='/api/farmer-workflow/analyze', request=dict(plan_id=plan_id, season=season)))
 
 
 def defensible_high(assessment,cutoff):
@@ -28,7 +49,19 @@ def run(repository,identity,plan_id,season,evidence,as_of=None,historical_predic
     cutoff=cutoff.astimezone(timezone.utc)
     records=snapshot(repository,cutoff)
     owned=next((p for p in records if p['plan_id']==plan_id and p['farmer_id']==identity),None)
-    if owned is None:raise HTTPException(404,'Active available future plan not found')
+    if owned is None:
+        # Inspect this owner's version at the cutoff, without changing the research
+        # snapshot's pre-planting eligibility or exposing any other farmer's records.
+        with repository.connection() as db:
+            rows=db.execute('SELECT recorded_at,payload FROM cultivation_plan_versions WHERE plan_id=? ORDER BY version_id DESC', (plan_id,)).fetchall()
+        version=next((json.loads(row['payload']) for row in rows
+            if datetime.fromisoformat(row['recorded_at'])<=cutoff
+            and datetime.fromisoformat(json.loads(row['payload'])['submitted_at'])<=cutoff), None)
+        if version and version['farmer_id']==identity and version['status']=='active' and (
+                date.fromisoformat(version['planting_date'])<=cutoff.date()
+                or date.fromisoformat(version['expected_harvest_date'])<=cutoff.date()):
+            return unavailable_report(plan_id, 'Historical or already-started cultivation is not eligible for current pre-planting analysis; the record is preserved.', season=season, cutoff=cutoff)
+        raise HTTPException(404,'Active available future plan not found')
     indicators=prepare_indicators(repository,cutoff,owned['district'],owned['region'],owned['crop'],
         season or 'unspecified',date.fromisoformat(owned['expected_harvest_date']),prepared_snapshot=records)
     assessment=explain(indicators)
@@ -61,6 +94,8 @@ def run(repository,identity,plan_id,season,evidence,as_of=None,historical_predic
     from app.services.production_reference import evaluate as reference_evaluate, farmer_response as reference_response
     reference_assessment=reference_response(reference_evaluate(records,owned,season,cutoff,production_registry))
     return dict(workflow_version='1',plan_id=plan_id,as_of=cutoff.isoformat(),historical_prediction=historical,
+        status='insufficient_evidence' if assessment.get('risk_level') is None else assessment['status'],
+        analysis_status='completed', missing_evidence=assessment['missing_evidence'],
         current_plan_risk=farmer_view(evaluate(indicators)),
         experimental_production_assessment=farmer_response(production),experimental_alternatives=experimental_candidates,
         experimental_reference_assessment=reference_assessment,

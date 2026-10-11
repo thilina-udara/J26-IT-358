@@ -36,6 +36,11 @@ class Plan(PlanInput):
     updated_at: datetime
 
 
+class PlanSubmission(PlanInput):
+    """HTTP input: identity comes from auth; optional legacy assertion must match."""
+    farmer_id: str | None = Field(default=None, min_length=1, max_length=100)
+
+
 class Concentration(BaseModel):
     plan_count: int | None = None
     total_acreage: float | None = None
@@ -48,3 +53,13 @@ class Concentration(BaseModel):
 class PlanResponse(BaseModel):
     plan: Plan
     concentration: Concentration
+
+
+class PlanListResponse(BaseModel):
+    """Current owned records only; historical versions stay in existing stores."""
+    items: list[Plan]
+    total: int = Field(ge=0)
+    limit: int = Field(ge=1, le=100)
+    offset: int = Field(ge=0, le=1_000_000)
+    has_more: bool
+    next_offset: int | None

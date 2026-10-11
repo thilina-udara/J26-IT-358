@@ -6,6 +6,7 @@ evidence-gated alternative-crop scenarios, personalized planning and prospective
 
 - [Setup and development](docs/setup.md)
 - [Farmer account API and security](docs/authentication.md)
+- [Optional historical inference and compatibility gates](docs/historical_inference.md)
 - [Frontend API contracts, CORS and readiness](docs/frontend_api.md)
 - [Methodology and limitations](docs/methodology.md)
 - [Model comparison](docs/model_comparison.md)

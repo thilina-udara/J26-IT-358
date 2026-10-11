@@ -23,6 +23,8 @@ class HistoricalPredictor:
         self.coverage_through=coverage_through
 
     def predict(self,district,crop,season,target_year,cutoff):
+        if type(target_year) is not int or cutoff.tzinfo is None or cutoff>datetime.now(timezone.utc):
+            return unavailable('Historical target year or prediction cutoff is invalid')
         if district not in ('Matara','Hambantota') or crop not in ('Bandakka','Brinjal','Pumpkin','Corn','Mung Beans','Chillies') or season not in ('Maha','Yala'):
             return unavailable('Unsupported district/crop/season combination')
         if cutoff.tzinfo is None or self.model_available_at.tzinfo is None or self.model_available_at>cutoff:
@@ -45,7 +47,9 @@ class HistoricalPredictor:
             Historical_Mean_Production_kg=sum(r['production_kg'] for r in history)/n,
             Historical_Mean_Yield_kg_per_Acre=sum(r['production_kg']/r['land_acres'] for r in history)/n,
             District=district,Crop=crop,Season=season,Target_Year=target_year)
-        predicted=int(self.model.predict(pd.DataFrame([features],columns=FEATURES))[0])
+        raw=self.model.predict(pd.DataFrame([features],columns=FEATURES))[0]
+        predicted=int(raw)
+        if raw!=predicted:return unavailable('Model label encoding mismatch')
         if predicted not in (0,1,2):return unavailable('Model label encoding mismatch')
         return dict(status='historical_proxy_prediction',risk_level=('Low','Medium','High')[predicted],
             model=self.model_name,label_definition=LABEL_DEFINITION,target_year=target_year,
@@ -54,6 +58,8 @@ class HistoricalPredictor:
 
 def predict_context(predictor,owned,season,cutoff):
     if predictor is None:return unavailable('No approved model/availability bundle configured')
+    from app.services.historical_runtime import UnavailablePredictor
+    if isinstance(predictor,UnavailablePredictor):return predictor.context()
     if season is None:return unavailable('Season required for historical proxy inference')
     # Calendar planting year is not automatically a verified Maha/Yala statistical year.
     mapper=getattr(predictor,'season_year_mapper',None)
@@ -73,3 +79,5 @@ def predict_context(predictor,owned,season,cutoff):
         return predictor.predict(owned['district'],owned['crop'],season,target,cutoff)
     except (ValueError,TypeError,KeyError,ArithmeticError):
         return unavailable('Historical model or availability bundle failed validation')
+    except Exception:
+        return unavailable('Historical inference dependency unavailable')

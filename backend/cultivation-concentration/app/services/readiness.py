@@ -97,5 +97,8 @@ def report(database_path, roles, legacy_enabled, historical_predictor=None, pros
     for name, predictor in (('historical_predictor', historical_predictor), ('prospective_predictor', prospective_predictor)):
         checks[name] = check('not_configured' if predictor is None else 'configured_not_validated', False,
                              'Optional predictor configuration only; no research validity or prediction availability asserted')
+    from app.services.historical_runtime import UnavailablePredictor
+    if isinstance(historical_predictor, UnavailablePredictor):
+        checks['historical_predictor'] = check('unavailable', False, historical_predictor.reason)
     ready = all(value['status'] == 'ready' for value in checks.values() if value['required'])
     return dict(status='ready' if ready else 'not_ready', checks=checks, research_validation='not_asserted')

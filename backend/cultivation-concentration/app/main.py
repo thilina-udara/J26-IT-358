@@ -21,6 +21,9 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
                reviewer_tokens=None, reference_database_path=None, historical_predictor=None, production_evidence=None, prospective_predictor=None):
     from app.schemas.production_risk import ProductionRegistry
     production_registry=ProductionRegistry.model_validate(production_evidence or {})
+    if historical_predictor is None:
+        from app.services.historical_runtime import provision
+        historical_predictor = provision()
     application = FastAPI(title="Cultivation Concentration Risk Prediction")
     # Lazy initialization keeps health checks/tests from creating the live DB.
     database_path = database_path or os.getenv('CULTIVATION_PLAN_DB', str(Path(__file__).resolve().parents[1]/'storage/cultivation_plans.sqlite3'))

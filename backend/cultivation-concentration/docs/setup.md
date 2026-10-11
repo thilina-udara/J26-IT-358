@@ -60,6 +60,10 @@ remain disclosed. Use a new output directory; never overwrite existing artifacts
 
 ## Backend and configuration
 
+See [optional historical inference provisioning](historical_inference.md) for
+trusted artifact loading, availability evidence and the current feature-schema
+blocker. Historical saved-model replay does not authorize current farmer risk.
+
 ```powershell
 $env:CULTIVATION_CORS_ORIGINS = '["http://localhost:5173","http://127.0.0.1:5173"]'
 .venv\Scripts\python.exe -B -m app.migrations

@@ -24,14 +24,16 @@ def unavailable_report(plan_id, reason, *, failed=False, season=None, cutoff=Non
     """Preserve the workflow envelope without claiming analysis was performed."""
     cutoff = cutoff or datetime.now(timezone.utc)
     missing = [reason]
-    empty = dict(status='insufficient_evidence', risk_level=None, missing_evidence=missing)
+    empty = dict(status='insufficient_evidence', risk_level=None, missing_evidence=missing,
+                 reason_codes=['analysis_not_evaluated'])
     return dict(workflow_version='1', plan_id=plan_id, as_of=cutoff.isoformat(),
         season_context=context or season_context({}, season),
         status='analysis_unavailable' if failed else 'insufficient_evidence',
         analysis_status='failed' if failed else 'not_applicable', missing_evidence=missing,
-        historical_prediction=dict(empty), current_plan_risk=dict(empty),
+        reason_codes=['analysis_unavailable' if failed else 'analysis_not_applicable'],
+        historical_prediction=dict(empty), current_plan_risk=farmer_view(empty),
         experimental_production_assessment=dict(empty), experimental_alternatives=[],
-        experimental_reference_assessment=dict(empty), assessment=dict(empty),
+        experimental_reference_assessment=dict(empty), assessment=farmer_view(empty),
         clustering=dict(status='not_evaluated', algorithms=['K-Means','DBSCAN'],
             explanation='Descriptive cultivation patterns only; no risk classification.'),
         recommendations=dict(status='blocked_unvalidated_risk', alternatives=[]),
@@ -98,6 +100,8 @@ def run(repository,identity,plan_id,season,evidence,as_of=None,historical_predic
     if season is None:assessment['missing_evidence'].append('Season not supplied; no season was inferred')
     from app.services.historical_prediction import predict_context
     historical=predict_context(historical_predictor,owned,season,cutoff)
+    historical=dict(historical,reason_codes=['historical_proxy_only'] if historical['status']=='historical_proxy_prediction'
+                    else ['historical_prediction_unavailable'])
     from app.services.current_plan_risk import evaluate
     from app.schemas.production_risk import ProductionRegistry
     from app.services.production_risk import evaluate as production_evaluate,farmer_response,alternatives as production_alternatives

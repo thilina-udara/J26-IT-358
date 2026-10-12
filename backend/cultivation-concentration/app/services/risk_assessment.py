@@ -18,6 +18,11 @@ def explain(values):
              'Target-specific cluster membership and independently validated density meaning']
     if values['status']!='available':
         missing.append('Insufficient releasable farmer coverage; numeric indicators suppressed')
+    reasons=['risk_classification_unvalidated','production_evidence_missing',
+             'historical_baseline_missing','season_coverage_evidence_missing',
+             'classification_reference_missing','density_validation_missing']
+    if values['status']!='available':reasons.append('coverage_or_privacy_limited')
     return dict(status='risk_level_unvalidated',risk_level=None,indicators=values,
+                reason_codes=reasons,
                 explanations=explanations,missing_evidence=missing,
                 interpretation='Descriptive pre-planting concentration assessment; no Low/Medium/High classification or observed market oversupply claim.')

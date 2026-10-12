@@ -12,6 +12,16 @@ DATA=Path(__file__).resolve().parents[2]/'data/guidelines/v1.1'
 HECTARE_ACRES=2.4710538147
 
 
+def evidence_metadata(report):
+    """Presentation only: never approve a claim or rewrite a saved revision."""
+    activities=report.get('activities',[])
+    approved=bool(activities) and all(a.get('verification_status')=='explicitly_verified_for_planning'
+                                    and a.get('approval_evidence') for a in activities)
+    return dict(approval_status='approved_activities_only' if approved else
+                'approval_not_recorded' if activities else 'no_approved_applicable_activities',
+                reason_codes=['schedule_incomplete'] + ([] if activities else ['applicable_guidance_unavailable']))
+
+
 def generate(repository,request,farmer,approvals,evidence,guideline_dir=DATA):
     current=repository.read(request.plan_id,farmer)['plan']
     if current.status!='active':raise HTTPException(409,'Cancelled plans cannot be planned')
@@ -88,10 +98,11 @@ def generate(repository,request,farmer,approvals,evidence,guideline_dir=DATA):
     if not activities:warnings.append('No explicitly verified applicable claims; all v1.1 claims remain inactive without an approval overlay.')
     if request.planting_method is None:warnings.append('Specify direct sowing versus transplanting; dates are not interchangeable.')
     missing=sorted(set(('land_preparation','establishment','fertilizer','management','harvest'))-{a['category'] for a in activities})
-    return dict(status='partial_plan',plan_id=current.plan_id,final_crop=crop,as_of=cutoff.isoformat(),
+    report=dict(status='partial_plan',plan_id=current.plan_id,final_crop=crop,as_of=cutoff.isoformat(),
                 request=request.model_dump(mode='json'),expected_harvest_date=harvest.isoformat(),
                 activities=activities,warnings=warnings,missing_categories=missing,
                 based_on_updated_at=current.updated_at.isoformat())
+    return dict(report,**evidence_metadata(report))
 
 
 def save_choice(repository,request,farmer,approvals,evidence,guideline_dir=DATA):
@@ -112,6 +123,7 @@ def retrieve(repository,plan_id,farmer):
                         (plan_id,farmer)).fetchall()
         if not rows:raise HTTPException(404,'No personalized plan saved')
         latest=json.loads(rows[-1]['payload'])
+        latest.update(evidence_metadata(latest))
         return dict(personalized_plan=latest,revision_id=rows[-1]['revision_id'],
             revisions=[dict(revision_id=r['revision_id'],saved_at=r['saved_at']) for r in rows],
             stale=current.updated_at.isoformat()!=latest['cultivation_updated_at'] or current.status!='active')

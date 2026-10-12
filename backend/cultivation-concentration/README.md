@@ -8,6 +8,7 @@ evidence-gated alternative-crop scenarios, personalized planning and prospective
 - [Farmer account API and security](docs/authentication.md)
 - [Optional historical inference and compatibility gates](docs/historical_inference.md)
 - [Frontend API contracts, CORS and readiness](docs/frontend_api.md)
+- [Frontend evidence states and privacy](docs/frontend_evidence.md)
 - [Methodology and limitations](docs/methodology.md)
 - [Model comparison](docs/model_comparison.md)
 

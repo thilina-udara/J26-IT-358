@@ -11,19 +11,35 @@ NUMERIC_AGGREGATES = {
 }
 
 
-def farmer_view(value):
+def _farmer_view(value):
     """Do not release exact collective numbers, even above the minimum cohort size.
 
     Stateless minimum-size controls cannot safely release editable-owner totals.
     Preserve decision/evidence fields; never apply to the owner's individual plan.
     """
     if isinstance(value, list):
-        return [farmer_view(item) for item in value]
+        return [_farmer_view(item) for item in value]
     if not isinstance(value, dict):
         return value
-    result = {key: farmer_view(item) for key, item in value.items()
+    result = {key: _farmer_view(item) for key, item in value.items()
               if key not in NUMERIC_AGGREGATES | {'cluster_context','kmeans','dbscan','noise','baseline','effective_k'}}
     result['privacy_policy'] = 'collective_numeric_values_withheld_from_farmer'
+    return result
+
+
+def farmer_view(value):
+    """Availability describes computation, never permission to disclose numbers.
+
+    Annotate only the filtered envelope, avoiding redundant states on every node.
+    The disclosure policy applies even when no calculation could be completed.
+    """
+    if isinstance(value, list):
+        return [farmer_view(item) for item in value]
+    result = _farmer_view(value)
+    if isinstance(result, dict):
+        result['disclosure_status'] = 'collective_values_withheld'
+        result['reason_codes'] = list(dict.fromkeys([
+            *result.get('reason_codes', []), 'collective_values_protected']))
     return result
 
 

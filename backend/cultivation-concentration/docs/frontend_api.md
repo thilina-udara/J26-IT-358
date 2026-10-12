@@ -4,6 +4,10 @@ The frontend uses existing Component 02 endpoints and bearer sessions. No resear
 service is duplicated or automatically promoted to validated risk prediction.
 OpenAPI and Swagger UI are available at `/openapi.json` and `/docs`.
 
+See [farmer-facing evidence states](frontend_evidence.md) for computation versus
+disclosure, unvalidated risk, per-candidate approval, partial schedules, stable
+reason codes, safe response excerpts, and recoverable workflow errors.
+
 ## Existing routes reused
 
 | Capability | Existing method and path |

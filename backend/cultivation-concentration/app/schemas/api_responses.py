@@ -1,7 +1,8 @@
 """Stable outer response contracts; variable evidence payloads remain intact."""
 from typing import Any, Literal
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.cultivation_plan import Plan, Crop, Season
+from app.schemas.evidence import DisclosureStatus, PlanningApprovalStatus, ReasonCode
 
 
 class CompatibleResponse(BaseModel):
@@ -44,6 +45,8 @@ def error_responses(*codes):
 
 
 class RiskAssessmentResponse(CompatibleResponse):
+    disclosure_status: DisclosureStatus | None = None
+    reason_codes: list[ReasonCode] = Field(default_factory=list)
     status: str
     risk_level: str | None
     indicators: dict[str, Any]
@@ -53,6 +56,8 @@ class RiskAssessmentResponse(CompatibleResponse):
 
 
 class AlternativeComparisonResponse(CompatibleResponse):
+    disclosure_status: DisclosureStatus | None = None
+    reason_codes: list[ReasonCode] = Field(default_factory=list)
     status: str
     as_of: str
     selected_crop: Crop
@@ -64,6 +69,8 @@ class AlternativeComparisonResponse(CompatibleResponse):
 
 
 class PersonalizedPlanResponse(CompatibleResponse):
+    approval_status: PlanningApprovalStatus | None = None
+    reason_codes: list[ReasonCode] = Field(default_factory=list)
     status: str
     plan_id: str
     final_crop: Crop
@@ -99,6 +106,7 @@ class SeasonContext(BaseModel):
 
 
 class WorkflowReportResponse(CompatibleResponse):
+    reason_codes: list[ReasonCode] = Field(default_factory=list)
     season_context: SeasonContext | None = None
     status: str
     analysis_status: str

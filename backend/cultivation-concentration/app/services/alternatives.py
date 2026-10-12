@@ -48,7 +48,7 @@ def compare_alternatives(repository,request,farmer,registry):
     selected=context(request.selected_crop);selected_coverage=coverage(request.selected_crop)
     alternatives=[];comparisons=[]
     for crop in sorted(set(get_args(Crop))-{request.selected_crop}):
-        values=context(crop);reasons=[]
+        values=context(crop);reasons=[];reason_codes=[]
         crop_coverage=coverage(crop)
         duration=(request.expected_harvest_date-request.planting_date).days
         guideline=next((e for e in registry.suitability if applicable(e,request,crop,cutoff)
@@ -56,12 +56,21 @@ def compare_alternatives(repository,request,farmer,registry):
             and e.valid_from<=request.planting_date<=request.expected_harvest_date<=e.valid_to
             and e.min_land_acres<=request.land_size_acres<=e.max_land_acres
             and e.min_harvest_days<=duration<=e.max_harvest_days),None)
-        if guideline is None:reasons.append('Verified applicable suitability guideline unavailable at cutoff')
-        if crop_coverage is None or selected_coverage is None:reasons.append('Comparable crop/region/harvest-window coverage evidence unavailable at cutoff')
+        if guideline is None:
+            reasons.append('Verified applicable suitability guideline unavailable at cutoff')
+            reason_codes.append('suitability_approval_unavailable')
+        if crop_coverage is None or selected_coverage is None:
+            reasons.append('Comparable crop/region/harvest-window coverage evidence unavailable at cutoff')
+            reason_codes.append('comparable_coverage_unavailable')
         elif crop_coverage.registration_scope_id!=selected_coverage.registration_scope_id:
             reasons.append('Coverage registry scopes differ across compared crops')
-        if values['status']!='available' or selected['status']!='available':reasons.append('Small-group privacy or insufficient registered farmer coverage')
+            reason_codes.append('coverage_scope_mismatch')
+        if values['status']!='available' or selected['status']!='available':
+            reasons.append('Small-group privacy or insufficient registered farmer coverage')
+            reason_codes.append('coverage_or_privacy_limited')
         entry=dict(crop=crop,status='insufficient_evidence' if reasons else 'comparison_available',
+                   approval_status='applicable_suitability_approved' if guideline else 'applicable_suitability_unavailable',
+                   reason_codes=['risk_classification_unvalidated',*reason_codes],
                    planned_concentration=values,missing_evidence=reasons,risk_level='unknown_unvalidated',
                    historical_context=None,
                    data_limitations=['No compatible historical regional/season/window baseline','Declared plans/harvest dates not independently verified',

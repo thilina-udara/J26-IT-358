@@ -2,7 +2,12 @@ import json
 import os
 import secrets
 import logging
+import sqlite3
+from contextlib import closing
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response
 from datetime import date, datetime, timezone
 from typing import Literal
@@ -27,6 +32,13 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
     application = FastAPI(title="Cultivation Concentration Risk Prediction")
     # Lazy initialization keeps health checks/tests from creating the live DB.
     database_path = database_path or os.getenv('CULTIVATION_PLAN_DB', str(Path(__file__).resolve().parents[1]/'storage/cultivation_plans.sqlite3'))
+    operational_path = Path(database_path).resolve()
+    if operational_path.name.casefold() == 'research_demo.sqlite3':
+        raise ValueError('Synthetic research database cannot serve operational farmer workflows')
+    if operational_path.exists():
+        with closing(sqlite3.connect(f'{operational_path.as_uri()}?mode=ro', uri=True)) as db:
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='research_demo_metadata'").fetchone():
+                raise ValueError('Synthetic research database cannot serve operational farmer workflows')
     security = HTTPBearer(auto_error=False)
     from app.cors import allowed_origins
     frontend_origins = allowed_origins()
@@ -424,6 +436,9 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
 
     from app.prospective_routes import router as prospective_router
     application.include_router(prospective_router(farmer,analyst,administrator,store,prospective_predictor))
+
+    from app.research_demo_routes import router as research_demo_router
+    application.include_router(research_demo_router())
 
     # CORS is outside the auth response middleware, so normal error responses also
     # receive allowlist headers. This bearer API does not use credential cookies.

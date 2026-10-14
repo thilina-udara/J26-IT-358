@@ -3,8 +3,11 @@
 The existing `HistoricalPredictor` and farmer workflow are reused. No historical
 HTTP endpoint existed separately: historical context is the `historical_prediction`
 field of owned workflow submission and analysis. Existing authentication, role
-separation and cross-farmer 404 protection apply. No new endpoint or file-upload API
-is introduced. Current concentration/risk and recommendations retain their own
+separation and cross-farmer 404 protection apply. This provisioning path adds no
+file-upload API. The separate, disabled-by-default `/api/research-demo/evaluate`
+endpoint exposes safe scenario metadata while withholding private historical outputs;
+it does not provision or activate this eight-input operational predictor. See the
+[research disclosure contract](research_demo_disclosure.md). Current concentration/risk and recommendations retain their own
 evidence gates, independent of any historical proxy category.
 
 ## Available artifact inspection

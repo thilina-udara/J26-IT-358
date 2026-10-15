@@ -145,6 +145,16 @@ def test_sparse_and_zero_peers_abstain_and_suppress(research, monkeypatch, count
         assert result["features"]["Overlap_Plan_Count"] is None
 
 
+def test_private_sparse_replay_runs_model_with_prior_features(research, monkeypatch):
+    monkeypatch.setattr(demo, "load_historical_dataset", lambda: research.iloc[:1].copy())
+    result = demo.evaluate_historical_scenario(
+        "Hambantota", "Mung Beans", "Yala", 3.5, date(2025, 6, 16),
+        date(2025, 8, 25), decision_cutoff=date(2025, 6, 16), allow_sparse=True)
+    assert result["status"] == "historical_proxy_prediction"
+    assert result["prediction"]["historical_proxy_label"] == "High"
+    assert result["prediction"]["overlapping_peer_count"] == 0
+
+
 def test_probability_order_and_no_market_or_recommendation_promotion(research):
     result = evaluate()
     assert result["prediction"]["class_probabilities"] == {"High": .7, "Low": .1, "Medium": .2}
@@ -153,6 +163,33 @@ def test_probability_order_and_no_market_or_recommendation_promotion(research):
     assert result["recommendation_status"] == "blocked_unvalidated_risk"
     assert result["diagnostic_alternatives"] == []
     assert not defensible_high(dict(status=result["status"], risk_level="High"), datetime.now(timezone.utc))
+
+
+def test_catboost_column_vector_prediction_uses_unchanged_class_encoding(research, monkeypatch):
+    pipeline, trained_through = demo.get_model_pipeline("CatBoost", 2025)
+    monkeypatch.setattr(pipeline, "predict", lambda _: np.array([[2]]))
+    monkeypatch.setattr(demo, "get_model_pipeline", lambda *_: (pipeline, trained_through))
+    assert evaluate()["prediction"]["historical_proxy_label"] == "High"
+    monkeypatch.setattr(pipeline, "predict", lambda _: np.array([[0, 2]]))
+    with pytest.raises(ValueError, match="prediction shape"):
+        evaluate()
+
+
+def test_chillies_uses_green_chillies_training_category_and_replay_group(research, monkeypatch):
+    data = research.copy()
+    data["Crop"] = "Green Chillies"
+    monkeypatch.setattr(demo, "load_historical_dataset", lambda: data)
+    pipeline, trained_through = demo.get_model_pipeline("XGBoost", 2025)
+    inputs = []
+    monkeypatch.setattr(pipeline, "predict", lambda features: (inputs.append(features.copy()), ["High"])[1])
+    monkeypatch.setattr(demo, "get_model_pipeline", lambda *_: (pipeline, trained_through))
+    result = demo.evaluate_historical_scenario("Hambantota", "Chillies", "Yala", 4,
+        date(2025, 6, 16), date(2025, 8, 25))
+    assert result["prediction"]["historical_proxy_label"] == "High"
+    assert result["simulated_plan"]["crop"] == "Chillies"
+    assert result["model_metadata"]["model_crop_category"] == "Green Chillies"
+    assert inputs[0].iloc[0]["Crop"] == "Green Chillies"
+    assert result["features"]["Overlap_Plan_Count"] == 5
 
 
 def test_high_historical_prediction_does_not_activate_farmer_workflow(tmp_path, monkeypatch):
@@ -224,6 +261,22 @@ def test_seeder_preserves_existing_non_demo_records(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="non-demo"):
         seed(database, "fictional", date(2026, 1, 1), date(2026, 1, 31), True)
     assert database.read_bytes() == before
+
+
+def test_reported_scenarios_reproduce_and_explicit_cutoff_decouples_planting():
+    early = evaluate(date(2025, 6, 10))
+    late = evaluate(date(2025, 6, 16))
+    assert early["prediction"]["overlapping_peer_count"] == 83
+    assert late["prediction"]["overlapping_peer_count"] == 214
+    assert early["prediction"]["overlapping_peer_acres"] == 218.5
+    assert late["prediction"]["overlapping_peer_acres"] == 549
+    assert early["prediction"]["historical_proxy_label"] == "Low"
+    assert late["prediction"]["historical_proxy_label"] == "High"
+    assert [key for key in demo.FEATURES if early["features"][key] != late["features"][key]] == ["Overlap_Plan_Count"]
+    fixed = evaluate(date(2025, 6, 16), date(2025, 6, 10))
+    assert fixed["features"] == early["features"]
+    assert fixed["prediction"] == early["prediction"]
+    assert fixed["model_metadata"]["feature_names"] == demo.FEATURES
 
 
 @pytest.mark.parametrize("model,count", [("XGBoost", 15), ("CatBoost", 15), ("Random Forest", 11), ("LinearSVC", 11), ("RBF SVC", 11)])

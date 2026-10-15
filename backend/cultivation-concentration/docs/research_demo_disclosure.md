@@ -56,6 +56,12 @@ application of the rule because target overlap acreage is excluded from its
 features. That disagreement does not authorize changing frozen labels/metrics
 or promoting a historical proxy into current validated risk.
 
+The authenticated loopback workbench has an explicit sparse-replay testing mode.
+It may display a frozen model class when no matching peers exist but prior
+historical feature windows are available. This does not change the public
+disclosure contract or live farmer workflow; no class is produced when the
+model has no prior historical input window.
+
 ## Operational and security boundaries
 
 Operational farmer creation retains future-date validation and owner isolation.

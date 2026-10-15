@@ -18,6 +18,7 @@ from app.services.historical_runtime import verified_bytes
 ROOT = Path(__file__).resolve().parents[2]
 DATA_PATH = ROOT / "data/legacy/official_farmer_cultivation_2020_2026.csv"
 MODEL_DIR = ROOT / "models/experimental/historical_feature_improvement/v1_20261009"
+RESEARCH_CROP_ALIASES = {"Chillies": "Green Chillies"}
 
 from app.services.research_metadata import FEATURES, LABELS, BENCHMARKS
 
@@ -164,7 +165,7 @@ def concentration_indicators(group, harvest, cutoff):
 
 def evaluate_historical_scenario(district: str, crop: str, season: str, land_size_acres: float,
         planting_date: date, expected_harvest_date: date, model_name: str = "XGBoost",
-        decision_cutoff: Optional[date] = None) -> Dict[str, Any]:
+        decision_cutoff: Optional[date] = None, allow_sparse: bool = False) -> Dict[str, Any]:
     cutoff = decision_cutoff or planting_date
     if district not in ("Matara", "Hambantota"):
         raise ValueError("Unsupported pilot district")
@@ -177,8 +178,11 @@ def evaluate_historical_scenario(district: str, crop: str, season: str, land_siz
     if cutoff.year != planting_date.year:
         raise ValueError("This frozen replay supports decision and planting in the same calendar year only; season/year mapping is unverified")
     dataset = load_historical_dataset()
-    group = dataset[(dataset.District == district) & (dataset.Crop == crop) & (dataset.Season == season)]
-    features, peers, prior = historical_features(group, district, crop, season, land_size_acres,
+    # Website wording must match the saved pipeline's original crop category.
+    # This research alias does not approve generic chilli agronomic guidance.
+    model_crop = RESEARCH_CROP_ALIASES.get(crop, crop)
+    group = dataset[(dataset.District == district) & (dataset.Crop == model_crop) & (dataset.Season == season)]
+    features, peers, prior = historical_features(group, district, model_crop, season, land_size_acres,
                                                planting_date, expected_harvest_date, cutoff)
     pipeline, trained_through = get_model_pipeline(model_name, cutoff.year)
     feature_names = list(pipeline.feature_names_in_)
@@ -192,9 +196,18 @@ def evaluate_historical_scenario(district: str, crop: str, season: str, land_siz
     classes = [label(value) for value in pipeline.classes_]
     if set(classes) != set(LABELS):
         raise ValueError("Frozen model class contract mismatch")
-    # Empty/sparse replay coverage cannot establish a reassuring Low classification.
-    eligible = len(peers) >= 3 and features["Past_Window_Count"] > 0
-    prediction = label(pipeline.predict(df_features)[0]) if eligible else None
+    # Public replay abstains on sparse peers. The separately authenticated local
+    # workbench may test the frozen model with no matching live-style peers when
+    # prior historical features are available; this is still only a proxy class.
+    eligible = features["Past_Window_Count"] > 0 and (allow_sparse or len(peers) >= 3)
+    prediction = None
+    if eligible:
+        # CatBoost emits (n, 1), while sklearn classifiers emit (n,).
+        # Normalize only a single prediction; never reinterpret the class map.
+        raw_prediction = np.asarray(pipeline.predict(df_features))
+        if raw_prediction.shape not in ((1,), (1, 1)):
+            raise ValueError("Unsupported frozen model prediction shape")
+        prediction = label(raw_prediction.reshape(-1)[0])
     probabilities = None
     if eligible and hasattr(pipeline, "predict_proba"):
         probabilities = {name: round(float(prob), 4) for name, prob in
@@ -217,7 +230,7 @@ def evaluate_historical_scenario(district: str, crop: str, season: str, land_siz
             target_year=planting_date.year, decision_cutoff=cutoff.isoformat(),
             cutoff_timestamp=datetime.combine(cutoff, datetime.min.time(), timezone(timedelta(hours=5, minutes=30))).isoformat(),
             cutoff_source="explicit_decision_cutoff" if decision_cutoff else "defaulted_to_planting_date"),
-        model_metadata=dict(model_name=model_name, trained_through=trained_through,
+        model_metadata=dict(model_name=model_name, model_crop_category=model_crop, trained_through=trained_through,
             training_data_cutoff=f"{trained_through}-12-31", training_cutoff_basis="recorded dataset Year upper bound; not publication or model release date",
             model_available_at_cutoff="not_verified; frozen artifacts built retrospectively in October 2026",
             simulated_target_year=planting_date.year, is_out_of_time_holdout=planting_date.year > trained_through,

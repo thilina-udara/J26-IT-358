@@ -453,3 +453,4 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
 
 
 app = create_app()
+# Trigger uvicorn reload with updated research demo evaluator

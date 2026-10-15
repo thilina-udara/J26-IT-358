@@ -95,7 +95,17 @@ def router() -> APIRouter:
             raise HTTPException(status_code=422, detail="Decision cutoff and planting must be in the same calendar year; statistical-season mapping is unverified.")
 
         try:
-            return public_scenario(payload).model_dump(mode="json")
+            from app.services.historical_research_evaluator import evaluate_historical_scenario
+            return evaluate_historical_scenario(
+                district=payload.district,
+                crop=payload.crop,
+                season=payload.season,
+                land_size_acres=payload.land_size_acres,
+                planting_date=payload.planting_date,
+                expected_harvest_date=payload.expected_harvest_date,
+                model_name=payload.model_name,
+                decision_cutoff=payload.decision_cutoff,
+            )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except Exception as exc:

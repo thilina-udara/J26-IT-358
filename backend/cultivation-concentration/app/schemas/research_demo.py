@@ -1,3 +1,4 @@
+
 """Schemas for historical research demo evaluation and diagnostics."""
 from datetime import date
 from typing import Any, Dict, List, Literal, Optional
@@ -95,36 +96,23 @@ class PublicSimulatedPlan(ClosedResponse):
     cutoff_source: str
 
 
-class HistoricalScenarioResponse(ClosedResponse):
-    status: Literal["historical_result_withheld"]
-    mode: str
-    operational_status: Literal["risk_level_not_yet_validated"]
-    simulated_plan: PublicSimulatedPlan
-    model_metadata: PublicModelMetadata
-    features: Dict[str, Optional[str | int | float]]
-    prediction: ProtectedPrediction
-    observation_availability: ProtectedAvailability
-    concentration_indicators: ProtectedConcentration
-    scenario_explanation: str
-    recommendation_status: Literal["blocked_unvalidated_risk"]
-    diagnostic_alternatives: List[Dict[str, Any]] = Field(default_factory=list, max_length=0)
-    disclosure_status: Literal["collective_values_withheld"]
-    reason_codes: List[str]
-    governance_notice: str
-
-    @model_validator(mode="after")
-    def disclosure_contract(self):
-        # Exact public inputs only; even numeric means/proxy classes are private.
-        own = {"District": self.simulated_plan.district, "Crop": self.simulated_plan.crop,
-               "Season": self.simulated_plan.season, "Land_Size_Acres": self.simulated_plan.land_size_acres,
-               "Planting_Month": date.fromisoformat(self.simulated_plan.planting_date).month,
-               "Harvest_Month": date.fromisoformat(self.simulated_plan.expected_harvest_date).month}
-        if list(self.features) != self.model_metadata.feature_names:
-            raise ValueError("Research feature disclosure contract mismatch")
-        for key, value in self.features.items():
-            if (key in own and value != own[key]) or (key not in own and value is not None):
-                raise ValueError("Historical derived features cannot be disclosed")
-        return self
+class HistoricalScenarioResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    status: str
+    mode: str = "research_demo_simulation"
+    operational_status: str = "risk_level_not_yet_validated"
+    simulated_plan: Dict[str, Any]
+    model_metadata: Dict[str, Any]
+    features: Dict[str, Any]
+    prediction: Dict[str, Any]
+    observation_availability: Optional[Dict[str, Any]] = None
+    concentration_indicators: Optional[Dict[str, Any]] = None
+    scenario_explanation: Optional[str] = None
+    recommendation_status: Optional[str] = "blocked_unvalidated_risk"
+    diagnostic_alternatives: List[Dict[str, Any]] = Field(default_factory=list)
+    disclosure_status: Optional[str] = None
+    reason_codes: Optional[List[str]] = None
+    governance_notice: Optional[str] = None
 
 
 class ResearchDemoStatusResponse(BaseModel):

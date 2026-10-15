@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>AgroDecision | Private Model Test</title><link rel="stylesheet" href="/workbench.css"><script src="/workbench.js" defer></script></head>
+<body><main>
+  <nav><strong>🌱 AgroDecision <span>Research</span></strong><a href="http://localhost:3000/crop-planning/research-demo" rel="noreferrer">Back to Crop Advisor ↗</a></nav>
+  <header><span class="eyebrow">PRIVATE LOCAL RESEARCH · 2025–AUGUST 2026</span><h1>Test your historical models.</h1><p>Enter a historical cultivation scenario and run a saved model against the historical dataset. No live farmer registrations are required.</p><small>Historical model classes remain separate from validated current risk and agricultural recommendations.</small></header>
+  <div id="error" role="alert" hidden></div>
+  <section id="unlock" class="card"><span class="eyebrow">RESEARCHER ACCESS</span><h2>Unlock your local workbench</h2><p>Choose <code>storage/private_research_workbench_token.txt</code> from this backend component, or paste the researcher credential. It stays in this page’s memory and is cleared on refresh.</p><form id="unlock-form"><label for="credential-file">Local researcher credential file</label><input id="credential-file" type="file" accept=".txt"><label for="credential">Researcher credential</label><input id="credential" type="password" autocomplete="off" required minlength="32"><button type="submit">Unlock private testing →</button></form></section>
+  <section id="workbench" hidden>
+    <div class="access-bar"><span>✓ Private researcher session · localhost only</span><button id="lock" type="button" class="secondary">Lock workbench</button></div>
+    <div class="grid">
+      <section class="card"><h2>Your historical scenario</h2><p>Choose planting in 2025 or January–August 2026.</p><form id="scenario-form">
+        <div class="pair"><div><label for="district">District</label><select id="district" name="district"><option>Matara</option><option selected>Hambantota</option></select></div><div><label for="season">Declared season</label><select id="season" name="season"><option>Maha</option><option selected>Yala</option></select></div></div>
+        <label for="crop">Crop</label><select id="crop" name="crop"><option>Bandakka</option><option>Brinjal</option><option>Pumpkin</option><option>Corn</option><option selected>Mung Beans</option><option value="Chillies">Chillies (Green Chillies in training)</option></select>
+        <label for="land_size_acres">Your hypothetical land size (acres)</label><input id="land_size_acres" name="land_size_acres" type="number" min="0.01" max="100" step="any" value="3.5" required>
+        <label for="planting_date">Historical planting date</label><input id="planting_date" name="planting_date" type="date" min="2025-01-01" max="2026-08-31" value="2025-06-16" required>
+        <label for="expected_harvest_date">Expected harvest date</label><input id="expected_harvest_date" name="expected_harvest_date" type="date" min="2025-06-16" value="2025-08-25" required>
+        <label for="decision_cutoff">Decision cutoff (optional)</label><input id="decision_cutoff" name="decision_cutoff" type="date" min="2025-01-01" max="2025-06-16"><small>Leave blank to use planting. Start of day in Asia/Colombo; earlier planting does not prove observation availability.</small>
+        <label for="model_name">Saved model</label><select id="model_name" name="model_name"><option>XGBoost</option><option>CatBoost</option><option>Random Forest</option><option>LinearSVC</option><option>RBF SVC</option></select>
+        <button id="run" type="submit">Run historical model prediction →</button>
+      </form></section>
+      <section class="output" aria-live="polite"><article id="empty" class="card welcome"><span class="plant">🌱</span><h2>Run a real model test.</h2><p>Your Low, Medium or High historical classification will appear here when the scenario has sufficient historical replay coverage.</p><div class="notice">October dates are outside this workbench’s historical testing range. An empty live farmer registry does not imply Low risk.</div><p class="small">These catalogued models were trained through recorded Year 2024. A dataset containing 2026 records does not mean these saved pipelines were trained through 2026.</p></article>
+        <article id="result" class="card" hidden><span class="eyebrow">SAVED MODEL INFERENCE · PRIVATE RESEARCH</span><div id="classification-panel"><div class="badge">Historical model classification</div><h2 id="classification"></h2><p id="classification-description"></p><div id="probabilities"></div></div><dl id="metadata"></dl><div class="notice">Observation availability remains unverified. This is a retrospective model test, with unknown availability assumed in replay. It is not an untouched holdout claim or verified current market-risk classification.</div><p class="small">No peer identities, counts, acreage totals or derived historical features are displayed. Historical High does not authorize alternative crops or cultivation activities. The live farmer workflow retains its independent approval gates.</p></article>
+      </section>
+    </div>
+  </section>
+</main></body></html>

@@ -129,3 +129,43 @@ disabled. Farmer requests use bearer authorization with `credentials: omit`.
 
 Planning clients must use owned saved details and backend-approved activities.
 Absent approval requires a partial/empty state without invented dates or quantities.
+
+## Private local historical model testing
+
+For an authorized researcher to test saved models using the private historical
+dataset, run this separate workbench from this component directory:
+
+```powershell
+..\..\.venv\Scripts\python.exe -m app.private_research_workbench
+```
+
+Open `http://127.0.0.1:8011` and choose the locally generated
+`storage/private_research_workbench_token.txt` credential file. The credential is
+kept in browser memory only, cleared on refresh/lock, and never put in a URL.
+The service binds only to loopback, requires a separate researcher credential,
+rejects remote/foreign-host/cross-origin requests, trusts no forwarded headers,
+and has no CORS or public API documentation. It is not mounted on the farmer API.
+Do not deploy this private workbench or publish its private output/credential.
+
+Enter planting dates between 2025-01-01 and 2026-08-31, plus district, crop,
+declared season, acreage, expected harvest and optional decision cutoff. These
+inputs run the existing frozen retrospective evaluator against the historical
+CSV, independently of live registrations. Model binaries are verified against
+the existing trusted catalog; the approved source version is also hash-checked.
+No operational farmer records are created or edited. The private test workbench can run the frozen model without matching peers when
+prior historical feature windows exist, so an empty live-style cohort does not
+prevent model testing. It still abstains when no prior feature window exists.
+The result is a historical model class, not validated current risk.
+
+The displayed Low/Medium/High value is a **historical model classification**.
+It never satisfies validated current-risk, crop recommendation or guideline
+approvals. Original observation availability is unknown, so replay assumptions
+do not establish zero temporal leakage. The catalogued pipelines used for
+2025/2026 tests were trained through recorded Year 2024; data extending into
+2026 does not make these pipelines trained-through-2026 models. No retraining,
+labels, saved research metrics or executable artifacts are changed.
+
+The website's `Chillies` input is explicitly mapped to the saved training category
+`Green Chillies` for private historical inference. That category is displayed in
+the workbench; no generic chilli guideline applicability is inferred. CatBoost's
+single-row column-vector prediction is normalized to the existing class encoding.

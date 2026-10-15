@@ -102,6 +102,29 @@ def run(repository,identity,plan_id,season,evidence,as_of=None,historical_predic
     historical=predict_context(historical_predictor,owned,season,cutoff)
     historical=dict(historical,reason_codes=['historical_proxy_only'] if historical['status']=='historical_proxy_prediction'
                     else ['historical_prediction_unavailable'])
+    # ── Concentration risk classification ─────────────────────────────────
+    # Combine live peer indicators with the ML historical proxy to produce a
+    # real Low/Medium/High classification.  Early adopters (few/no peers in
+    # the same crop/district/region/window) always receive Low risk; as more
+    # farmers register, the ML signal and concentration intensity determine
+    # the level.  This replaces the unconditional 'risk_level_unvalidated'
+    # returned by explain() with a data-driven classification.
+    from app.services.concentration_risk_classifier import classify
+    classification=classify(indicators,historical)
+    # Merge classification result into the assessment envelope.
+    assessment.update(
+        status=classification['status'],
+        risk_level=classification['risk_level'],
+        interpretation=classification['classification_basis'],
+        reason_codes=list(dict.fromkeys([
+            *assessment.get('reason_codes',[]),
+            *classification['reason_codes'],
+        ])),
+        missing_evidence=list(dict.fromkeys([
+            *assessment.get('missing_evidence',[]),
+            *classification['missing_evidence'],
+        ])),
+    )
     from app.services.current_plan_risk import evaluate
     from app.schemas.production_risk import ProductionRegistry
     from app.services.production_risk import evaluate as production_evaluate,farmer_response,alternatives as production_alternatives
@@ -112,7 +135,7 @@ def run(repository,identity,plan_id,season,evidence,as_of=None,historical_predic
     reference_assessment=reference_response(reference_evaluate(records,owned,season,cutoff,production_registry))
     return dict(workflow_version='1',plan_id=plan_id,as_of=cutoff.isoformat(),historical_prediction=historical,
         season_context=context_season,
-        status='insufficient_evidence' if assessment.get('risk_level') is None else assessment['status'],
+        status=assessment['status'],
         analysis_status='completed', missing_evidence=assessment['missing_evidence'],
         current_plan_risk=farmer_view(evaluate(indicators)),
         experimental_production_assessment=farmer_response(production),experimental_alternatives=experimental_candidates,

@@ -41,6 +41,13 @@ from app.schemas.profit_calculation import (
     ProfitCalculationInput,
     ProfitCalculationResult,
 )
+from app.schemas.profit_risk import (
+    ProfitRiskCategory,
+    ProfitRiskThresholds,
+    ProfitRiskAssessmentInput,
+    ProfitRiskFactors,
+    ProfitRiskAssessmentResult,
+)
 
 __all__ = [
     "BudgetEntryMode",
@@ -74,4 +81,9 @@ __all__ = [
     "PaginatedProfitAnalysisResponse",
     "ProfitCalculationInput",
     "ProfitCalculationResult",
+    "ProfitRiskCategory",
+    "ProfitRiskThresholds",
+    "ProfitRiskAssessmentInput",
+    "ProfitRiskFactors",
+    "ProfitRiskAssessmentResult",
 ]

@@ -27,6 +27,11 @@ from app.services.profit_calculation_service import (
     calculate_deterministic_profit,
     calculate_profit_from_input,
 )
+from app.services.profit_risk_service import (
+    assess_profit_risk,
+    assess_profit_risk_from_parameters,
+    assess_profit_risk_from_input,
+)
 
 __all__ = [
     "create_market_price",
@@ -48,4 +53,7 @@ __all__ = [
     "format_profit_analysis_response",
     "calculate_deterministic_profit",
     "calculate_profit_from_input",
+    "assess_profit_risk",
+    "assess_profit_risk_from_parameters",
+    "assess_profit_risk_from_input",
 ]

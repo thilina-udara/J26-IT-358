@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app.core.database import engine
+from app.routes import api_router
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(api_router)
 
 @app.get("/")
 def root():

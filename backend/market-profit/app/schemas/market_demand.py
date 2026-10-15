@@ -63,3 +63,13 @@ class MarketDemandResponse(MarketDemandBase):
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+from typing import List
+from app.schemas.common import PaginationMeta
+
+
+class PaginatedMarketDemandResponse(BaseModel):
+    """Paginated collection of market demand records."""
+    meta: PaginationMeta
+    items: List[MarketDemandResponse]

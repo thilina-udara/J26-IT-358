@@ -156,3 +156,13 @@ class PredictionResultResponse(BaseModel):
             error_message=error_detail,
             created_at=datetime.now()
         )
+
+
+from typing import List
+from app.schemas.common import PaginationMeta
+
+
+class PaginatedProfitAnalysisResponse(BaseModel):
+    """Paginated collection of saved profit analyses."""
+    meta: PaginationMeta
+    items: List[PredictionResultResponse]

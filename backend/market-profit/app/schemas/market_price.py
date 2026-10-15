@@ -47,3 +47,13 @@ class MarketPriceResponse(MarketPriceBase):
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+from typing import List
+from app.schemas.common import PaginationMeta
+
+
+class PaginatedMarketPriceResponse(BaseModel):
+    """Paginated collection of market price observations."""
+    meta: PaginationMeta
+    items: List[MarketPriceResponse]

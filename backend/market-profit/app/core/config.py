@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     # Microservice configuration
     PORT_MARKET_PROFIT_SERVICE: int = 8001
 
+    # Administrative Security & Access Control (loaded strictly from environment configuration)
+    ADMIN_API_KEY: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=str(ENV_PATH) if ENV_PATH.exists() else ".env",
         env_file_encoding="utf-8",

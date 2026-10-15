@@ -122,3 +122,13 @@ class CultivationBudgetResponse(BaseModel):
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+from typing import List
+from app.schemas.common import PaginationMeta
+
+
+class PaginatedCultivationBudgetResponse(BaseModel):
+    """Paginated collection of cultivation budgets."""
+    meta: PaginationMeta
+    items: List[CultivationBudgetResponse]

@@ -133,3 +133,14 @@ class SeasonEnum(str, Enum):
     MAHA = "Maha"
     YALA = "Yala"
     YEAR_ROUND = "Year-round"
+
+
+from pydantic import BaseModel, Field
+
+
+class PaginationMeta(BaseModel):
+    """Metadata for paginated queries."""
+    total: int = Field(..., description="Total matching records count")
+    page: int = Field(..., ge=1, description="Current page index (1-based)")
+    page_size: int = Field(..., ge=1, le=100, description="Items returned per page")
+    total_pages: int = Field(..., description="Total available pages")

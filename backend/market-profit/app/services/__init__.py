@@ -23,6 +23,10 @@ from app.services.profit_analysis_service import (
     delete_profit_analysis,
     format_profit_analysis_response,
 )
+from app.services.profit_calculation_service import (
+    calculate_deterministic_profit,
+    calculate_profit_from_input,
+)
 
 __all__ = [
     "create_market_price",
@@ -42,4 +46,6 @@ __all__ = [
     "list_profit_analyses",
     "delete_profit_analysis",
     "format_profit_analysis_response",
+    "calculate_deterministic_profit",
+    "calculate_profit_from_input",
 ]

@@ -37,6 +37,10 @@ from app.schemas.profit_analysis import (
     PredictionResultResponse,
     PaginatedProfitAnalysisResponse,
 )
+from app.schemas.profit_calculation import (
+    ProfitCalculationInput,
+    ProfitCalculationResult,
+)
 
 __all__ = [
     "BudgetEntryMode",
@@ -68,4 +72,6 @@ __all__ = [
     "FarmerAnalysisInput",
     "PredictionResultResponse",
     "PaginatedProfitAnalysisResponse",
+    "ProfitCalculationInput",
+    "ProfitCalculationResult",
 ]

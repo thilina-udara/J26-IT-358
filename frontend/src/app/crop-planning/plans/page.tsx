@@ -3,22 +3,28 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import {
+  AlertTriangle,
   Calendar,
   Check,
+  CheckCircle2,
   ChevronRight,
   Filter,
   Layers,
   Leaf,
+  Loader2,
   MoreVertical,
+  Pencil,
   Plus,
   RefreshCw,
   Search,
   Sprout,
   Sun,
   FileText,
+  Trash2,
+  X,
 } from "lucide-react";
 import { formatDate } from "../lib/dates";
-import { CROPS, DISTRICTS, type Plan } from "../lib/contracts";
+import { CROPS, DISTRICTS, type Crop, type District, type Plan, type PlanFields, type Season } from "../lib/contracts";
 import { useSession } from "../components/session";
 import { Button } from "../components/ui/button";
 import { Empty, ErrorNotice, Loading, useLoad } from "../components/ui";
@@ -44,6 +50,26 @@ export default function PlansPage() {
   const [season, setSeason] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("latest");
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Edit and Delete Modal States
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [deletingPlan, setDeletingPlan] = useState<Plan | null>(null);
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  const [editForm, setEditForm] = useState<PlanFields>({
+    crop: "Bandakka",
+    district: "Matara",
+    region: "",
+    land_size_acres: 1,
+    planting_date: "",
+    expected_harvest_date: "",
+    farmer_declared_season: "Maha",
+  });
 
   const result = useLoad(
     (signal) => {
@@ -53,7 +79,7 @@ export default function PlansPage() {
       if (district) query.set("district", district);
       return api.list(query, signal);
     },
-    [api, offset, status, crop, district]
+    [api, offset, status, crop, district, reloadKey]
   );
 
   const rawPlans = result.data?.items ?? [];
@@ -94,6 +120,78 @@ export default function PlansPage() {
     setSeason("");
     setSearchQuery("");
     setOffset(0);
+  }
+
+  function openEditModal(plan: Plan) {
+    setEditingPlan(plan);
+    setEditForm({
+      crop: plan.crop,
+      district: plan.district,
+      region: plan.region,
+      land_size_acres: plan.land_size_acres,
+      planting_date: plan.planting_date,
+      expected_harvest_date: plan.expected_harvest_date,
+      farmer_declared_season: plan.farmer_declared_season || "Maha",
+    });
+    setModalError(null);
+    setActiveDropdownId(null);
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingPlan) return;
+    if (!editForm.region.trim()) {
+      setModalError("Please enter a location / region.");
+      return;
+    }
+    if (!editForm.land_size_acres || editForm.land_size_acres <= 0) {
+      setModalError("Land size must be greater than 0 acres.");
+      return;
+    }
+    if (!editForm.planting_date) {
+      setModalError("Please select a planting date.");
+      return;
+    }
+    if (!editForm.expected_harvest_date || editForm.expected_harvest_date < editForm.planting_date) {
+      setModalError("Expected harvest date must be on or after the planting date.");
+      return;
+    }
+    setSaving(true);
+    setModalError(null);
+    try {
+      await api.update(editingPlan.plan_id, editForm);
+      setEditingPlan(null);
+      setReloadKey((k) => k + 1);
+      setActionSuccess(`Plan for ${editForm.crop} updated successfully!`);
+      setTimeout(() => setActionSuccess(null), 4000);
+    } catch (err: any) {
+      setModalError(err?.message || "Failed to update plan. Please verify inputs.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openDeleteModal(plan: Plan) {
+    setDeletingPlan(plan);
+    setModalError(null);
+    setActiveDropdownId(null);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deletingPlan) return;
+    setDeleting(true);
+    setModalError(null);
+    try {
+      await api.cancel(deletingPlan.plan_id);
+      setDeletingPlan(null);
+      setReloadKey((k) => k + 1);
+      setActionSuccess(`Plan for ${deletingPlan.crop} cancelled successfully!`);
+      setTimeout(() => setActionSuccess(null), 4000);
+    } catch (err: any) {
+      setModalError(err?.message || "Failed to delete plan.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -806,7 +904,7 @@ export default function PlansPage() {
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", position: "relative" }}>
                 <Button
                   asChild
                   style={{
@@ -823,23 +921,161 @@ export default function PlansPage() {
                   </Link>
                 </Button>
 
+                {/* Direct Edit Icon Button */}
                 <button
                   type="button"
+                  title="Edit Plan"
+                  aria-label="Edit Plan"
+                  onClick={() => openEditModal(plan)}
                   style={{
-                    width: "34px",
-                    height: "34px",
+                    width: "36px",
+                    height: "36px",
                     borderRadius: "10px",
-                    border: "1px solid #e2e8f0",
+                    border: "1px solid #cbd5e1",
                     background: "#ffffff",
-                    color: "#64748b",
+                    color: "#166534",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#f0fdf4";
+                    e.currentTarget.style.borderColor = "#86efac";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ffffff";
+                    e.currentTarget.style.borderColor = "#cbd5e1";
                   }}
                 >
-                  <MoreVertical size={16} />
+                  <Pencil size={15} />
                 </button>
+
+                {/* Direct Delete Icon Button */}
+                <button
+                  type="button"
+                  title="Delete Plan"
+                  aria-label="Delete Plan"
+                  onClick={() => openDeleteModal(plan)}
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "10px",
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    color: "#dc2626",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#fef2f2";
+                    e.currentTarget.style.borderColor = "#fca5a5";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ffffff";
+                    e.currentTarget.style.borderColor = "#cbd5e1";
+                  }}
+                >
+                  <Trash2 size={15} />
+                </button>
+
+                {/* More Options Dropdown Toggle */}
+                <div style={{ position: "relative" }}>
+                  <button
+                    type="button"
+                    title="More actions"
+                    aria-label="More actions"
+                    onClick={() =>
+                      setActiveDropdownId(activeDropdownId === plan.plan_id ? null : plan.plan_id)
+                    }
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "10px",
+                      border: "1px solid #e2e8f0",
+                      background: activeDropdownId === plan.plan_id ? "#f1f5f9" : "#ffffff",
+                      color: "#64748b",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <MoreVertical size={16} />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {activeDropdownId === plan.plan_id && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: "42px",
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
+                        border: "1px solid #e2e8f0",
+                        width: "160px",
+                        zIndex: 50,
+                        overflow: "hidden",
+                        padding: "4px",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(plan)}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "8px 12px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          fontSize: "12.5px",
+                          color: "#166534",
+                          background: "transparent",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          fontWeight: 600,
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f0fdf4")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <Pencil size={14} />
+                        <span>Edit Plan</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openDeleteModal(plan)}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "8px 12px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          fontSize: "12.5px",
+                          color: "#dc2626",
+                          background: "transparent",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          fontWeight: 600,
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <Trash2 size={14} />
+                        <span>Delete Plan</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -881,6 +1117,615 @@ export default function PlansPage() {
           </div>
         </div>
       )}
+
+      {/* Floating Success Toast */}
+      {actionSuccess && (
+        <div
+          style={{
+            position: "fixed",
+            top: "24px",
+            right: "24px",
+            zIndex: 1100,
+            background: "#166534",
+            color: "#ffffff",
+            padding: "14px 20px",
+            borderRadius: "14px",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.18)",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            fontSize: "14px",
+            fontWeight: 600,
+          }}
+        >
+          <CheckCircle2 size={18} />
+          <span>{actionSuccess}</span>
+          <button
+            onClick={() => setActionSuccess(null)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#ffffff",
+              cursor: "pointer",
+              marginLeft: "8px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* Edit Plan Modal Popup */}
+      {editingPlan && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.55)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+          onClick={() => !saving && setEditingPlan(null)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "24px",
+              width: "100%",
+              maxWidth: "600px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              overflow: "hidden",
+              border: "1px solid #e2e8f0",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "22px 28px",
+                borderBottom: "1px solid #f1f5f9",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: "#f8fafc",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "12px",
+                    background: "#dcfce7",
+                    color: "#166534",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Pencil size={20} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                    Edit Cultivation Plan
+                  </h2>
+                  <p style={{ fontSize: "12.5px", color: "#64748b", margin: "2px 0 0 0" }}>
+                    Update your crop variety, land allocation, and cultivation schedule
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !saving && setEditingPlan(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  padding: "6px",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleSaveEdit}>
+              <div style={{ padding: "24px 28px", maxHeight: "70vh", overflowY: "auto" }}>
+                {modalError && (
+                  <div
+                    style={{
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
+                      borderRadius: "12px",
+                      padding: "12px 16px",
+                      color: "#b91c1c",
+                      fontSize: "13px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    <AlertTriangle size={16} />
+                    <span>{modalError}</span>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "16px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  {/* Crop */}
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "12.5px",
+                        fontWeight: 700,
+                        color: "#334155",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Crop Variety *
+                    </label>
+                    <select
+                      value={editForm.crop}
+                      onChange={(e) => setEditForm({ ...editForm, crop: e.target.value as Crop })}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: "10px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "13.5px",
+                        background: "#ffffff",
+                        color: "#0f172a",
+                        outline: "none",
+                      }}
+                    >
+                      {CROPS.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Land Size */}
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "12.5px",
+                        fontWeight: 700,
+                        color: "#334155",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Land Size (Acres) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      required
+                      value={editForm.land_size_acres}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          land_size_acres: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: "10px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "13.5px",
+                        background: "#ffffff",
+                        color: "#0f172a",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "16px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  {/* District */}
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "12.5px",
+                        fontWeight: 700,
+                        color: "#334155",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      District *
+                    </label>
+                    <select
+                      value={editForm.district}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, district: e.target.value as District })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: "10px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "13.5px",
+                        background: "#ffffff",
+                        color: "#0f172a",
+                        outline: "none",
+                      }}
+                    >
+                      {DISTRICTS.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Region / Agrarian Division */}
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "12.5px",
+                        fontWeight: 700,
+                        color: "#334155",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Region / Agrarian Division *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Hakmana, Thissamaharama"
+                      value={editForm.region}
+                      onChange={(e) => setEditForm({ ...editForm, region: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: "10px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "13.5px",
+                        background: "#ffffff",
+                        color: "#0f172a",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Season */}
+                <div style={{ marginBottom: "16px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "12.5px",
+                      fontWeight: 700,
+                      color: "#334155",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    Cultivation Season
+                  </label>
+                  <div style={{ display: "flex", gap: "12px" }}>
+                    {(["Maha", "Yala"] as Season[]).map((s) => (
+                      <button
+                        type="button"
+                        key={s}
+                        onClick={() => setEditForm({ ...editForm, farmer_declared_season: s })}
+                        style={{
+                          flex: 1,
+                          padding: "10px 16px",
+                          borderRadius: "10px",
+                          border:
+                            editForm.farmer_declared_season === s
+                              ? "2px solid #166534"
+                              : "1px solid #e2e8f0",
+                          background:
+                            editForm.farmer_declared_season === s ? "#f0fdf4" : "#ffffff",
+                          color:
+                            editForm.farmer_declared_season === s ? "#166534" : "#475569",
+                          fontWeight: editForm.farmer_declared_season === s ? 700 : 500,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          fontSize: "13px",
+                        }}
+                      >
+                        <Sun size={15} />
+                        <span>{s} Season</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "16px",
+                    marginBottom: "8px",
+                  }}
+                >
+                  {/* Planting Date */}
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "12.5px",
+                        fontWeight: 700,
+                        color: "#334155",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Planting Date *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={editForm.planting_date}
+                      onChange={(e) => setEditForm({ ...editForm, planting_date: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: "10px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "13.5px",
+                        background: "#ffffff",
+                        color: "#0f172a",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  {/* Expected Harvest Date */}
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "12.5px",
+                        fontWeight: 700,
+                        color: "#334155",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Expected Harvest Date *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={editForm.expected_harvest_date}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, expected_harvest_date: e.target.value })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: "10px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "13.5px",
+                        background: "#ffffff",
+                        color: "#0f172a",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "18px 28px",
+                  borderTop: "1px solid #f1f5f9",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "12px",
+                  background: "#f8fafc",
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => setEditingPlan(null)}
+                  style={{ borderRadius: "10px", padding: "10px 18px", fontSize: "13px" }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  style={{
+                    background: "#166534",
+                    color: "#ffffff",
+                    borderRadius: "10px",
+                    padding: "10px 22px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Saving Changes...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={16} />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Plan Modal Popup */}
+      {deletingPlan && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.55)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+          onClick={() => !deleting && setDeletingPlan(null)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "24px",
+              width: "100%",
+              maxWidth: "460px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              overflow: "hidden",
+              border: "1px solid #e2e8f0",
+              padding: "28px",
+              textAlign: "center",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                width: "56px",
+                height: "56px",
+                borderRadius: "18px",
+                background: "#fee2e2",
+                color: "#dc2626",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 18px auto",
+              }}
+            >
+              <Trash2 size={28} />
+            </div>
+
+            <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", margin: "0 0 8px 0" }}>
+              Delete Cultivation Plan?
+            </h2>
+            <p
+              style={{
+                fontSize: "13.5px",
+                color: "#64748b",
+                margin: "0 0 20px 0",
+                lineHeight: 1.5,
+              }}
+            >
+              Are you sure you want to delete / cancel the cultivation plan for{" "}
+              <strong style={{ color: "#0f172a" }}>{deletingPlan.crop}</strong> in{" "}
+              <strong style={{ color: "#0f172a" }}>
+                {deletingPlan.district} ({deletingPlan.region})
+              </strong>
+              ? This action cannot be undone.
+            </p>
+
+            {modalError && (
+              <div
+                style={{
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: "12px",
+                  padding: "10px 14px",
+                  color: "#b91c1c",
+                  fontSize: "12.5px",
+                  marginBottom: "16px",
+                  textAlign: "left",
+                }}
+              >
+                {modalError}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={deleting}
+                onClick={() => setDeletingPlan(null)}
+                style={{ flex: 1, borderRadius: "10px", padding: "12px", fontSize: "13.5px" }}
+              >
+                Keep Plan
+              </Button>
+              <Button
+                type="button"
+                disabled={deleting}
+                onClick={handleConfirmDelete}
+                style={{
+                  flex: 1,
+                  background: "#dc2626",
+                  color: "#ffffff",
+                  borderRadius: "10px",
+                  padding: "12px",
+                  fontSize: "13.5px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    <span>Yes, Delete</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

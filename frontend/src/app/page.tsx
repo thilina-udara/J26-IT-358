@@ -270,7 +270,7 @@ export default function HomePage() {
       <section id="hero" className="portal-hero-section">
         <div className="portal-container">
           <div className="portal-hero-grid">
-            
+
             {/* Left Column */}
             <div>
               <div className="portal-hero-badge">
@@ -369,7 +369,7 @@ export default function HomePage() {
       <section className="portal-stats-bar">
         <div className="portal-container">
           <div className="portal-stats-grid">
-            
+
             <div className="portal-stat-item">
               <div className="portal-stat-icon-wrap" style={{ background: "#ecfdf5", color: "#059669" }}>
                 <Users size={26} />
@@ -420,7 +420,7 @@ export default function HomePage() {
       <section id="about" className="portal-about-section">
         <div className="portal-container">
           <div className="portal-about-grid">
-            
+
             {/* Left: Image with badge */}
             <div className="portal-about-img-wrap">
               <img
@@ -524,7 +524,7 @@ export default function HomePage() {
           </div>
 
           <div className="portal-features-grid">
-            
+
             {/* Card 1 */}
             <div className="portal-feature-card">
               <div>
@@ -640,7 +640,7 @@ export default function HomePage() {
           </div>
 
           <div className="portal-steps-grid">
-            
+
             <div className="portal-step-card">
               <div className="portal-step-num" style={{ background: "#15803d" }}>
                 <Users size={24} />
@@ -762,7 +762,7 @@ export default function HomePage() {
       <section id="sdgs" className="portal-sdg-section">
         <div className="portal-container">
           <div className="portal-sdg-grid">
-            
+
             {/* Left: Research Cluster & SDGs */}
             <div>
               <div className="portal-section-label">
@@ -913,7 +913,7 @@ export default function HomePage() {
           </div>
 
           <div className="portal-testimonials-grid">
-            
+
             <div className="portal-testimonial-card">
               <p className="portal-test-quote">
                 &ldquo;AgroDecision AI has really helped me with pre-planting advice and market prices. I avoided oversupplied cabbage in Welimada and got 2.5x better returns for my crops.&rdquo;
@@ -1011,7 +1011,7 @@ export default function HomePage() {
       <footer className="portal-footer">
         <div className="portal-container">
           <div className="portal-footer-grid">
-            
+
             {/* Col 1 */}
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>

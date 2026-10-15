@@ -51,18 +51,58 @@ export default function RiskAnalysisPage() {
   );
 
   const savedPlans: Plan[] = useMemo(() => plansResult.data?.items ?? [], [plansResult.data?.items]);
+  const [directPlan, setDirectPlan] = useState<Plan | null>(null);
+
+  // Read plan_id from URL query string on client
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search).get("plan_id");
+      if (q) {
+        setSelectedPlanId(q);
+      }
+    }
+  }, []);
+
+  // If selectedPlanId is provided but not yet in savedPlans, fetch it directly
+  useEffect(() => {
+    if (!selectedPlanId) return;
+    if (savedPlans.some((p) => p.plan_id === selectedPlanId)) {
+      setDirectPlan(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .read(selectedPlanId)
+      .then((res) => {
+        if (!cancelled && res?.plan) {
+          setDirectPlan(res.plan);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPlanId, savedPlans, api]);
+
+  // Combined list of plans for selection
+  const allAvailablePlans: Plan[] = useMemo(() => {
+    if (directPlan && !savedPlans.some((p) => p.plan_id === directPlan.plan_id)) {
+      return [directPlan, ...savedPlans];
+    }
+    return savedPlans;
+  }, [savedPlans, directPlan]);
 
   // Automatically select the first plan if none selected
   useEffect(() => {
-    if (savedPlans.length > 0 && (!selectedPlanId || !savedPlans.some((p) => p.plan_id === selectedPlanId))) {
-      setSelectedPlanId(savedPlans[0].plan_id);
+    if (allAvailablePlans.length > 0 && (!selectedPlanId || !allAvailablePlans.some((p) => p.plan_id === selectedPlanId))) {
+      setSelectedPlanId(allAvailablePlans[0].plan_id);
     }
-  }, [savedPlans, selectedPlanId]);
+  }, [allAvailablePlans, selectedPlanId]);
 
   // Current active plan
   const activePlan = useMemo(() => {
-    return savedPlans.find((p) => p.plan_id === selectedPlanId) || null;
-  }, [savedPlans, selectedPlanId]);
+    return allAvailablePlans.find((p) => p.plan_id === selectedPlanId) || null;
+  }, [allAvailablePlans, selectedPlanId]);
 
   // Fetch backend analysis for the selected active plan
   useEffect(() => {
@@ -245,7 +285,7 @@ export default function RiskAnalysisPage() {
       </section>
 
       {/* If farmer has no registered plans */}
-      {savedPlans.length === 0 && !plansResult.loading && (
+      {allAvailablePlans.length === 0 && !plansResult.loading && (
         <div
           style={{
             background: "#ffffff",
@@ -307,7 +347,7 @@ export default function RiskAnalysisPage() {
       )}
 
       {/* Plan Selector Card */}
-      {savedPlans.length > 0 && activePlan && (
+      {allAvailablePlans.length > 0 && activePlan && (
         <section
           style={{
             background: "#ffffff",
@@ -406,7 +446,7 @@ export default function RiskAnalysisPage() {
               }}
               aria-label="Select saved cultivation plan"
             >
-              {savedPlans.map((p) => (
+              {allAvailablePlans.map((p) => (
                 <option key={p.plan_id} value={p.plan_id}>
                   {p.crop} · {p.district} ({p.region}) · {p.land_size_acres} Acres · {formatDate(p.planting_date)}
                 </option>

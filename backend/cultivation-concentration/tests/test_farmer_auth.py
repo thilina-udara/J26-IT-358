@@ -82,7 +82,7 @@ def test_invalid_login_is_generic_and_does_not_create_sessions(client, tmp_path)
 
 
 @pytest.mark.parametrize('changes', [
-    {'password': 'short-secret'}, {'password': 'x' * 129}, {'login_identifier': 'bad space'},
+    {'password': 'short'}, {'password': 'x' * 129}, {'login_identifier': 'bad space'},
     {'login_identifier': 'ééé'}, {'login_identifier': '   '}, {'farmer_id': 'chosen-id'},
     {'role': 'administrator'},
 ])

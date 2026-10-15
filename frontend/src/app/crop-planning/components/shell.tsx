@@ -81,10 +81,10 @@ export function CropShell({ children }: { children: React.ReactNode }) {
             style={
               isActive
                 ? {
-                    background: "#eaf5ea",
-                    color: "#15803d",
-                    fontWeight: 700,
-                  }
+                  background: "#eaf5ea",
+                  color: "#15803d",
+                  fontWeight: 700,
+                }
                 : undefined
             }
           >
@@ -330,14 +330,14 @@ export function CropShell({ children }: { children: React.ReactNode }) {
               {pathname.includes("/research-demo")
                 ? "Research Lab (2025-2026)"
                 : pathname.includes("risk-analysis")
-                ? "Risk Analysis"
-                : pathname.includes("suggested-crops")
-                ? "Suggested Crops"
-                : pathname.includes("cultivation-methods") || pathname.includes("cultivation-plan")
-                ? "Cultivation Planning"
-                : pathname.includes("plans")
-                ? "My Farm Plans"
-                : "Dashboard"}
+                  ? "Risk Analysis"
+                  : pathname.includes("suggested-crops")
+                    ? "Suggested Crops"
+                    : pathname.includes("cultivation-methods") || pathname.includes("cultivation-plan")
+                      ? "Cultivation Planning"
+                      : pathname.includes("plans")
+                        ? "My Farm Plans"
+                        : "Dashboard"}
             </strong>
           </div>
 

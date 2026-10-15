@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import verify_admin_access
 from app.schemas.profit_analysis import FarmerAnalysisInput, PaginatedProfitAnalysisResponse, PredictionResultResponse
+from app.schemas.profit_calculation import ProfitCalculationInput, ProfitCalculationResult
 from app.services.profit_analysis_service import (
     create_profit_analysis,
     get_profit_analysis,
@@ -12,6 +13,7 @@ from app.services.profit_analysis_service import (
     delete_profit_analysis,
     format_profit_analysis_response,
 )
+from app.services.profit_calculation_service import calculate_profit_from_input
 
 router = APIRouter()
 
@@ -29,6 +31,24 @@ def create_analysis_endpoint(
 ):
     record = create_profit_analysis(db, payload)
     return format_profit_analysis_response(record)
+
+
+@router.post(
+    "/calculate",
+    response_model=ProfitCalculationResult,
+    status_code=status.HTTP_200_OK,
+    summary="Stateless deterministic profit calculation",
+    description=(
+        "Calculate gross revenue, net profit, return on investment (ROI %), breakeven selling price, "
+        "and margin of safety from farmer-provided cultivation parameters. "
+        "Stateless calculation that does not write to PostgreSQL. "
+        "The selling price is explicitly identified as a user planning assumption, not a machine-learning forecast."
+    )
+)
+def calculate_profit_endpoint(
+    payload: ProfitCalculationInput
+) -> ProfitCalculationResult:
+    return calculate_profit_from_input(payload)
 
 
 @router.get(

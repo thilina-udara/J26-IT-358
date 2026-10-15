@@ -2,10 +2,13 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: ["class"],
+  // Scope the reset to crop-planning CSS rather than changing sibling components.
+  corePlugins: { preflight: false },
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "!./src/app/crop-planning/_test-build/**",
   ],
   theme: {
     extend: {

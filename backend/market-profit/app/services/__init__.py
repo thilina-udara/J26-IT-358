@@ -32,6 +32,11 @@ from app.services.profit_risk_service import (
     assess_profit_risk_from_parameters,
     assess_profit_risk_from_input,
 )
+from app.services.demand_prediction_service import (
+    AbstractDemandPredictor,
+    DefaultUnavailableDemandPredictor,
+    get_demand_predictor,
+)
 
 __all__ = [
     "create_market_price",
@@ -56,4 +61,7 @@ __all__ = [
     "assess_profit_risk",
     "assess_profit_risk_from_parameters",
     "assess_profit_risk_from_input",
+    "AbstractDemandPredictor",
+    "DefaultUnavailableDemandPredictor",
+    "get_demand_predictor",
 ]

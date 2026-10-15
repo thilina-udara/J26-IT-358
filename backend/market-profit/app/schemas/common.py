@@ -86,6 +86,16 @@ STANDARD_MARKETS = {
 }
 
 
+def validate_market_id_value(value: str) -> str:
+    """Validate market identifier against known Dedicated Economic Centres (DECs) and market hubs."""
+    if value not in STANDARD_MARKETS:
+        valid_list = sorted(list(STANDARD_MARKETS.keys()))
+        raise ValueError(
+            f"Invalid target_market_id '{value}'. Must be one of registered market centers: {', '.join(valid_list)}"
+        )
+    return value
+
+
 class PredictionStatus(str, Enum):
     """Lifecycle state of an ML prediction request."""
     PENDING = "pending"

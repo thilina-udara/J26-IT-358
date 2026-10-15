@@ -5,12 +5,14 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import verify_admin_access
 from app.schemas.market_demand import MarketDemandCreate, MarketDemandResponse, PaginatedMarketDemandResponse
+from app.schemas.demand_forecast import DemandForecastRequest, DemandForecastResponse
 from app.services.market_demand_service import (
     create_market_demand,
     get_market_demand,
     list_market_demands,
     delete_market_demand,
 )
+from app.services.demand_prediction_service import AbstractDemandPredictor, get_demand_predictor
 
 router = APIRouter()
 
@@ -28,6 +30,25 @@ def create_demand_endpoint(
     _auth: str = Depends(verify_admin_access)
 ):
     return create_market_demand(db, payload)
+
+
+@router.post(
+    "/forecast",
+    response_model=DemandForecastResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Stateless ML-ready commodity demand forecasting",
+    description=(
+        "Generate projected demand volume and categorical demand level (High/Medium/Low) "
+        "for a given crop, district, market center, and target harvest arrival date. "
+        "Returns prediction_status='unavailable' until trained machine-learning models are connected. "
+        "This endpoint is entirely stateless and does not persist records to PostgreSQL."
+    )
+)
+def forecast_demand_endpoint(
+    payload: DemandForecastRequest,
+    predictor: AbstractDemandPredictor = Depends(get_demand_predictor)
+) -> DemandForecastResponse:
+    return predictor.predict_demand(payload)
 
 
 @router.get(

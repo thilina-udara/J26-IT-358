@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.core.security import verify_admin_access
 from app.schemas.profit_analysis import FarmerAnalysisInput, PaginatedProfitAnalysisResponse, PredictionResultResponse
 from app.schemas.profit_calculation import ProfitCalculationInput, ProfitCalculationResult
+from app.schemas.profit_risk import ProfitRiskAssessmentInput, ProfitRiskAssessmentResult
 from app.services.profit_analysis_service import (
     create_profit_analysis,
     get_profit_analysis,
@@ -14,6 +15,7 @@ from app.services.profit_analysis_service import (
     format_profit_analysis_response,
 )
 from app.services.profit_calculation_service import calculate_profit_from_input
+from app.services.profit_risk_service import assess_profit_risk_from_input
 
 router = APIRouter()
 
@@ -49,6 +51,25 @@ def calculate_profit_endpoint(
     payload: ProfitCalculationInput
 ) -> ProfitCalculationResult:
     return calculate_profit_from_input(payload)
+
+
+@router.post(
+    "/assess-risk",
+    response_model=ProfitRiskAssessmentResult,
+    status_code=status.HTTP_200_OK,
+    summary="Stateless rule-based profit risk assessment",
+    description=(
+        "Evaluate agricultural profit risk category (Low, Medium, High, or insufficient_information) "
+        "from farmer cultivation parameters using deterministic preliminary rules. "
+        "Stateless calculation that does not write to PostgreSQL. "
+        "The risk output is explicitly identified as a rule-based heuristic with preliminary thresholds, "
+        "NOT a machine learning prediction."
+    )
+)
+def assess_risk_endpoint(
+    payload: ProfitRiskAssessmentInput
+) -> ProfitRiskAssessmentResult:
+    return assess_profit_risk_from_input(payload)
 
 
 @router.get(

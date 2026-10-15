@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -93,6 +96,12 @@ const benefits = [
 ];
 
 export default function HomePage() {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.location.replace("/crop-planning/dashboard");
+    }
+  }, []);
+
   return (
     <>
       {/* ─── HERO ──────────────────────────────────────── */}

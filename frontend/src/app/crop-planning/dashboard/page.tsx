@@ -394,7 +394,7 @@ export default function DashboardPage() {
 
         {/* Card 4: Upcoming Activities */}
         <Link
-          href="/crop-planning/cultivation-plan"
+          href="/crop-planning/plans"
           style={{
             background: "#ffffff",
             borderRadius: "20px",
@@ -578,9 +578,9 @@ export default function DashboardPage() {
             </div>
           </Link>
 
-          {/* Action 4: Generate Plan */}
+          {/* Action 4: Register New Plan */}
           <Link
-            href="/crop-planning/cultivation-plan"
+            href="/crop-planning/plans"
             style={{
               background: "#faf5ff",
               borderRadius: "18px",
@@ -612,9 +612,9 @@ export default function DashboardPage() {
             </div>
             <div>
               <strong style={{ fontSize: "14px", color: "#0f172a", display: "block" }}>
-                Generate Plan
+                Add New Plan
               </strong>
-              <small style={{ fontSize: "11px", color: "#64748b" }}>Get cultivation guidance</small>
+              <small style={{ fontSize: "11px", color: "#64748b" }}>Register seasonal intention</small>
             </div>
           </Link>
         </div>
@@ -753,7 +753,7 @@ export default function DashboardPage() {
           <div style={{ background: "#ffffff", borderRadius: "22px", padding: "24px", border: "1px solid #e2e8f0" }}>
             <h3>Approved activities for your plan</h3>
             <p>Choose a saved cultivation plan to view activities supported by applicable approval evidence. No activity reminder is inferred from your planting date.</p>
-            <Link href="/crop-planning/cultivation-plan">Open planning workspace</Link>
+            <Link href="/crop-planning/plans">Open farm plans</Link>
           </div>
           <div style={{ background: "#f0fdf4", borderRadius: "22px", padding: "24px" }}>
             <h3>Your saved intentions</h3>

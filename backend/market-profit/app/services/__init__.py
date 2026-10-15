@@ -37,6 +37,11 @@ from app.services.demand_prediction_service import (
     DefaultUnavailableDemandPredictor,
     get_demand_predictor,
 )
+from app.services.price_forecasting_service import (
+    AbstractPricePredictor,
+    DefaultUnavailablePricePredictor,
+    get_price_predictor,
+)
 
 __all__ = [
     "create_market_price",
@@ -64,4 +69,7 @@ __all__ = [
     "AbstractDemandPredictor",
     "DefaultUnavailableDemandPredictor",
     "get_demand_predictor",
+    "AbstractPricePredictor",
+    "DefaultUnavailablePricePredictor",
+    "get_price_predictor",
 ]

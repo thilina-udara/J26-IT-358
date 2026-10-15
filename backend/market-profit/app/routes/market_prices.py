@@ -5,12 +5,14 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import verify_admin_access
 from app.schemas.market_price import MarketPriceCreate, MarketPriceResponse, PaginatedMarketPriceResponse
+from app.schemas.price_forecast import PriceForecastRequest, PriceForecastResponse
 from app.services.market_price_service import (
     create_market_price,
     get_market_price,
     list_market_prices,
     delete_market_price,
 )
+from app.services.price_forecasting_service import AbstractPricePredictor, get_price_predictor
 
 router = APIRouter()
 
@@ -28,6 +30,25 @@ def create_price_endpoint(
     _auth: str = Depends(verify_admin_access)
 ):
     return create_market_price(db, payload)
+
+
+@router.post(
+    "/forecast",
+    response_model=PriceForecastResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Stateless ML-ready commodity price trend forecasting",
+    description=(
+        "Generate a forecasted price per kg (LKR) for a given crop, cultivation district, "
+        "target market center, arrival date, and price type (wholesale or retail). "
+        "Returns prediction_status='unavailable' until trained machine-learning models are connected. "
+        "This endpoint is entirely stateless and does not persist records to PostgreSQL."
+    )
+)
+def forecast_price_endpoint(
+    payload: PriceForecastRequest,
+    predictor: AbstractPricePredictor = Depends(get_price_predictor)
+) -> PriceForecastResponse:
+    return predictor.forecast_price(payload)
 
 
 @router.get(

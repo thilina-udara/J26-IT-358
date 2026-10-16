@@ -167,48 +167,6 @@ export default function HomePage() {
   return (
     <div>
       {/* --------------------------------------------------------------------------
-          TOP ANNOUNCEMENT BAR
-          -------------------------------------------------------------------------- */}
-      <div className="portal-top-bar">
-        <div className="portal-top-bar-inner">
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                backgroundColor: "#4ade80",
-                display: "inline-block",
-              }}
-            />
-            <strong style={{ color: "#ffffff" }}>
-              AIMS Research Group • Faculty of Computing (IT)
-            </strong>
-            <span style={{ opacity: 0.7 }}>|</span>
-            <span>
-              Data-Driven Farmer Decision System for Collaborative Crop Planning & Market Risk Reduction
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <span style={{ opacity: 0.9 }}>SDG 2 • SDG 8 • SDG 12 • SDG 13</span>
-            <span>•</span>
-            <Link
-              href="/crop-planning"
-              style={{
-                color: "#ffffff",
-                fontWeight: 700,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              Access Prototype <ArrowRight size={14} />
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* --------------------------------------------------------------------------
           HEADER / NAVBAR (Kishan Sathi Exact Format)
           -------------------------------------------------------------------------- */}
       <header className="portal-navbar">
@@ -326,36 +284,6 @@ export default function HomePage() {
                   alt="Sri Lankan farmer using AgroDecision smartphone app in vegetable field"
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
-                <div className="portal-hero-img-overlay">
-                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#86efac", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                    Happy Farmers • Resilient Sri Lanka
-                  </div>
-                  <div style={{ fontSize: "12px", marginTop: "2px" }}>
-                    Real-time cultivation intelligence delivered to farmers’ mobile phones.
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating Badge Top Right */}
-              <div className="portal-float-badge-1">
-                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#dcfce7", color: "#166534", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Sprout size={20} />
-                </div>
-                <div>
-                  <div style={{ fontSize: "12px", fontWeight: 800, color: "#0f172a" }}>100+ Varieties</div>
-                  <div style={{ fontSize: "10px", color: "#64748b" }}>Agronomic Guidelines</div>
-                </div>
-              </div>
-
-              {/* Floating Badge Bottom Left */}
-              <div className="portal-float-badge-2">
-                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#dbeafe", color: "#1d4ed8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <BarChart3 size={20} />
-                </div>
-                <div>
-                  <div style={{ fontSize: "12px", fontWeight: 800, color: "#0f172a" }}>94.6% Accuracy</div>
-                  <div style={{ fontSize: "10px", color: "#64748b" }}>DBSCAN & ML Models</div>
-                </div>
               </div>
             </div>
 

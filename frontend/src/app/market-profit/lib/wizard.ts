@@ -109,3 +109,176 @@ export function clearStep1Storage(): void {
     // Ignore silently
   }
 }
+
+// ============================================================================
+// Step 2: Harvest Details (Expected Harvest Date)
+// ============================================================================
+
+export interface Step2FormData {
+  harvest_date: string; // Stored in YYYY-MM-DD local format
+}
+
+export interface Step2ValidationResult {
+  isValid: boolean;
+  errors: {
+    harvest_date?: string;
+  };
+}
+
+export const STEP2_STORAGE_KEY = "agrodecision_wizard_step2";
+
+/**
+ * Checks if a given calendar year is a leap year.
+ */
+export function isLeapYear(year: number): boolean {
+  if (year % 4 !== 0) return false;
+  if (year % 100 !== 0) return true;
+  return year % 400 === 0;
+}
+
+/**
+ * Returns number of days in a given calendar month (1-12) and year.
+ */
+export function getDaysInMonth(year: number, month: number): number {
+  if (month < 1 || month > 12) return 0;
+  if (month === 2) {
+    return isLeapYear(year) ? 29 : 28;
+  }
+  if ([4, 6, 9, 11].includes(month)) {
+    return 30;
+  }
+  return 31;
+}
+
+/**
+ * Checks if a given year, month (1-12), and day (1-31) form a valid calendar date.
+ */
+export function isValidCalendarDate(year: number, month: number, day: number): boolean {
+  if (year < 1000 || year > 9999) return false;
+  if (month < 1 || month > 12) return false;
+  const maxDays = getDaysInMonth(year, month);
+  return day >= 1 && day <= maxDays;
+}
+
+/**
+ * Gets local today's date formatted as YYYY-MM-DD.
+ * Strictly uses local calendar components to prevent UTC timezone date shifting.
+ */
+export function getTodayDateString(refDate: Date = new Date()): string {
+  const y = refDate.getFullYear();
+  const m = String(refDate.getMonth() + 1).padStart(2, "0");
+  const d = String(refDate.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Validates the expected harvest date string.
+ * Enforces YYYY-MM-DD format, calendar validity (including leap years), and rejects past dates.
+ * Accepts today or any future calendar date.
+ */
+export function validateHarvestDate(
+  dateStr: string | undefined | null,
+  referenceDate?: Date
+): { isValid: boolean; error?: string } {
+  if (!dateStr || dateStr.trim() === "") {
+    return {
+      isValid: false,
+      error: "Please select an expected harvest date.",
+    };
+  }
+
+  const clean = dateStr.trim();
+  const regex = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const match = clean.match(regex);
+
+  if (!match) {
+    return {
+      isValid: false,
+      error: "Please enter a valid date in YYYY-MM-DD format.",
+    };
+  }
+
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+
+  if (!isValidCalendarDate(year, month, day)) {
+    return {
+      isValid: false,
+      error: "Please select a valid calendar date.",
+    };
+  }
+
+  const todayStr = getTodayDateString(referenceDate);
+  if (clean < todayStr) {
+    return {
+      isValid: false,
+      error: "Expected harvest date cannot be in the past.",
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validates Step 2 form input.
+ */
+export function validateStep2(
+  data: Partial<Step2FormData>,
+  referenceDate?: Date
+): Step2ValidationResult {
+  const dateVal = validateHarvestDate(data.harvest_date, referenceDate);
+  return {
+    isValid: dateVal.isValid,
+    errors: dateVal.error ? { harvest_date: dateVal.error } : {},
+  };
+}
+
+/**
+ * Safely reads Step 2 state from browser session storage.
+ */
+export function loadStep2FromStorage(): Step2FormData {
+  if (typeof window === "undefined") {
+    return { harvest_date: "" };
+  }
+
+  try {
+    const stored = window.sessionStorage.getItem(STEP2_STORAGE_KEY);
+    if (!stored) {
+      return { harvest_date: "" };
+    }
+    const parsed = JSON.parse(stored);
+    return {
+      harvest_date: typeof parsed.harvest_date === "string" ? parsed.harvest_date : "",
+    };
+  } catch {
+    return { harvest_date: "" };
+  }
+}
+
+/**
+ * Safely saves Step 2 state into browser session storage.
+ */
+export function saveStep2ToStorage(data: Step2FormData): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.setItem(STEP2_STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore storage quota errors silently
+  }
+}
+
+/**
+ * Clears Step 2 state from session storage.
+ */
+export function clearStep2Storage(): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.removeItem(STEP2_STORAGE_KEY);
+  } catch {
+    // Ignore silently
+  }
+}
+

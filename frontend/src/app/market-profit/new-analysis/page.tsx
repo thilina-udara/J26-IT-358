@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image, { StaticImageData } from "next/image";
 import {
   ArrowLeft,
@@ -15,7 +16,6 @@ import {
 } from "lucide-react";
 
 import { WizardProgress } from "../components/WizardProgress";
-import { Step2ComingSoonModal } from "../components/Step2ComingSoonModal";
 import {
   SUPPORTED_FRONTEND_CROPS,
   SRI_LANKA_DISTRICTS,
@@ -47,11 +47,11 @@ const CROP_IMAGE_MAP: Record<string, StaticImageData> = {
 };
 
 export default function NewAnalysisPage() {
+  const router = useRouter();
   const [selectedCrop, setSelectedCrop] = useState<string>("");
   const [selectedDistrict, setSelectedDistrict] = useState<string>("");
   const [errors, setErrors] = useState<{ crop_id?: string; cultivation_district_id?: string }>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
   // Restore saved state from browser session storage on mount
   useEffect(() => {
@@ -102,7 +102,11 @@ export default function NewAnalysisPage() {
     }
 
     setErrors({});
-    setIsSuccessModalOpen(true);
+    saveStep1ToStorage({
+      crop_id: selectedCrop,
+      cultivation_district_id: selectedDistrict,
+    });
+    router.push("/market-profit/new-analysis/harvest-details");
   };
 
   // Pilot districts vs other districts
@@ -398,16 +402,6 @@ export default function NewAnalysisPage() {
           </button>
         </div>
       </form>
-
-      {/* Step 2 Coming Soon Confirmation Modal */}
-      <Step2ComingSoonModal
-        isOpen={isSuccessModalOpen}
-        onClose={() => setIsSuccessModalOpen(false)}
-        cropName={activeCropMeta?.name_en || ""}
-        cropNameSi={activeCropMeta?.name_si || ""}
-        districtName={activeDistrictMeta?.name || ""}
-        isPilotDistrict={Boolean(activeDistrictMeta?.is_pilot)}
-      />
     </div>
   );
 }

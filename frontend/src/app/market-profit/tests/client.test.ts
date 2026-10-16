@@ -26,7 +26,19 @@ import {
 } from "../lib/formatters";
 
 import { MarketProfitApiClient, ApiError } from "../lib/api";
-import { validateStep1 } from "../lib/wizard";
+import {
+  validateStep1,
+  validateStep2,
+  validateHarvestDate,
+  isLeapYear,
+  getDaysInMonth,
+  isValidCalendarDate,
+  getTodayDateString,
+  STEP2_STORAGE_KEY,
+  loadStep2FromStorage,
+  saveStep2ToStorage,
+  clearStep2Storage,
+} from "../lib/wizard";
 
 import type {
   DemandForecastRequest,
@@ -580,3 +592,129 @@ test("Wizard Step 1: All 6 supported frontend crops pass validation with pilot d
     }
   }
 });
+
+// ============================================================================
+// 6. Step 2 Wizard Harvest Date Validation Tests
+// ============================================================================
+
+const FIXED_TODAY = new Date(2026, 9, 16); // 2026-10-16 in local time
+
+test("Wizard Step 2: Valid future harvest date passes validation", () => {
+  const result = validateHarvestDate("2026-11-20", FIXED_TODAY);
+  assert.equal(result.isValid, true);
+  assert.equal(result.error, undefined);
+
+  const nextYear = validateHarvestDate("2027-03-15", FIXED_TODAY);
+  assert.equal(nextYear.isValid, true);
+  assert.equal(nextYear.error, undefined);
+});
+
+test("Wizard Step 2: Today's date passes validation as minimum acceptable date", () => {
+  const todayStr = getTodayDateString(FIXED_TODAY);
+  assert.equal(todayStr, "2026-10-16");
+
+  const result = validateHarvestDate("2026-10-16", FIXED_TODAY);
+  assert.equal(result.isValid, true);
+  assert.equal(result.error, undefined);
+});
+
+test("Wizard Step 2: Missing or whitespace date is rejected with friendly message", () => {
+  const emptyResult = validateHarvestDate("", FIXED_TODAY);
+  assert.equal(emptyResult.isValid, false);
+  assert.equal(emptyResult.error, "Please select an expected harvest date.");
+
+  const whitespaceResult = validateHarvestDate("   ", FIXED_TODAY);
+  assert.equal(whitespaceResult.isValid, false);
+  assert.equal(whitespaceResult.error, "Please select an expected harvest date.");
+
+  const nullResult = validateHarvestDate(null as any, FIXED_TODAY);
+  assert.equal(nullResult.isValid, false);
+  assert.equal(nullResult.error, "Please select an expected harvest date.");
+});
+
+test("Wizard Step 2: Invalid date format is rejected", () => {
+  const slashFormat = validateHarvestDate("2026/10/16", FIXED_TODAY);
+  assert.equal(slashFormat.isValid, false);
+  assert.equal(slashFormat.error, "Please enter a valid date in YYYY-MM-DD format.");
+
+  const ddmmyyyy = validateHarvestDate("16-10-2026", FIXED_TODAY);
+  assert.equal(ddmmyyyy.isValid, false);
+  assert.equal(ddmmyyyy.error, "Please enter a valid date in YYYY-MM-DD format.");
+
+  const gibberish = validateHarvestDate("not-a-date", FIXED_TODAY);
+  assert.equal(gibberish.isValid, false);
+  assert.equal(gibberish.error, "Please enter a valid date in YYYY-MM-DD format.");
+});
+
+test("Wizard Step 2: Past dates are rejected", () => {
+  const yesterday = validateHarvestDate("2026-10-15", FIXED_TODAY);
+  assert.equal(yesterday.isValid, false);
+  assert.equal(yesterday.error, "Expected harvest date cannot be in the past.");
+
+  const pastYear = validateHarvestDate("2025-05-10", FIXED_TODAY);
+  assert.equal(pastYear.isValid, false);
+  assert.equal(pastYear.error, "Expected harvest date cannot be in the past.");
+});
+
+test("Wizard Step 2: Calendar validity and leap-year rules are strictly enforced", () => {
+  // Leap year calculation verification
+  assert.equal(isLeapYear(2024), true);
+  assert.equal(isLeapYear(2028), true);
+  assert.equal(isLeapYear(2000), true);
+  assert.equal(isLeapYear(1900), false);
+  assert.equal(isLeapYear(2026), false);
+
+  // Month day limits
+  assert.equal(getDaysInMonth(2024, 2), 29);
+  assert.equal(getDaysInMonth(2026, 2), 28);
+  assert.equal(getDaysInMonth(2026, 4), 30);
+  assert.equal(getDaysInMonth(2026, 12), 31);
+  assert.equal(getDaysInMonth(2026, 13), 0);
+
+  // Valid calendar date checker
+  assert.equal(isValidCalendarDate(2024, 2, 29), true);
+  assert.equal(isValidCalendarDate(2026, 2, 29), false, "Feb 29 on non-leap year must be invalid");
+  assert.equal(isValidCalendarDate(2026, 2, 30), false, "Feb 30 must be invalid");
+  assert.equal(isValidCalendarDate(2026, 4, 31), false, "April 31 must be invalid");
+  assert.equal(isValidCalendarDate(2026, 6, 31), false, "June 31 must be invalid");
+  assert.equal(isValidCalendarDate(2026, 9, 31), false, "September 31 must be invalid");
+  assert.equal(isValidCalendarDate(2026, 11, 31), false, "November 31 must be invalid");
+
+  // validateHarvestDate with invalid calendar days
+  const feb30 = validateHarvestDate("2027-02-30", FIXED_TODAY);
+  assert.equal(feb30.isValid, false);
+  assert.equal(feb30.error, "Please select a valid calendar date.");
+
+  const feb29NonLeap = validateHarvestDate("2027-02-29", FIXED_TODAY);
+  assert.equal(feb29NonLeap.isValid, false);
+  assert.equal(feb29NonLeap.error, "Please select a valid calendar date.");
+
+  // Future leap year Feb 29 (2028-02-29) is completely valid
+  const feb29Leap = validateHarvestDate("2028-02-29", FIXED_TODAY);
+  assert.equal(feb29Leap.isValid, true);
+  assert.equal(feb29Leap.error, undefined);
+});
+
+test("Wizard Step 2: validateStep2 returns composite validation output", () => {
+  const valid = validateStep2({ harvest_date: "2027-01-20" }, FIXED_TODAY);
+  assert.equal(valid.isValid, true);
+  assert.deepEqual(valid.errors, {});
+
+  const invalid = validateStep2({ harvest_date: "" }, FIXED_TODAY);
+  assert.equal(invalid.isValid, false);
+  assert.equal(invalid.errors.harvest_date, "Please select an expected harvest date.");
+});
+
+test("Wizard Step 2: Session storage helpers and keys are safe and stable", () => {
+  assert.equal(STEP2_STORAGE_KEY, "agrodecision_wizard_step2");
+
+  // In Node environment, helpers return default gracefully without throwing
+  const initial = loadStep2FromStorage();
+  assert.deepEqual(initial, { harvest_date: "" });
+
+  assert.doesNotThrow(() => {
+    saveStep2ToStorage({ harvest_date: "2027-03-01" });
+    clearStep2Storage();
+  });
+});
+

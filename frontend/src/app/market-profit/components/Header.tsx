@@ -8,6 +8,7 @@ interface HeaderProps {
 
 export function Header({ onToggleSidebar }: HeaderProps) {
   const pathname = usePathname();
+  const isHarvestDetails = pathname.includes("/harvest-details");
   const isNewAnalysis = pathname.includes("/new-analysis");
 
   return (
@@ -46,7 +47,11 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           <span>Market & Profit</span>
           <span>/</span>
           <span className="text-[#166534] font-semibold">
-            {isNewAnalysis ? "New Analysis (Step 1)" : "Overview"}
+            {isHarvestDetails
+              ? "New Analysis (Step 2: Harvest Details)"
+              : isNewAnalysis
+              ? "New Analysis (Step 1: Crop & Location)"
+              : "Overview"}
           </span>
         </div>
       </div>

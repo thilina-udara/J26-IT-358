@@ -1,0 +1,352 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Image, { StaticImageData } from "next/image";
+import {
+  ArrowLeft,
+  ArrowRight,
+  AlertCircle,
+  CheckCircle2,
+  Calendar,
+  Sprout,
+  MapPin,
+  Clock,
+  Info,
+  Check,
+} from "lucide-react";
+
+import { WizardProgress } from "../../components/WizardProgress";
+import {
+  SUPPORTED_FRONTEND_CROPS,
+  SRI_LANKA_DISTRICTS,
+  FrontendCropMetadata,
+  DistrictMetadata,
+} from "../../lib/constants";
+import {
+  validateStep1,
+  loadStep1FromStorage,
+  Step1FormData,
+  validateHarvestDate,
+  validateStep2,
+  loadStep2FromStorage,
+  saveStep2ToStorage,
+  getTodayDateString,
+} from "../../lib/wizard";
+
+// Statically import the 6 verified crop photographs for the summary badge
+import okraImg from "../../assets/crops/okra.jpg";
+import brinjalImg from "../../assets/crops/brinjal.jpg";
+import pumpkinImg from "../../assets/crops/pumpkin.jpg";
+import maizeImg from "../../assets/crops/maize.jpg";
+import mungBeanImg from "../../assets/crops/mung-bean.jpg";
+import chilliImg from "../../assets/crops/chilli.jpg";
+
+const CROP_IMAGE_MAP: Record<string, StaticImageData> = {
+  CR_OKRA: okraImg,
+  CR_BRINJAL: brinjalImg,
+  CR_PUMPKIN: pumpkinImg,
+  CR_MAIZE: maizeImg,
+  CR_MUNG_BEAN: mungBeanImg,
+  CR_CHILLI: chilliImg,
+};
+
+export default function HarvestDetailsPage() {
+  const router = useRouter();
+
+  // Step 1 summary state
+  const [step1Data, setStep1Data] = useState<Step1FormData>({
+    crop_id: "",
+    cultivation_district_id: "",
+  });
+  const [isStep1Valid, setIsStep1Valid] = useState<boolean | null>(null);
+
+  // Step 2 date state
+  const [harvestDate, setHarvestDate] = useState<string>("");
+  const [dateError, setDateError] = useState<string | undefined>(undefined);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [isStep2Saved, setIsStep2Saved] = useState(false);
+
+  // Minimum allowed date is today's local date
+  const todayString = getTodayDateString();
+
+  // Load Step 1 and Step 2 state on mount
+  useEffect(() => {
+    // 1. Verify Step 1 selections
+    const savedStep1 = loadStep1FromStorage();
+    const validation = validateStep1(savedStep1);
+
+    if (!validation.isValid) {
+      setIsStep1Valid(false);
+      // Brief redirect delay to allow explanation to show
+      const timer = setTimeout(() => {
+        router.replace("/market-profit/new-analysis");
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else {
+      setIsStep1Valid(true);
+      setStep1Data(savedStep1);
+    }
+
+    // 2. Restore Step 2 saved date if available
+    const savedStep2 = loadStep2FromStorage();
+    if (savedStep2.harvest_date) {
+      setHarvestDate(savedStep2.harvest_date);
+    }
+  }, [router]);
+
+  // Handle date input change
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value;
+    setHarvestDate(newDate);
+    setIsStep2Saved(false);
+
+    // Persist immediately to session storage
+    saveStep2ToStorage({ harvest_date: newDate });
+
+    // Clear inline error if user fixes input
+    if (hasAttemptedSubmit) {
+      const validation = validateHarvestDate(newDate);
+      setDateError(validation.error);
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setHasAttemptedSubmit(true);
+
+    const validation = validateStep2({ harvest_date: harvestDate });
+
+    if (!validation.isValid) {
+      setDateError(validation.errors.harvest_date);
+      setIsStep2Saved(false);
+      return;
+    }
+
+    setDateError(undefined);
+    saveStep2ToStorage({ harvest_date: harvestDate });
+    setIsStep2Saved(true);
+  };
+
+  // Find metadata for summary card
+  const selectedCropMeta: FrontendCropMetadata | undefined =
+    SUPPORTED_FRONTEND_CROPS.find((c) => c.crop_id === step1Data.crop_id);
+  const selectedDistrictMeta: DistrictMetadata | undefined =
+    SRI_LANKA_DISTRICTS.find((d) => d.id === step1Data.cultivation_district_id);
+  const cropImage = step1Data.crop_id ? CROP_IMAGE_MAP[step1Data.crop_id] : null;
+
+  // If Step 1 is invalid, show friendly redirect notice
+  if (isStep1Valid === false) {
+    return (
+      <div className="max-w-2xl mx-auto py-12 text-center space-y-4">
+        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+          <AlertCircle className="h-6 w-6" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900">
+          Step 1 Information Missing
+        </h2>
+        <p className="text-sm text-slate-600 max-w-md mx-auto">
+          Please select your candidate crop and cultivation district first.
+          Redirecting you to Step 1...
+        </p>
+        <div>
+          <Link
+            href="/market-profit/new-analysis"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#15803d] hover:underline"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Go to Step 1: Crop & Location</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 pb-16">
+      {/* Top Navigation & Breadcrumb */}
+      <div className="flex items-center justify-between gap-4">
+        <Link
+          href="/market-profit/new-analysis"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-[#15803d] transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to Crop & Location</span>
+        </Link>
+
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100/80 text-[#166534]">
+          Step 2 of 4
+        </span>
+      </div>
+
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+          Harvest Details
+        </h1>
+        <p className="text-sm sm:text-base text-slate-600 mt-1.5 leading-relaxed">
+          Step 2 of 4: Specify the timing of your harvest to align with historical price seasons and wholesale demand.
+        </p>
+      </div>
+
+      {/* Progress Stepper - Step 2 is Active */}
+      <WizardProgress currentStep={2} />
+
+      {/* Step 1 Selections Summary Banner */}
+      <section className="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-4 sm:p-5 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
+            {cropImage && (
+              <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 border border-emerald-300 shadow-xs bg-white">
+                <Image
+                  src={cropImage}
+                  alt={selectedCropMeta?.name_en || "Selected crop"}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#15803d] uppercase tracking-wider">
+                <Sprout className="h-3.5 w-3.5" />
+                <span>Selected Crop & Location</span>
+              </div>
+              <div className="text-base font-bold text-slate-900 truncate">
+                {selectedCropMeta?.name_en || "Crop"}{" "}
+                <span className="text-xs font-normal text-slate-500">
+                  ({selectedCropMeta?.name_si})
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-0.5">
+                <MapPin className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                <span>{selectedDistrictMeta?.name || "District"}, Sri Lanka</span>
+                {selectedDistrictMeta?.is_pilot && (
+                  <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-emerald-100 text-[#166534]">
+                    Pilot District
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <Link
+            href="/market-profit/new-analysis"
+            className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-[#15803d] hover:text-[#166534] hover:underline self-start sm:self-auto shrink-0 bg-white px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs"
+          >
+            <span>Change</span>
+          </Link>
+        </div>
+      </section>
+
+      {/* Main Step 2 Form */}
+      <form onSubmit={handleFormSubmit} className="space-y-8">
+        <section className="rounded-2xl bg-white p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-6">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#15803d]">
+              <Calendar className="h-4 w-4" />
+              <span>Step 2.1 — Timeline</span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
+              Expected Harvest Date
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Select the date you expect to harvest your crop.
+            </p>
+          </div>
+
+          {/* Date Input Field */}
+          <div className="max-w-md space-y-2">
+            <label
+              htmlFor="harvest_date"
+              className="block text-sm font-semibold text-slate-700"
+            >
+              Expected Harvest Date <span className="text-red-500">*</span>
+            </label>
+
+            <div className="relative">
+              <input
+                type="date"
+                id="harvest_date"
+                name="harvest_date"
+                min={todayString}
+                value={harvestDate}
+                onChange={handleDateChange}
+                aria-describedby="harvest_date_help harvest_date_error"
+                className={`w-full rounded-xl border px-4 py-3 text-sm text-slate-900 shadow-2xs transition-colors focus:outline-hidden ${
+                  dateError
+                    ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-400/20 bg-red-50/20"
+                    : "border-slate-300 focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 bg-white"
+                }`}
+              />
+            </div>
+
+            <p id="harvest_date_help" className="text-xs text-slate-500">
+              Select the date you expect to harvest your crop. Today or any future calendar date is accepted.
+            </p>
+
+            {dateError && (
+              <p
+                id="harvest_date_error"
+                role="alert"
+                className="text-xs font-semibold text-red-600 flex items-center gap-1.5 pt-1"
+              >
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{dateError}</span>
+              </p>
+            )}
+          </div>
+
+          {/* Informational Guidance Box */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-xs text-slate-600 space-y-1.5 max-w-xl">
+            <div className="flex items-center gap-2 font-semibold text-slate-800">
+              <Clock className="h-4 w-4 text-[#15803d]" />
+              <span>How the harvest date is used</span>
+            </div>
+            <p className="leading-relaxed">
+              AgroDecision evaluates seasonal wholesale price fluctuations and demand trends for the month of your harvest to project revenue and assess financial risk.
+            </p>
+          </div>
+        </section>
+
+        {/* Success Confirmation Notice if user validated and saved */}
+        {isStep2Saved && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 text-emerald-950 shadow-xs">
+            <div className="flex items-start gap-3">
+              <div className="h-6 w-6 rounded-full bg-[#15803d] text-white flex items-center justify-center shrink-0 mt-0.5">
+                <Check className="h-4 w-4 stroke-[3]" />
+              </div>
+              <div className="text-sm space-y-1">
+                <span className="font-bold">
+                  Expected Harvest Date Saved: {harvestDate}
+                </span>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  Your timeline selection is preserved. Land Extent, Expected Yield, and Step 3 (Selling Market) will be available in upcoming sprint tasks.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons Bar */}
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
+          <Link
+            href="/market-profit/new-analysis"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
+          >
+            <ArrowLeft className="h-4 w-4 text-slate-500" />
+            <span>Back to Crop & Location</span>
+          </Link>
+
+          <button
+            type="submit"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white px-8 py-3.5 text-sm font-bold shadow-sm shadow-emerald-800/20 transition-all cursor-pointer group"
+          >
+            <span>Save & Proceed</span>
+            <ArrowRight className="h-4 w-4 text-emerald-100 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

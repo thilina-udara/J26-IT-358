@@ -88,3 +88,20 @@ desktop.ini
 .gemini/
 README.md
 
+
+# --- Personal Notes & Docs (Rule 5: Never Commit) ---
+DATA_COLLECTION_CHECKLIST.md
+PROJECT_ROADMAP.md
+*.draft.md
+*.scratch.md
+
+# --- Block Raw Heavy Dumps & PDFs (Rule 6) ---
+*.pdf
+*.nc
+*.nc4
+*.grib
+*.tif
+*.tiff
+_archive/
+scratch_test_dmc/
+sri_lanka_paddy_data/

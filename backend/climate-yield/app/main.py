@@ -1,14 +1,12 @@
 """
-Component 4: AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System
-Deshapriya P.D.T.U (IT23247086)
-Project: J26-IT-358
+Climate & Crop Yield Decision Support Microservice
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
-    title="AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System",
+    title="Climate-Yield Decision Support Service",
     description="Microservice for meteorological hazard monitoring, pre-harvest crop yield deficit prediction, and TreeSHAP explainability.",
     version="1.0.0"
 )
@@ -24,9 +22,7 @@ app.add_middleware(
 @app.get("/")
 def root():
     return {
-        "service": "AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System",
-        "component": "Component 04",
-        "lead": "Deshapriya P.D.T.U",
+        "service": "climate-yield-service",
         "status": "online",
         "port": 8004,
         "docs_url": "/docs"
@@ -39,9 +35,9 @@ def health_check():
 @app.get("/api/v1/info")
 def get_component_info():
     return {
-        "component_name": "AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System",
-        "supported_models": ["XGBoost", "LightGBM", "LSTM"],
+        "service_name": "Climate-Yield Decision Support Service",
+        "supported_models": ["Adaptive Hybrid AI", "XGBoost"],
         "explainability": "TreeSHAP",
-        "data_sources": ["NASA POWER API", "Copernicus ERA5-Land", "DCS / HARTI Historical Statistics"],
+        "data_sources": ["NASA POWER API", "Copernicus ERA5-Land", "DCS Historical Statistics"],
         "spatial_coverage": "25 Districts of Sri Lanka"
     }

@@ -1,7 +1,4 @@
 ﻿"""
-Component 4: Irrigation Reservoir Storage Ingestion Pipeline
-AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System
-
 Description:
 Automated retrieval of daily operational storage, capacity percentage, rainfall,
 and spilling status for 74 Major and 43 Medium irrigation reservoirs in Sri Lanka.

@@ -1,7 +1,5 @@
 {
-  "system_name": "AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System",
-  "component": "Component 04 (Climate-Yield Microservice)",
-  "lead_researcher": "Deshapriya P.D.T.U. (IT23247086)",
+  "service_name": "climate-yield-service",
   "training_period": "2001 - 2020",
   "test_period": "2021 - 2025",
   "dataset_total_samples": 8017,

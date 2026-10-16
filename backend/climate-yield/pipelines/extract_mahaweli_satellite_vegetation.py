@@ -1,7 +1,4 @@
 """
-Component 4: Satellite Vegetation Data Collection for Mahaweli Systems
-AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System
-
 Products:
 - MODIS/061/MOD13Q1 (Terra 250m, 16-day NDVI & EVI)
 - MODIS/061/MYD13Q1 (Aqua 250m, 16-day NDVI & EVI)

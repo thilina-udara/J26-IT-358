@@ -1,6 +1,5 @@
 """
-Component 4: Adaptive Hybrid AI Crop Yield Model Trainer & Evaluator
-Project: J26-IT-358 | Lead: Deshapriya P.D.T.U. (IT23247086)
+Adaptive Hybrid AI Crop Yield Model Trainer & Evaluator
 
 Trains and exports:
 1. Adaptive Hybrid AI Model (3-Year Rolling Baseline + Attenuated Climate Shock) -> R² = 0.6023
@@ -174,9 +173,7 @@ for c in sorted(test_sorted_df["crop_name"].unique()):
 # 4. Save Official Metrics JSON
 # ------------------------------------------------------------------------------
 metrics_payload = {
-    "system_name": "AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System",
-    "component": "Component 04 (Climate-Yield Microservice)",
-    "lead_researcher": "Deshapriya P.D.T.U. (IT23247086)",
+    "service_name": "climate-yield-service",
     "training_period": "2001 - 2020",
     "test_period": "2021 - 2025",
     "dataset_total_samples": len(df),

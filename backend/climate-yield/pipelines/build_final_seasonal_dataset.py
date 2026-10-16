@@ -1,7 +1,4 @@
 """
-Component 4: Master Seasonal Climate-Crop Dataset Builder (Two-Tier Architecture)
-Project: J26-IT-358 (Lead: Deshapriya P.D.T.U. / IT23247086)
-
 Generates the locked, verified master seasonal dataset with Tier 1 Irrigation Zone integration:
 - Exactly 8,017 rows (1 record per crop per season per district)
 - Exactly 12 columns (including irrigation_zone_type)
@@ -30,7 +27,7 @@ OUT_RESEARCH_PATH = os.path.join(RESEARCH_DIR, "component04_final_seasonal_datas
 OUT_GIT_PATH = os.path.join(GIT_DATA_DIR, "component04_final_seasonal_dataset.csv")
 
 print("=" * 80)
-print("BUILDING COMPONENT 4 MASTER SEASONAL CLIMATE-CROP DATASET")
+print("BUILDING MASTER SEASONAL CLIMATE-CROP DATASET")
 print("=" * 80)
 
 # 1. Load DCS crop records

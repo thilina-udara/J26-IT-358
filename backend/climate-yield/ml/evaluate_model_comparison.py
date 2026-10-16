@@ -1,8 +1,7 @@
 """
-Component 4: Model Comparison & Evaluation Benchmarking
-Project: J26-IT-358 (Lead: Deshapriya P.D.T.U. / IT23247086)
+Model Comparison & Evaluation Benchmarking
 
-Runs full baseline comparisons and the Adaptive Hybrid AI model on the
+Runs baseline comparisons and the Adaptive Hybrid AI model on the
 locked master seasonal dataset (8,017 samples, 7 crops, 25 districts).
 """
 
@@ -33,7 +32,7 @@ if not DATA_PATH:
     sys.exit(1)
 
 print("=" * 85)
-print("COMPONENT 4: MODEL BENCHMARKING & VALIDATION REPORT")
+print("CROP YIELD MODEL BENCHMARKING & VALIDATION REPORT")
 print("=" * 85)
 print(f"Dataset Loaded : {DATA_PATH}")
 

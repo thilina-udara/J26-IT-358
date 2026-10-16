@@ -1,7 +1,4 @@
 ﻿"""
-Component 4: Standardized Precipitation Index (SPI) Drought Calculation Pipeline
-AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System
-
 Description:
 Computes multi-timescale meteorological drought indices (SPI-1, SPI-3, SPI-6)
 for all 25 districts of Sri Lanka across 45 years (1981-2025).

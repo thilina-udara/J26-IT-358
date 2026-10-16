@@ -1,18 +1,9 @@
 ﻿"""
-Component 4: Weather Data Ingestion Pipeline
-AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System
+Weather Data Ingestion Pipeline
 
 Description:
 Fetches 45 years (1981 to 2025) of daily meteorological data for all 25 districts
 of Sri Lanka using the NASA POWER Agroclimatology (AG) API.
-
-Parameters Collected:
-- PRECTOTCORR : Precipitation / Rainfall (mm/day)
-- T2M         : Mean Air Temperature at 2m (°C)
-- T2M_MAX     : Maximum Air Temperature at 2m (°C)
-- T2M_MIN     : Minimum Air Temperature at 2m (°C)
-- RH2M        : Relative Humidity at 2m (%)
-- WS2M        : Wind Speed at 2m (m/s)
 """
 
 import os

@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-green: #15803d;
+  --dark-green: #166534;
+  --light-green: #dcfce7;
+}
+
+/* Smooth transitions and scroll behavior for AgroDecision dashboard */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: #1e293b;
+  background-color: #f8fafc;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}

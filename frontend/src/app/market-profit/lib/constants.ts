@@ -103,6 +103,69 @@ export const MASTER_CROPS: CropMetadata[] = [
   },
 ];
 
+// 6 Farmer-Facing Supported Crops for Component 1 (Excludes Tomato per pilot scope)
+// Displayed exactly: Okra, Brinjal (Eggplant), Pumpkin, Maize (Corn), Mung Bean (Green Gram), Chilli
+export interface FrontendCropMetadata {
+  crop_id: string;
+  name_en: string;
+  name_si: string;
+  category: string;
+  image_name: string;
+  alt_text: string;
+}
+
+export const SUPPORTED_FRONTEND_CROPS: FrontendCropMetadata[] = [
+  {
+    crop_id: "CR_OKRA",
+    name_en: "Okra",
+    name_si: "බණ්ඩක්කා (Bandakka)",
+    category: "Vegetable",
+    image_name: "okra.jpg",
+    alt_text: "Fresh green okra pods",
+  },
+  {
+    crop_id: "CR_BRINJAL",
+    name_en: "Brinjal (Eggplant)",
+    name_si: "වම්බටු (Wambatu)",
+    category: "Vegetable",
+    image_name: "brinjal.jpg",
+    alt_text: "Fresh glossy purple brinjals",
+  },
+  {
+    crop_id: "CR_PUMPKIN",
+    name_en: "Pumpkin",
+    name_si: "වට්ටක්කා (Wattakka)",
+    category: "Vegetable",
+    image_name: "pumpkin.jpg",
+    alt_text: "Whole ripe Sri Lankan pumpkin",
+  },
+  {
+    crop_id: "CR_MAIZE",
+    name_en: "Maize (Corn)",
+    name_si: "ඉරිඟු (Bada Iringu)",
+    category: "Grain",
+    image_name: "maize.jpg",
+    alt_text: "Fresh golden yellow maize corn cobs",
+  },
+  {
+    crop_id: "CR_MUNG_BEAN",
+    name_en: "Mung Bean (Green Gram)",
+    name_si: "මුං ඇට (Mung Ata)",
+    category: "Legume",
+    image_name: "mung-bean.jpg",
+    alt_text: "Raw green gram mung bean seeds",
+  },
+  {
+    crop_id: "CR_CHILLI",
+    name_en: "Chilli",
+    name_si: "මිරිස් (Miris)",
+    category: "Condiment",
+    image_name: "chilli.jpg",
+    alt_text: "Fresh bright red and green chillies",
+  },
+];
+
+
 // Valid Sri Lankan Districts from shared/constants/srilanka_districts.json
 export const SRI_LANKA_DISTRICTS: DistrictMetadata[] = [
   // Pilot Districts

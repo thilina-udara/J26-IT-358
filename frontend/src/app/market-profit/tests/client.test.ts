@@ -8,6 +8,7 @@ import test from "node:test";
 
 import {
   MASTER_CROPS,
+  SUPPORTED_FRONTEND_CROPS,
   SRI_LANKA_DISTRICTS,
   STANDARD_MARKETS,
   PRICE_TYPES,
@@ -52,6 +53,25 @@ test("Catalogs: Master crops catalog contains 7 registered crops", () => {
   assert.ok(cropIds.includes("CR_OKRA"));
   assert.ok(cropIds.includes("CR_PUMPKIN"));
   assert.ok(cropIds.includes("CR_MUNG_BEAN"));
+});
+
+test("Catalogs: Farmer-facing supported crops contains exactly 6 crops excluding Tomato", () => {
+  assert.equal(SUPPORTED_FRONTEND_CROPS.length, 6);
+  const cropIds = SUPPORTED_FRONTEND_CROPS.map((c) => c.crop_id);
+  assert.equal(cropIds.includes("CR_TOMATO"), false);
+  assert.deepEqual(cropIds, [
+    "CR_OKRA",
+    "CR_BRINJAL",
+    "CR_PUMPKIN",
+    "CR_MAIZE",
+    "CR_MUNG_BEAN",
+    "CR_CHILLI",
+  ]);
+  // Confirm all 6 have valid image asset names and alt text
+  for (const crop of SUPPORTED_FRONTEND_CROPS) {
+    assert.ok(crop.image_name && crop.image_name.endsWith(".jpg"));
+    assert.ok(crop.alt_text && crop.alt_text.length > 5);
+  }
 });
 
 test("Catalogs: Districts include Matara (LK-32) and Hambantota (LK-33) pilot districts", () => {

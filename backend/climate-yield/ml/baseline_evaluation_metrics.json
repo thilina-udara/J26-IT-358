@@ -1,0 +1,89 @@
+{
+  "system_name": "AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System",
+  "component": "Component 04 (Climate-Yield Microservice)",
+  "lead_researcher": "Deshapriya P.D.T.U. (IT23247086)",
+  "training_period": "2001 - 2020",
+  "test_period": "2021 - 2025",
+  "dataset_total_samples": 8017,
+  "train_samples": 6355,
+  "test_samples": 1662,
+  "models_evaluated": {
+    "baseline_xgboost": {
+      "model_type": "Seasonal XGBoost Regressor (Tuned Regularization)",
+      "hyperparameters": {
+        "n_estimators": 300,
+        "learning_rate": 0.03,
+        "max_depth": 5,
+        "reg_lambda": 10.0,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "random_state": 42
+      },
+      "overall_metrics": {
+        "test_r2": 0.5061,
+        "test_rmse_mt_ha": 4.2547,
+        "test_mae_mt_ha": 2.4797
+      }
+    },
+    "adaptive_hybrid_ai_model": {
+      "model_type": "Adaptive Hybrid AI (3-Year Rolling Agronomic Baseline + Attenuated Climate Shock)",
+      "architecture_description": "Combines district-crop lagged rolling historical yield with regularized Ridge climate shock estimation and crop-specific attenuation factors to prevent negative transfer during macro input shocks.",
+      "overall_metrics": {
+        "test_r2": 0.6023,
+        "test_rmse_mt_ha": 3.8182,
+        "test_mae_mt_ha": 1.8931
+      },
+      "per_crop_metrics": {
+        "Brinjal": {
+          "test_samples": 250,
+          "mean_actual_yield_mt_ha": 11.5096,
+          "test_r2": 0.39,
+          "rmse_mt_ha": 2.8348,
+          "mae_mt_ha": 1.835
+        },
+        "Chilli": {
+          "test_samples": 250,
+          "mean_actual_yield_mt_ha": 5.3132,
+          "test_r2": 0.0642,
+          "rmse_mt_ha": 3.2851,
+          "mae_mt_ha": 1.6565
+        },
+        "Green Gram": {
+          "test_samples": 215,
+          "mean_actual_yield_mt_ha": 1.2506,
+          "test_r2": 0.4654,
+          "rmse_mt_ha": 0.6253,
+          "mae_mt_ha": 0.426
+        },
+        "Maize": {
+          "test_samples": 217,
+          "mean_actual_yield_mt_ha": 3.1422,
+          "test_r2": 0.106,
+          "rmse_mt_ha": 1.4294,
+          "mae_mt_ha": 0.916
+        },
+        "Okra": {
+          "test_samples": 250,
+          "mean_actual_yield_mt_ha": 10.2784,
+          "test_r2": 0.0547,
+          "rmse_mt_ha": 4.5356,
+          "mae_mt_ha": 1.9861
+        },
+        "Pumpkin": {
+          "test_samples": 230,
+          "mean_actual_yield_mt_ha": 12.711,
+          "test_r2": 0.093,
+          "rmse_mt_ha": 7.0718,
+          "mae_mt_ha": 4.1877
+        },
+        "Tomato": {
+          "test_samples": 250,
+          "mean_actual_yield_mt_ha": 11.6243,
+          "test_r2": 0.6398,
+          "rmse_mt_ha": 3.0662,
+          "mae_mt_ha": 2.0935
+        }
+      }
+    }
+  }
+}

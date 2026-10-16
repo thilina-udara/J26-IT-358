@@ -31,7 +31,9 @@ import {
   validateStep2,
   validateHarvestDate,
   validateLandExtent,
+  validateExpectedYield,
   MAX_LAND_EXTENT_ACRES,
+  MAX_EXPECTED_YIELD_KG,
   isLeapYear,
   getDaysInMonth,
   isValidCalendarDate,
@@ -797,27 +799,128 @@ test("Wizard Step 2: Excessively large land extent exceeding configurable limit 
   );
 });
 
-test("Wizard Step 2: validateStep2 requires both valid harvest date and valid land extent", () => {
-  // Both valid
-  const bothValid = validateStep2(
-    { harvest_date: "2027-01-20", land_extent_acres: "2.5" },
+test("Wizard Step 2: Valid expected harvest yield in whole and decimal kg passes", () => {
+  // Whole number string
+  const wholeStr = validateExpectedYield("1500");
+  assert.equal(wholeStr.isValid, true);
+  assert.equal(wholeStr.parsedValue, 1500);
+  assert.equal(wholeStr.error, undefined);
+
+  // Decimal number string
+  const decimalStr = validateExpectedYield("2500.75");
+  assert.equal(decimalStr.isValid, true);
+  assert.equal(decimalStr.parsedValue, 2500.75);
+
+  // Small positive fraction
+  const fraction = validateExpectedYield("0.5");
+  assert.equal(fraction.isValid, true);
+  assert.equal(fraction.parsedValue, 0.5);
+
+  // Numeric type input
+  const numInput = validateExpectedYield(500);
+  assert.equal(numInput.isValid, true);
+  assert.equal(numInput.parsedValue, 500);
+});
+
+test("Wizard Step 2: Zero and negative expected harvest yield values are rejected", () => {
+  const zeroNum = validateExpectedYield(0);
+  assert.equal(zeroNum.isValid, false);
+  assert.equal(zeroNum.error, "Expected harvest yield must be greater than 0 kg.");
+
+  const zeroStr = validateExpectedYield("0");
+  assert.equal(zeroStr.isValid, false);
+  assert.equal(zeroStr.error, "Expected harvest yield must be greater than 0 kg.");
+
+  const negNum = validateExpectedYield(-50);
+  assert.equal(negNum.isValid, false);
+  assert.equal(negNum.error, "Expected harvest yield must be greater than 0 kg.");
+
+  const negStr = validateExpectedYield("-12.5");
+  assert.equal(negStr.isValid, false);
+  assert.equal(negStr.error, "Expected harvest yield must be greater than 0 kg.");
+});
+
+test("Wizard Step 2: Non-numeric, NaN, and Infinity expected yield inputs are rejected", () => {
+  const textInput = validateExpectedYield("1500kg");
+  assert.equal(textInput.isValid, false);
+  assert.equal(textInput.error, "Expected harvest yield must be a valid numeric value.");
+
+  const words = validateExpectedYield("one ton");
+  assert.equal(words.isValid, false);
+  assert.equal(words.error, "Expected harvest yield must be a valid numeric value.");
+
+  const nanVal = validateExpectedYield(NaN);
+  assert.equal(nanVal.isValid, false);
+  assert.equal(nanVal.error, "Expected harvest yield must be a valid numeric value.");
+
+  const infVal = validateExpectedYield(Infinity);
+  assert.equal(infVal.isValid, false);
+  assert.equal(infVal.error, "Expected harvest yield must be a valid numeric value.");
+});
+
+test("Wizard Step 2: Missing or whitespace expected harvest yield is rejected with friendly message", () => {
+  const emptyStr = validateExpectedYield("");
+  assert.equal(emptyStr.isValid, false);
+  assert.equal(emptyStr.error, "Please enter your expected harvest yield in kilograms.");
+
+  const spacesOnly = validateExpectedYield("   ");
+  assert.equal(spacesOnly.isValid, false);
+  assert.equal(spacesOnly.error, "Please enter your expected harvest yield in kilograms.");
+
+  const nullVal = validateExpectedYield(null);
+  assert.equal(nullVal.isValid, false);
+  assert.equal(nullVal.error, "Please enter your expected harvest yield in kilograms.");
+
+  const undefinedVal = validateExpectedYield(undefined);
+  assert.equal(undefinedVal.isValid, false);
+  assert.equal(undefinedVal.error, "Please enter your expected harvest yield in kilograms.");
+});
+
+test("Wizard Step 2: Excessively large expected harvest yield exceeding configurable limit is rejected", () => {
+  // 1,000,000 kg passes (default max)
+  const atMax = validateExpectedYield(MAX_EXPECTED_YIELD_KG);
+  assert.equal(atMax.isValid, true);
+  assert.equal(atMax.parsedValue, 1000000);
+
+  // Exceeding 1,000,000 kg fails
+  const overMax = validateExpectedYield("1000000.1");
+  assert.equal(overMax.isValid, false);
+  assert.equal(
+    overMax.error,
+    "Expected harvest yield exceeds the maximum planning limit of 1,000,000 kg. Please enter a realistic expected harvest amount."
+  );
+
+  // Custom configurable limit
+  const customLimit = validateExpectedYield("5500", 5000);
+  assert.equal(customLimit.isValid, false);
+  assert.equal(
+    customLimit.error,
+    "Expected harvest yield exceeds the maximum planning limit of 5,000 kg. Please enter a realistic expected harvest amount."
+  );
+});
+
+test("Wizard Step 2: validateStep2 requires valid harvest date, land extent, and expected yield", () => {
+  // All three valid
+  const allValid = validateStep2(
+    { harvest_date: "2027-01-20", land_extent_acres: "2.5", expected_yield_kg: "1500" },
     FIXED_TODAY
   );
-  assert.equal(bothValid.isValid, true);
-  assert.deepEqual(bothValid.errors, {});
+  assert.equal(allValid.isValid, true);
+  assert.deepEqual(allValid.errors, {});
 
   // Missing harvest date
   const missingDate = validateStep2(
-    { harvest_date: "", land_extent_acres: "2.5" },
+    { harvest_date: "", land_extent_acres: "2.5", expected_yield_kg: "1500" },
     FIXED_TODAY
   );
   assert.equal(missingDate.isValid, false);
   assert.equal(missingDate.errors.harvest_date, "Please select an expected harvest date.");
   assert.equal(missingDate.errors.land_extent_acres, undefined);
+  assert.equal(missingDate.errors.expected_yield_kg, undefined);
 
   // Missing land extent
   const missingExtent = validateStep2(
-    { harvest_date: "2027-01-20", land_extent_acres: "" },
+    { harvest_date: "2027-01-20", land_extent_acres: "", expected_yield_kg: "1500" },
     FIXED_TODAY
   );
   assert.equal(missingExtent.isValid, false);
@@ -826,34 +929,84 @@ test("Wizard Step 2: validateStep2 requires both valid harvest date and valid la
     missingExtent.errors.land_extent_acres,
     "Please enter your cultivation land extent in acres."
   );
+  assert.equal(missingExtent.errors.expected_yield_kg, undefined);
 
-  // Both invalid
-  const bothInvalid = validateStep2(
-    { harvest_date: "2025-01-01", land_extent_acres: "0" },
+  // Missing expected yield
+  const missingYield = validateStep2(
+    { harvest_date: "2027-01-20", land_extent_acres: "2.5", expected_yield_kg: "" },
     FIXED_TODAY
   );
-  assert.equal(bothInvalid.isValid, false);
+  assert.equal(missingYield.isValid, false);
+  assert.equal(missingYield.errors.harvest_date, undefined);
+  assert.equal(missingYield.errors.land_extent_acres, undefined);
   assert.equal(
-    bothInvalid.errors.harvest_date,
+    missingYield.errors.expected_yield_kg,
+    "Please enter your expected harvest yield in kilograms."
+  );
+
+  // All three invalid
+  const allInvalid = validateStep2(
+    { harvest_date: "2025-01-01", land_extent_acres: "0", expected_yield_kg: "-100" },
+    FIXED_TODAY
+  );
+  assert.equal(allInvalid.isValid, false);
+  assert.equal(
+    allInvalid.errors.harvest_date,
     "Expected harvest date cannot be in the past."
   );
   assert.equal(
-    bothInvalid.errors.land_extent_acres,
+    allInvalid.errors.land_extent_acres,
     "Cultivation land extent must be greater than 0 acres."
+  );
+  assert.equal(
+    allInvalid.errors.expected_yield_kg,
+    "Expected harvest yield must be greater than 0 kg."
   );
 });
 
-test("Wizard Step 2: Session storage helpers preserve both harvest date and land extent", () => {
+test("Wizard Step 2: Session storage helpers preserve harvest date, land extent, and expected yield", () => {
   assert.equal(STEP2_STORAGE_KEY, "agrodecision_wizard_step2");
 
   // In Node environment, helpers return default gracefully without throwing
   const initial = loadStep2FromStorage();
-  assert.deepEqual(initial, { harvest_date: "", land_extent_acres: "" });
+  assert.deepEqual(initial, { harvest_date: "", land_extent_acres: "", expected_yield_kg: "" });
 
   assert.doesNotThrow(() => {
-    saveStep2ToStorage({ harvest_date: "2027-03-01", land_extent_acres: "1.75" });
+    saveStep2ToStorage({
+      harvest_date: "2027-03-01",
+      land_extent_acres: "1.75",
+      expected_yield_kg: "1500",
+    });
     clearStep2Storage();
   });
 });
+
+test("Wizard Step 2: loadStep2FromStorage maintains backward compatibility with older 2-field records", () => {
+  const mockStorage = new Map<string, string>();
+  mockStorage.set(
+    STEP2_STORAGE_KEY,
+    JSON.stringify({ harvest_date: "2027-04-15", land_extent_acres: "2.0" })
+  );
+
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => mockStorage.get(key) ?? null,
+      setItem: (key: string, val: string) => mockStorage.set(key, val),
+      removeItem: (key: string) => mockStorage.delete(key),
+    },
+  };
+
+  try {
+    const loaded = loadStep2FromStorage();
+    assert.deepEqual(loaded, {
+      harvest_date: "2027-04-15",
+      land_extent_acres: "2.0",
+      expected_yield_kg: "",
+    });
+  } finally {
+    delete (globalThis as unknown as { window?: unknown }).window;
+  }
+});
+
 
 

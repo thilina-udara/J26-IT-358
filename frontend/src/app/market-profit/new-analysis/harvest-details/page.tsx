@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Calendar,
   Compass,
+  Scale,
   Sprout,
   MapPin,
   Clock,
@@ -31,6 +32,7 @@ import {
   Step1FormData,
   validateHarvestDate,
   validateLandExtent,
+  validateExpectedYield,
   validateStep2,
   loadStep2FromStorage,
   saveStep2ToStorage,
@@ -67,8 +69,10 @@ export default function HarvestDetailsPage() {
   // Step 2 form state
   const [harvestDate, setHarvestDate] = useState<string>("");
   const [landExtent, setLandExtent] = useState<string>("");
+  const [expectedYield, setExpectedYield] = useState<string>("");
   const [dateError, setDateError] = useState<string | undefined>(undefined);
   const [extentError, setExtentError] = useState<string | undefined>(undefined);
+  const [yieldError, setYieldError] = useState<string | undefined>(undefined);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isStep2Saved, setIsStep2Saved] = useState(false);
 
@@ -101,6 +105,9 @@ export default function HarvestDetailsPage() {
     if (savedStep2.land_extent_acres) {
       setLandExtent(savedStep2.land_extent_acres);
     }
+    if (savedStep2.expected_yield_kg) {
+      setExpectedYield(savedStep2.expected_yield_kg);
+    }
   }, [router]);
 
   // Handle date input change
@@ -113,6 +120,7 @@ export default function HarvestDetailsPage() {
     saveStep2ToStorage({
       harvest_date: newDate,
       land_extent_acres: landExtent,
+      expected_yield_kg: expectedYield,
     });
 
     // Clear inline error if user fixes input
@@ -132,12 +140,33 @@ export default function HarvestDetailsPage() {
     saveStep2ToStorage({
       harvest_date: harvestDate,
       land_extent_acres: val,
+      expected_yield_kg: expectedYield,
     });
 
     // Clear inline error if user fixes input
     if (hasAttemptedSubmit) {
       const validation = validateLandExtent(val);
       setExtentError(validation.error);
+    }
+  };
+
+  // Handle expected yield input change
+  const handleYieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setExpectedYield(val);
+    setIsStep2Saved(false);
+
+    // Persist immediately to session storage
+    saveStep2ToStorage({
+      harvest_date: harvestDate,
+      land_extent_acres: landExtent,
+      expected_yield_kg: val,
+    });
+
+    // Clear inline error if user fixes input
+    if (hasAttemptedSubmit) {
+      const validation = validateExpectedYield(val);
+      setYieldError(validation.error);
     }
   };
 
@@ -148,10 +177,12 @@ export default function HarvestDetailsPage() {
     const validation = validateStep2({
       harvest_date: harvestDate,
       land_extent_acres: landExtent,
+      expected_yield_kg: expectedYield,
     });
 
     setDateError(validation.errors.harvest_date);
     setExtentError(validation.errors.land_extent_acres);
+    setYieldError(validation.errors.expected_yield_kg);
 
     if (!validation.isValid) {
       setIsStep2Saved(false);
@@ -161,6 +192,7 @@ export default function HarvestDetailsPage() {
     saveStep2ToStorage({
       harvest_date: harvestDate,
       land_extent_acres: landExtent,
+      expected_yield_kg: expectedYield,
     });
     setIsStep2Saved(true);
   };
@@ -393,6 +425,66 @@ export default function HarvestDetailsPage() {
             )}
           </div>
 
+          {/* Expected Harvest Yield Input Field */}
+          <div className="max-w-md space-y-2 pt-4 border-t border-slate-100">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#15803d]">
+                <Scale className="h-4 w-4" />
+                <span>Step 2.3 — Expected Yield</span>
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight mt-0.5">
+                Expected Harvest Yield
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Enter the total amount of crop you expect to harvest.
+              </p>
+            </div>
+
+            <label
+              htmlFor="expected_yield"
+              className="block text-sm font-semibold text-slate-700"
+            >
+              Expected Harvest Yield (kg) <span className="text-red-500">*</span>
+            </label>
+
+            <div className="relative">
+              <input
+                type="number"
+                id="expected_yield"
+                name="expected_yield"
+                step="any"
+                min="0.01"
+                placeholder="1500"
+                value={expectedYield}
+                onChange={handleYieldChange}
+                aria-describedby="expected_yield_help expected_yield_error"
+                className={`w-full rounded-xl border pl-4 pr-16 py-3 text-sm text-slate-900 shadow-2xs transition-colors focus:outline-hidden ${
+                  yieldError
+                    ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-400/20 bg-red-50/20"
+                    : "border-slate-300 focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 bg-white"
+                }`}
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-xs font-bold text-slate-500 bg-slate-100/80 border-l border-slate-200 px-3 rounded-r-xl">
+                kg
+              </div>
+            </div>
+
+            <p id="expected_yield_help" className="text-xs text-slate-500">
+              Enter the total amount of crop you expect to harvest in kilograms (e.g. 500, 1500, 2500.5). Must be greater than 0 kg.
+            </p>
+
+            {yieldError && (
+              <p
+                id="expected_yield_error"
+                role="alert"
+                className="text-xs font-semibold text-red-600 flex items-center gap-1.5 pt-1"
+              >
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{yieldError}</span>
+              </p>
+            )}
+          </div>
+
           {/* Informational Guidance Box */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-xs text-slate-600 space-y-1.5 max-w-xl">
             <div className="flex items-center gap-2 font-semibold text-slate-800">
@@ -400,7 +492,7 @@ export default function HarvestDetailsPage() {
               <span>How your harvest details are used</span>
             </div>
             <p className="leading-relaxed">
-              AgroDecision evaluates seasonal wholesale price fluctuations and demand trends for the month of your harvest, and calculates production scale based on your cultivation land extent to project revenue and assess financial risk.
+              AgroDecision evaluates seasonal wholesale price fluctuations and demand trends for the month of your harvest, and calculates production scale based on your cultivation land extent and expected yield to project revenue and assess financial risk.
             </p>
           </div>
         </section>
@@ -414,10 +506,10 @@ export default function HarvestDetailsPage() {
               </div>
               <div className="text-sm space-y-1">
                 <span className="font-bold">
-                  Harvest Date &amp; Land Extent Saved: {harvestDate} • {landExtent} Acres
+                  Harvest Details Saved: {harvestDate} • {landExtent} Acres • {expectedYield} kg
                 </span>
                 <p className="text-xs text-emerald-800 leading-relaxed">
-                  Your timeline and cultivation extent are preserved. Expected Yield input and Step 3 (Selling Market) will be available in upcoming sprint tasks.
+                  Your harvest timeline, cultivation extent, and expected yield are preserved. Step 3 (Selling Market) will be available in the upcoming sprint task.
                 </p>
               </div>
             </div>

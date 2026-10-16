@@ -117,6 +117,7 @@ export function clearStep1Storage(): void {
 export interface Step2FormData {
   harvest_date: string; // Stored in YYYY-MM-DD local format
   land_extent_acres: string; // Numeric string preserving farmer's exact decimal input (e.g. "1.5")
+  expected_yield_kg: string; // Numeric string preserving farmer's exact decimal input (e.g. "1500")
 }
 
 export interface Step2ValidationResult {
@@ -124,11 +125,13 @@ export interface Step2ValidationResult {
   errors: {
     harvest_date?: string;
     land_extent_acres?: string;
+    expected_yield_kg?: string;
   };
 }
 
 export const STEP2_STORAGE_KEY = "agrodecision_wizard_step2";
 export const MAX_LAND_EXTENT_ACRES = 1000;
+export const MAX_EXPECTED_YIELD_KG = 1000000; // Application-level planning limit (1,000,000 kg)
 
 /**
  * Checks if a given calendar year is a leap year.
@@ -277,38 +280,100 @@ export function validateLandExtent(
 }
 
 /**
- * Validates Step 2 form input (Expected Harvest Date and Cultivation Land Extent).
+ * Validates the expected harvest yield in kilograms.
+ * Rejects missing input, non-numeric values, zero, negative numbers, NaN, and Infinity.
+ * Rejects values exceeding the configurable application planning limit.
+ * Preserves decimal precision.
+ */
+export function validateExpectedYield(
+  yieldInput: string | number | undefined | null,
+  maxLimit: number = MAX_EXPECTED_YIELD_KG
+): { isValid: boolean; error?: string; parsedValue?: number } {
+  if (yieldInput === undefined || yieldInput === null) {
+    return {
+      isValid: false,
+      error: "Please enter your expected harvest yield in kilograms.",
+    };
+  }
+
+  const str = String(yieldInput).trim();
+  if (str === "") {
+    return {
+      isValid: false,
+      error: "Please enter your expected harvest yield in kilograms.",
+    };
+  }
+
+  const num = Number(str);
+  if (!Number.isFinite(num) || Number.isNaN(num)) {
+    return {
+      isValid: false,
+      error: "Expected harvest yield must be a valid numeric value.",
+    };
+  }
+
+  if (num <= 0) {
+    return {
+      isValid: false,
+      error: "Expected harvest yield must be greater than 0 kg.",
+    };
+  }
+
+  if (num > maxLimit) {
+    return {
+      isValid: false,
+      error: `Expected harvest yield exceeds the maximum planning limit of ${maxLimit.toLocaleString()} kg. Please enter a realistic expected harvest amount.`,
+    };
+  }
+
+  return {
+    isValid: true,
+    parsedValue: num,
+  };
+}
+
+/**
+ * Validates Step 2 form input (Expected Harvest Date, Cultivation Land Extent, and Expected Harvest Yield).
  */
 export function validateStep2(
   data: Partial<Step2FormData>,
   referenceDate?: Date,
-  maxLandLimit: number = MAX_LAND_EXTENT_ACRES
+  maxLandLimit: number = MAX_LAND_EXTENT_ACRES,
+  maxYieldLimit: number = MAX_EXPECTED_YIELD_KG
 ): Step2ValidationResult {
   const dateVal = validateHarvestDate(data.harvest_date, referenceDate);
   const extentVal = validateLandExtent(data.land_extent_acres, maxLandLimit);
+  const yieldVal = validateExpectedYield(data.expected_yield_kg, maxYieldLimit);
 
-  const errors: { harvest_date?: string; land_extent_acres?: string } = {};
+  const errors: {
+    harvest_date?: string;
+    land_extent_acres?: string;
+    expected_yield_kg?: string;
+  } = {};
+
   if (!dateVal.isValid) errors.harvest_date = dateVal.error;
   if (!extentVal.isValid) errors.land_extent_acres = extentVal.error;
+  if (!yieldVal.isValid) errors.expected_yield_kg = yieldVal.error;
 
   return {
-    isValid: dateVal.isValid && extentVal.isValid,
+    isValid: dateVal.isValid && extentVal.isValid && yieldVal.isValid,
     errors,
   };
 }
 
 /**
  * Safely reads Step 2 state from browser session storage.
+ * Maintains full backward compatibility with older session storage records lacking expected_yield_kg.
  */
 export function loadStep2FromStorage(): Step2FormData {
   if (typeof window === "undefined") {
-    return { harvest_date: "", land_extent_acres: "" };
+    return { harvest_date: "", land_extent_acres: "", expected_yield_kg: "" };
   }
 
   try {
     const stored = window.sessionStorage.getItem(STEP2_STORAGE_KEY);
     if (!stored) {
-      return { harvest_date: "", land_extent_acres: "" };
+      return { harvest_date: "", land_extent_acres: "", expected_yield_kg: "" };
     }
     const parsed = JSON.parse(stored);
     return {
@@ -319,9 +384,15 @@ export function loadStep2FromStorage(): Step2FormData {
           : typeof parsed.land_extent_acres === "number"
           ? String(parsed.land_extent_acres)
           : "",
+      expected_yield_kg:
+        typeof parsed.expected_yield_kg === "string"
+          ? parsed.expected_yield_kg
+          : typeof parsed.expected_yield_kg === "number"
+          ? String(parsed.expected_yield_kg)
+          : "",
     };
   } catch {
-    return { harvest_date: "", land_extent_acres: "" };
+    return { harvest_date: "", land_extent_acres: "", expected_yield_kg: "" };
   }
 }
 

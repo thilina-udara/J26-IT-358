@@ -223,6 +223,14 @@ def evaluate_historical_scenario(district: str, crop: str, season: str, land_siz
         "Changing planting month changes Planting_Month. The model predicts a rule-derived historical class; "
         "zero known peers means insufficient evidence, never validated Low risk."
     )
+    diagnostic_alternatives = []
+    if prediction == "High":
+        diagnostic_alternatives = [
+            dict(crop=candidate, status="diagnostic_only", risk_level="unvalidated")
+            for candidate in ("Bandakka", "Brinjal", "Pumpkin", "Corn", "Mung Beans", "Chillies")
+            if candidate != crop
+        ][:3]
+
     return dict(status="historical_proxy_prediction" if eligible else "insufficient_research_coverage",
         mode="research_demo_simulation", operational_status="risk_level_not_yet_validated",
         simulated_plan=dict(district=district, crop=crop, season=season, land_size_acres=land_size_acres,
@@ -253,9 +261,8 @@ def evaluate_historical_scenario(district: str, crop: str, season: str, land_siz
             required_evidence="Exact record-version availability timestamp, timezone, source reference and independent attestation; planting/harvest/Year are insufficient"),
         concentration_indicators=indicators,
         scenario_explanation=explanation,
-        # Crop ranking with unknown registration coverage/suitability is withheld.
-        diagnostic_alternatives=[],
-        recommendation_status="blocked_unvalidated_risk",
+        diagnostic_alternatives=diagnostic_alternatives,
+        recommendation_status="diagnostic_alternatives_only" if diagnostic_alternatives else "blocked_unvalidated_risk",
         governance_notice="RESEARCH PROXY ONLY: unknown observation availability is assumed in the retrospective replay. "
             "No verified current concentration category, market oversupply, price loss, suitability or complete cultivation schedule follows. "
             "Historical High cannot activate farmer recommendations. Verified current High, comparable coverage, suitability and guideline approvals remain required.")

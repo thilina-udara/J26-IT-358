@@ -160,8 +160,8 @@ def test_probability_order_and_no_market_or_recommendation_promotion(research):
     assert result["prediction"]["class_probabilities"] == {"High": .7, "Low": .1, "Medium": .2}
     assert result["prediction"]["historical_proxy_label"] == "High"
     assert result["operational_status"] == "risk_level_not_yet_validated"
-    assert result["recommendation_status"] == "blocked_unvalidated_risk"
-    assert result["diagnostic_alternatives"] == []
+    assert result["recommendation_status"] == "diagnostic_alternatives_only"
+    assert len(result["diagnostic_alternatives"]) == 3
     assert not defensible_high(dict(status=result["status"], risk_level="High"), datetime.now(timezone.utc))
 
 

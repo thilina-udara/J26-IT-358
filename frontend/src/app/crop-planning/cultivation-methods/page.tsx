@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -667,6 +667,13 @@ export default function CultivationMethodsPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [selectedStageId, setSelectedStageId] = useState<string>("land-prep");
   const [timelineView, setTimelineView] = useState<"timeline" | "calendar">("timeline");
+
+  useEffect(() => {
+    const crop = new URLSearchParams(window.location.search).get("crop");
+    if (crop && CROP_GUIDANCE[crop]) {
+      setSelectedCrop(crop);
+    }
+  }, []);
 
   const plansResult = useLoad(
     (signal) => api.list(new URLSearchParams({ limit: "20", status: "active" }), signal),

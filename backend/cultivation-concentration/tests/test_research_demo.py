@@ -162,8 +162,12 @@ def test_research_demo_evaluation_with_strict_temporal_cutoff(isolated_app, monk
         assert feat in data["features"]
 
     assert "class_probabilities" in data["prediction"]
-    assert data["diagnostic_alternatives"] == []
-    assert data["recommendation_status"] == "blocked_unvalidated_risk"
+    if data["prediction"]["historical_proxy_label"] == "High":
+        assert len(data["diagnostic_alternatives"]) == 3
+        assert data["recommendation_status"] == "diagnostic_alternatives_only"
+    else:
+        assert data["diagnostic_alternatives"] == []
+        assert data["recommendation_status"] == "blocked_unvalidated_risk"
 
 
 def test_research_demo_date_boundary_validation(isolated_app, monkeypatch):

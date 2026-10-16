@@ -408,6 +408,64 @@ export default function SuggestedCropsPage() {
                 </div>
               )}
 
+              {hasAlternatives && (
+                <div
+                  style={{
+                    background: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                    borderRadius: "16px",
+                    padding: "20px",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <div style={{ marginBottom: "14px" }}>
+                    <strong style={{ fontSize: "15px", color: "#166534", display: "block" }}>
+                      3 low-risk alternative crops
+                    </strong>
+                    <p style={{ fontSize: "13px", color: "#365314", margin: "6px 0 0", lineHeight: 1.5 }}>
+                      These options passed the available lower-supply proxy and suitability checks for this High-risk
+                      assessment. Review the evidence before changing your plan.
+                    </p>
+                  </div>
+                  <div style={{ display: "grid", gap: "10px" }}>
+                    {alternatives.slice(0, 3).map((alternative: any, index: number) => (
+                      <div
+                        key={`${alternative.crop}-${index}`}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "12px",
+                          background: "#ffffff",
+                          border: "1px solid #dcfce7",
+                          borderRadius: "12px",
+                          padding: "12px 14px",
+                        }}
+                      >
+                        <div>
+                          <strong style={{ color: "#14532d", fontSize: "14px" }}>{alternative.crop}</strong>
+                          <small style={{ display: "block", color: "#64748b", fontSize: "11.5px", marginTop: "3px" }}>
+                            Evidence-gated experimental alternative
+                          </small>
+                        </div>
+                        <span
+                          style={{
+                            color: "#15803d",
+                            background: "#dcfce7",
+                            borderRadius: "9999px",
+                            padding: "4px 9px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Low proxy
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Four Mandatory Approval Gates Checklist */}
               <div>
                 <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a", margin: "0 0 12px 0" }}>

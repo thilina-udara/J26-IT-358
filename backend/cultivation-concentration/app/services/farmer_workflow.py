@@ -131,6 +131,29 @@ def run(repository,identity,plan_id,season,evidence,as_of=None,historical_predic
     production_registry=production_registry or ProductionRegistry()
     production=production_evaluate(records,owned,season,cutoff,production_registry)
     experimental_candidates=production_alternatives(records,owned,season,cutoff,production_registry,evidence,production)
+    if assessment.get('risk_level')=='High' and experimental_candidates:
+        low_risk_candidates=[
+            candidate for candidate in experimental_candidates
+            if candidate.get('assessment',{}).get('experimental_risk_level')=='Low'
+        ][:3]
+        if low_risk_candidates:
+            recommendations=dict(
+                status='experimental_alternatives_available',
+                alternatives=farmer_view([
+                    dict(
+                        crop=candidate['crop'],
+                        status='experimental_candidate_not_approved_recommendation',
+                        risk_level='Low',
+                        recommendation_explanation=(
+                            'Experimental lower-supply proxy only. Review suitability and '
+                            'approval evidence before changing the cultivation plan.'
+                        ),
+                        suitability_reference=candidate.get('suitability_reference'),
+                    )
+                    for candidate in low_risk_candidates
+                ]),
+                explanation='Up to three lower-risk experimental alternatives are available for this High-risk assessment.',
+            )
     from app.services.production_reference import evaluate as reference_evaluate, farmer_response as reference_response
     reference_assessment=reference_response(reference_evaluate(records,owned,season,cutoff,production_registry))
     return dict(workflow_version='1',plan_id=plan_id,as_of=cutoff.isoformat(),historical_prediction=historical,

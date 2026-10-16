@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Sprout } from "lucide-react";
 import type { HistoricalScenarioResponse } from "../lib/contracts";
 
 export function ResearchResult({
@@ -9,6 +9,7 @@ export function ResearchResult({
   result: HistoricalScenarioResponse;
   previous: HistoricalScenarioResponse | null;
 }) {
+  const [selectedAlternative, setSelectedAlternative] = React.useState<string | null>(null);
   const { simulated_plan: plan, model_metadata: model, prediction, features } = result;
 
   // Fallback if outputs are withheld
@@ -117,6 +118,9 @@ export function ResearchResult({
     : "0.0";
 
   const featureEntries = Object.entries(features || {});
+  const diagnosticAlternatives = isHigh && Array.isArray(result.diagnostic_alternatives)
+    ? result.diagnostic_alternatives.slice(0, 3)
+    : [];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -258,6 +262,63 @@ export function ResearchResult({
           oversupply, price drop, or live farmer risk claim. Current operational risk remains strictly unvalidated.
         </p>
       </div>
+
+      {diagnosticAlternatives.length > 0 && (
+        <div
+          style={{
+            background: "#eff6ff",
+            border: "1px solid #bfdbfe",
+            borderRadius: "16px",
+            padding: "20px 24px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <Sprout size={18} style={{ color: "#2563eb" }} />
+            <h3 style={{ fontSize: "15px", color: "#1e3a8a", margin: 0 }}>
+              3 alternative crops for this High Risk Proxy
+            </h3>
+          </div>
+          <p style={{ fontSize: "12.5px", color: "#1e40af", margin: "0 0 14px", lineHeight: 1.5 }}>
+            These are historical diagnostic candidates only. They are not verified low-risk recommendations for current
+            farming decisions.
+          </p>
+          <div style={{ display: "grid", gap: "8px" }}>
+            {diagnosticAlternatives.map((alternative, index) => (
+              <div
+                key={`${alternative.crop}-${index}`}
+                style={{
+                  background: "#ffffff",
+                  border: `1px solid ${selectedAlternative === alternative.crop ? "#2563eb" : "#dbeafe"}`,
+                  borderRadius: "10px",
+                  padding: "10px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                }}
+              >
+                <input
+                  id={`alternative-${index}`}
+                  type="radio"
+                  name="alternative-crop"
+                  value={alternative.crop}
+                  checked={selectedAlternative === alternative.crop}
+                  onChange={() => {
+                    setSelectedAlternative(alternative.crop);
+                    window.location.href = `/crop-planning/cultivation-methods?crop=${encodeURIComponent(alternative.crop)}`;
+                  }}
+                  style={{ accentColor: "#2563eb", width: "16px", height: "16px", flexShrink: 0 }}
+                />
+                <label
+                  htmlFor={`alternative-${index}`}
+                  style={{ color: "#1e3a8a", fontSize: "13px", fontWeight: 700, cursor: "pointer", flex: 1 }}
+                >
+                  {alternative.crop}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Exact 15 Model Features Grid */}
       <div

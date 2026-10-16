@@ -26,6 +26,7 @@ import {
 } from "../lib/formatters";
 
 import { MarketProfitApiClient, ApiError } from "../lib/api";
+import { validateStep1 } from "../lib/wizard";
 
 import type {
   DemandForecastRequest,
@@ -507,4 +508,75 @@ test("API Client: evaluateComprehensiveFarmerPlan executes all 4 endpoints concu
   assert.equal(result.profitCalculation.net_profit, "170000.00");
   assert.equal(result.profitRisk.risk_level, "Low");
   assert.ok(result.evaluated_at);
+});
+
+// ============================================================================
+// 5. Step 1 Wizard Validation & Selection Logic Tests
+// ============================================================================
+
+test("Wizard Step 1: Validates complete selection with supported crop and district", () => {
+  const result = validateStep1({
+    crop_id: "CR_OKRA",
+    cultivation_district_id: "LK-32",
+  });
+  assert.equal(result.isValid, true);
+  assert.equal(result.errors.crop_id, undefined);
+  assert.equal(result.errors.cultivation_district_id, undefined);
+});
+
+test("Wizard Step 1: Detects missing crop and provides clear error", () => {
+  const result = validateStep1({
+    crop_id: "",
+    cultivation_district_id: "LK-32",
+  });
+  assert.equal(result.isValid, false);
+  assert.equal(result.errors.crop_id, "Please select a crop to proceed with the analysis.");
+  assert.equal(result.errors.cultivation_district_id, undefined);
+});
+
+test("Wizard Step 1: Detects missing cultivation district and provides clear error", () => {
+  const result = validateStep1({
+    crop_id: "CR_MAIZE",
+    cultivation_district_id: "",
+  });
+  assert.equal(result.isValid, false);
+  assert.equal(result.errors.crop_id, undefined);
+  assert.equal(result.errors.cultivation_district_id, "Please select a cultivation district in Sri Lanka.");
+});
+
+test("Wizard Step 1: Rejects excluded Tomato (CR_TOMATO) from frontend active catalog", () => {
+  const result = validateStep1({
+    crop_id: "CR_TOMATO",
+    cultivation_district_id: "LK-33",
+  });
+  assert.equal(result.isValid, false);
+  assert.equal(
+    result.errors.crop_id,
+    "The selected crop is not part of the active 6-crop pilot catalog."
+  );
+});
+
+test("Wizard Step 1: Rejects unrecognized district code", () => {
+  const result = validateStep1({
+    crop_id: "CR_PUMPKIN",
+    cultivation_district_id: "LK-999",
+  });
+  assert.equal(result.isValid, false);
+  assert.equal(
+    result.errors.cultivation_district_id,
+    "The selected district code is not recognized in Sri Lanka districts."
+  );
+});
+
+test("Wizard Step 1: All 6 supported frontend crops pass validation with pilot districts", () => {
+  const pilotDistricts = ["LK-32", "LK-33"];
+  for (const crop of SUPPORTED_FRONTEND_CROPS) {
+    for (const districtId of pilotDistricts) {
+      const result = validateStep1({
+        crop_id: crop.crop_id,
+        cultivation_district_id: districtId,
+      });
+      assert.equal(result.isValid, true, `Crop ${crop.crop_id} failed in district ${districtId}`);
+    }
+  }
 });

@@ -7,3 +7,4 @@ export * from "./constants";
 export * from "./types";
 export * from "./formatters";
 export * from "./api";
+export * from "./wizard";

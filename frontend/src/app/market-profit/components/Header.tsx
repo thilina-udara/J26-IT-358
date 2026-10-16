@@ -1,4 +1,5 @@
 import React from "react";
+import { usePathname } from "next/navigation";
 import { Menu, Sprout, MapPin } from "lucide-react";
 
 interface HeaderProps {
@@ -6,6 +7,9 @@ interface HeaderProps {
 }
 
 export function Header({ onToggleSidebar }: HeaderProps) {
+  const pathname = usePathname();
+  const isNewAnalysis = pathname.includes("/new-analysis");
+
   return (
     <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-md sm:px-6 lg:px-8">
       {/* Left section: Mobile toggle + Branding / Breadcrumb */}
@@ -41,7 +45,9 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           <span>/</span>
           <span>Market & Profit</span>
           <span>/</span>
-          <span className="text-[#166534] font-semibold">Overview</span>
+          <span className="text-[#166534] font-semibold">
+            {isNewAnalysis ? "New Analysis (Step 1)" : "Overview"}
+          </span>
         </div>
       </div>
 

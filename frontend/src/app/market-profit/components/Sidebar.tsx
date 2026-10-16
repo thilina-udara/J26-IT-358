@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Sprout,
   Home,
@@ -14,10 +15,14 @@ import {
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  onStartAnalysisClick: () => void;
+  onStartAnalysisClick?: () => void;
 }
 
 export function Sidebar({ isOpen, onClose, onStartAnalysisClick }: SidebarProps) {
+  const pathname = usePathname();
+  const isOverviewActive = pathname === "/market-profit";
+  const isNewAnalysisActive = pathname === "/market-profit/new-analysis";
+
   return (
     <>
       {/* Mobile Backdrop overlay */}
@@ -68,33 +73,39 @@ export function Sidebar({ isOpen, onClose, onStartAnalysisClick }: SidebarProps)
         {/* Navigation list */}
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
           <nav className="space-y-1.5">
-            {/* 1. Overview (Active) */}
+            {/* 1. Overview */}
             <Link
               href="/market-profit"
               onClick={onClose}
-              className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold bg-[#dcfce7] text-[#166534] border border-[#bbf7d0]/60 shadow-2xs transition-colors"
+              className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+                isOverviewActive
+                  ? "bg-[#dcfce7] text-[#166534] border border-[#bbf7d0]/60 shadow-2xs"
+                  : "text-slate-700 hover:bg-slate-50 border border-transparent"
+              }`}
             >
               <div className="flex items-center gap-3">
-                <Home className="h-5 w-5 text-[#15803d]" />
+                <Home className={`h-5 w-5 ${isOverviewActive ? "text-[#15803d]" : "text-slate-400"}`} />
                 <span>Overview</span>
               </div>
-              <span className="h-2 w-2 rounded-full bg-[#15803d]" />
+              {isOverviewActive && <span className="h-2 w-2 rounded-full bg-[#15803d]" />}
             </Link>
 
             {/* 2. New Analysis */}
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onStartAnalysisClick();
-              }}
-              className="w-full flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors text-left group cursor-pointer"
+            <Link
+              href="/market-profit/new-analysis"
+              onClick={onClose}
+              className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition-colors group ${
+                isNewAnalysisActive
+                  ? "bg-[#dcfce7] text-[#166534] border border-[#bbf7d0]/60 shadow-2xs"
+                  : "text-slate-700 hover:bg-slate-50 border border-transparent"
+              }`}
             >
               <div className="flex items-center gap-3">
                 <PlusCircle className="h-5 w-5 text-[#15803d] group-hover:scale-105 transition-transform" />
                 <span>New Analysis</span>
               </div>
-            </button>
+              {isNewAnalysisActive && <span className="h-2 w-2 rounded-full bg-[#15803d]" />}
+            </Link>
 
             {/* 3. Market Demand (Coming Soon) */}
             <div

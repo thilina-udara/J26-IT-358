@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import {
   Sprout,
   ArrowRight,
@@ -46,15 +47,14 @@ export default function MarketProfitHomePage() {
 
           {/* Action CTAs */}
           <div className="flex flex-wrap items-center gap-4">
-            <button
-              type="button"
-              onClick={openStartAnalysisModal}
+            <Link
+              href="/market-profit/new-analysis"
               className="inline-flex items-center gap-2.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-bold text-sm px-6 py-3.5 shadow-sm shadow-emerald-800/20 transition-all cursor-pointer group"
             >
               <Sprout className="h-5 w-5 text-emerald-100 group-hover:scale-110 transition-transform" />
               <span>Start New Analysis</span>
               <ArrowRight className="h-4 w-4 text-emerald-100 group-hover:translate-x-1 transition-transform" />
-            </button>
+            </Link>
 
             <a
               href="#supported-crops"

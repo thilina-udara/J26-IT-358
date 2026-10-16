@@ -116,16 +116,19 @@ export function clearStep1Storage(): void {
 
 export interface Step2FormData {
   harvest_date: string; // Stored in YYYY-MM-DD local format
+  land_extent_acres: string; // Numeric string preserving farmer's exact decimal input (e.g. "1.5")
 }
 
 export interface Step2ValidationResult {
   isValid: boolean;
   errors: {
     harvest_date?: string;
+    land_extent_acres?: string;
   };
 }
 
 export const STEP2_STORAGE_KEY = "agrodecision_wizard_step2";
+export const MAX_LAND_EXTENT_ACRES = 1000;
 
 /**
  * Checks if a given calendar year is a leap year.
@@ -221,16 +224,76 @@ export function validateHarvestDate(
 }
 
 /**
- * Validates Step 2 form input.
+ * Validates the cultivation land extent in acres.
+ * Rejects missing input, non-numeric values, zero, negative numbers, NaN, and Infinity.
+ * Rejects values exceeding the configurable max limit.
+ * Preserves decimal precision.
+ */
+export function validateLandExtent(
+  extentInput: string | number | undefined | null,
+  maxLimit: number = MAX_LAND_EXTENT_ACRES
+): { isValid: boolean; error?: string; parsedValue?: number } {
+  if (extentInput === undefined || extentInput === null) {
+    return {
+      isValid: false,
+      error: "Please enter your cultivation land extent in acres.",
+    };
+  }
+
+  const str = String(extentInput).trim();
+  if (str === "") {
+    return {
+      isValid: false,
+      error: "Please enter your cultivation land extent in acres.",
+    };
+  }
+
+  const num = Number(str);
+  if (!Number.isFinite(num) || Number.isNaN(num)) {
+    return {
+      isValid: false,
+      error: "Cultivation land extent must be a valid numeric value.",
+    };
+  }
+
+  if (num <= 0) {
+    return {
+      isValid: false,
+      error: "Cultivation land extent must be greater than 0 acres.",
+    };
+  }
+
+  if (num > maxLimit) {
+    return {
+      isValid: false,
+      error: `Cultivation land extent exceeds the maximum planning limit of ${maxLimit} acres. Please enter a realistic land area.`,
+    };
+  }
+
+  return {
+    isValid: true,
+    parsedValue: num,
+  };
+}
+
+/**
+ * Validates Step 2 form input (Expected Harvest Date and Cultivation Land Extent).
  */
 export function validateStep2(
   data: Partial<Step2FormData>,
-  referenceDate?: Date
+  referenceDate?: Date,
+  maxLandLimit: number = MAX_LAND_EXTENT_ACRES
 ): Step2ValidationResult {
   const dateVal = validateHarvestDate(data.harvest_date, referenceDate);
+  const extentVal = validateLandExtent(data.land_extent_acres, maxLandLimit);
+
+  const errors: { harvest_date?: string; land_extent_acres?: string } = {};
+  if (!dateVal.isValid) errors.harvest_date = dateVal.error;
+  if (!extentVal.isValid) errors.land_extent_acres = extentVal.error;
+
   return {
-    isValid: dateVal.isValid,
-    errors: dateVal.error ? { harvest_date: dateVal.error } : {},
+    isValid: dateVal.isValid && extentVal.isValid,
+    errors,
   };
 }
 
@@ -239,20 +302,26 @@ export function validateStep2(
  */
 export function loadStep2FromStorage(): Step2FormData {
   if (typeof window === "undefined") {
-    return { harvest_date: "" };
+    return { harvest_date: "", land_extent_acres: "" };
   }
 
   try {
     const stored = window.sessionStorage.getItem(STEP2_STORAGE_KEY);
     if (!stored) {
-      return { harvest_date: "" };
+      return { harvest_date: "", land_extent_acres: "" };
     }
     const parsed = JSON.parse(stored);
     return {
       harvest_date: typeof parsed.harvest_date === "string" ? parsed.harvest_date : "",
+      land_extent_acres:
+        typeof parsed.land_extent_acres === "string"
+          ? parsed.land_extent_acres
+          : typeof parsed.land_extent_acres === "number"
+          ? String(parsed.land_extent_acres)
+          : "",
     };
   } catch {
-    return { harvest_date: "" };
+    return { harvest_date: "", land_extent_acres: "" };
   }
 }
 

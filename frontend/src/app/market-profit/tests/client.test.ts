@@ -30,6 +30,8 @@ import {
   validateStep1,
   validateStep2,
   validateHarvestDate,
+  validateLandExtent,
+  MAX_LAND_EXTENT_ACRES,
   isLeapYear,
   getDaysInMonth,
   isValidCalendarDate,
@@ -695,26 +697,163 @@ test("Wizard Step 2: Calendar validity and leap-year rules are strictly enforced
   assert.equal(feb29Leap.error, undefined);
 });
 
-test("Wizard Step 2: validateStep2 returns composite validation output", () => {
-  const valid = validateStep2({ harvest_date: "2027-01-20" }, FIXED_TODAY);
-  assert.equal(valid.isValid, true);
-  assert.deepEqual(valid.errors, {});
+test("Wizard Step 2: Valid land extent in whole and decimal acres passes", () => {
+  const wholeAcres = validateLandExtent("2");
+  assert.equal(wholeAcres.isValid, true);
+  assert.equal(wholeAcres.parsedValue, 2);
+  assert.equal(wholeAcres.error, undefined);
 
-  const invalid = validateStep2({ harvest_date: "" }, FIXED_TODAY);
-  assert.equal(invalid.isValid, false);
-  assert.equal(invalid.errors.harvest_date, "Please select an expected harvest date.");
+  const decimalAcres = validateLandExtent("1.5");
+  assert.equal(decimalAcres.isValid, true);
+  assert.equal(decimalAcres.parsedValue, 1.5);
+  assert.equal(decimalAcres.error, undefined);
+
+  const smallPlot = validateLandExtent("0.25");
+  assert.equal(smallPlot.isValid, true);
+  assert.equal(smallPlot.parsedValue, 0.25);
+  assert.equal(smallPlot.error, undefined);
+
+  const numericType = validateLandExtent(3.75);
+  assert.equal(numericType.isValid, true);
+  assert.equal(numericType.parsedValue, 3.75);
 });
 
-test("Wizard Step 2: Session storage helpers and keys are safe and stable", () => {
+test("Wizard Step 2: Zero and negative land extent values are rejected", () => {
+  const zeroStr = validateLandExtent("0");
+  assert.equal(zeroStr.isValid, false);
+  assert.equal(zeroStr.error, "Cultivation land extent must be greater than 0 acres.");
+
+  const zeroNum = validateLandExtent(0);
+  assert.equal(zeroNum.isValid, false);
+  assert.equal(zeroNum.error, "Cultivation land extent must be greater than 0 acres.");
+
+  const negativeStr = validateLandExtent("-1.5");
+  assert.equal(negativeStr.isValid, false);
+  assert.equal(negativeStr.error, "Cultivation land extent must be greater than 0 acres.");
+
+  const negativeNum = validateLandExtent(-0.1);
+  assert.equal(negativeNum.isValid, false);
+  assert.equal(negativeNum.error, "Cultivation land extent must be greater than 0 acres.");
+});
+
+test("Wizard Step 2: Non-numeric, NaN, and Infinity land extent inputs are rejected", () => {
+  const letters = validateLandExtent("abc");
+  assert.equal(letters.isValid, false);
+  assert.equal(letters.error, "Cultivation land extent must be a valid numeric value.");
+
+  const symbols = validateLandExtent("1.5.0");
+  assert.equal(symbols.isValid, false);
+  assert.equal(symbols.error, "Cultivation land extent must be a valid numeric value.");
+
+  const nanVal = validateLandExtent(NaN);
+  assert.equal(nanVal.isValid, false);
+  assert.equal(nanVal.error, "Cultivation land extent must be a valid numeric value.");
+
+  const infVal = validateLandExtent(Infinity);
+  assert.equal(infVal.isValid, false);
+  assert.equal(infVal.error, "Cultivation land extent must be a valid numeric value.");
+});
+
+test("Wizard Step 2: Missing or whitespace land extent is rejected with friendly message", () => {
+  const emptyStr = validateLandExtent("");
+  assert.equal(emptyStr.isValid, false);
+  assert.equal(emptyStr.error, "Please enter your cultivation land extent in acres.");
+
+  const whitespace = validateLandExtent("   ");
+  assert.equal(whitespace.isValid, false);
+  assert.equal(whitespace.error, "Please enter your cultivation land extent in acres.");
+
+  const nullVal = validateLandExtent(null);
+  assert.equal(nullVal.isValid, false);
+  assert.equal(nullVal.error, "Please enter your cultivation land extent in acres.");
+
+  const undefVal = validateLandExtent(undefined);
+  assert.equal(undefVal.isValid, false);
+  assert.equal(undefVal.error, "Please enter your cultivation land extent in acres.");
+});
+
+test("Wizard Step 2: Excessively large land extent exceeding configurable limit is rejected", () => {
+  assert.equal(MAX_LAND_EXTENT_ACRES, 1000);
+
+  // Exact maximum passes
+  const maxAllowed = validateLandExtent("1000");
+  assert.equal(maxAllowed.isValid, true);
+  assert.equal(maxAllowed.parsedValue, 1000);
+
+  // Beyond maximum fails
+  const overLimit = validateLandExtent("1000.5");
+  assert.equal(overLimit.isValid, false);
+  assert.equal(
+    overLimit.error,
+    "Cultivation land extent exceeds the maximum planning limit of 1000 acres. Please enter a realistic land area."
+  );
+
+  // Custom configurable limit
+  const customLimit = validateLandExtent("55", 50);
+  assert.equal(customLimit.isValid, false);
+  assert.equal(
+    customLimit.error,
+    "Cultivation land extent exceeds the maximum planning limit of 50 acres. Please enter a realistic land area."
+  );
+});
+
+test("Wizard Step 2: validateStep2 requires both valid harvest date and valid land extent", () => {
+  // Both valid
+  const bothValid = validateStep2(
+    { harvest_date: "2027-01-20", land_extent_acres: "2.5" },
+    FIXED_TODAY
+  );
+  assert.equal(bothValid.isValid, true);
+  assert.deepEqual(bothValid.errors, {});
+
+  // Missing harvest date
+  const missingDate = validateStep2(
+    { harvest_date: "", land_extent_acres: "2.5" },
+    FIXED_TODAY
+  );
+  assert.equal(missingDate.isValid, false);
+  assert.equal(missingDate.errors.harvest_date, "Please select an expected harvest date.");
+  assert.equal(missingDate.errors.land_extent_acres, undefined);
+
+  // Missing land extent
+  const missingExtent = validateStep2(
+    { harvest_date: "2027-01-20", land_extent_acres: "" },
+    FIXED_TODAY
+  );
+  assert.equal(missingExtent.isValid, false);
+  assert.equal(missingExtent.errors.harvest_date, undefined);
+  assert.equal(
+    missingExtent.errors.land_extent_acres,
+    "Please enter your cultivation land extent in acres."
+  );
+
+  // Both invalid
+  const bothInvalid = validateStep2(
+    { harvest_date: "2025-01-01", land_extent_acres: "0" },
+    FIXED_TODAY
+  );
+  assert.equal(bothInvalid.isValid, false);
+  assert.equal(
+    bothInvalid.errors.harvest_date,
+    "Expected harvest date cannot be in the past."
+  );
+  assert.equal(
+    bothInvalid.errors.land_extent_acres,
+    "Cultivation land extent must be greater than 0 acres."
+  );
+});
+
+test("Wizard Step 2: Session storage helpers preserve both harvest date and land extent", () => {
   assert.equal(STEP2_STORAGE_KEY, "agrodecision_wizard_step2");
 
   // In Node environment, helpers return default gracefully without throwing
   const initial = loadStep2FromStorage();
-  assert.deepEqual(initial, { harvest_date: "" });
+  assert.deepEqual(initial, { harvest_date: "", land_extent_acres: "" });
 
   assert.doesNotThrow(() => {
-    saveStep2ToStorage({ harvest_date: "2027-03-01" });
+    saveStep2ToStorage({ harvest_date: "2027-03-01", land_extent_acres: "1.75" });
     clearStep2Storage();
   });
 });
+
 

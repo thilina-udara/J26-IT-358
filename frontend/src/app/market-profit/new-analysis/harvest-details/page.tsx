@@ -10,6 +10,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Calendar,
+  Compass,
   Sprout,
   MapPin,
   Clock,
@@ -29,6 +30,7 @@ import {
   loadStep1FromStorage,
   Step1FormData,
   validateHarvestDate,
+  validateLandExtent,
   validateStep2,
   loadStep2FromStorage,
   saveStep2ToStorage,
@@ -62,9 +64,11 @@ export default function HarvestDetailsPage() {
   });
   const [isStep1Valid, setIsStep1Valid] = useState<boolean | null>(null);
 
-  // Step 2 date state
+  // Step 2 form state
   const [harvestDate, setHarvestDate] = useState<string>("");
+  const [landExtent, setLandExtent] = useState<string>("");
   const [dateError, setDateError] = useState<string | undefined>(undefined);
+  const [extentError, setExtentError] = useState<string | undefined>(undefined);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isStep2Saved, setIsStep2Saved] = useState(false);
 
@@ -89,10 +93,13 @@ export default function HarvestDetailsPage() {
       setStep1Data(savedStep1);
     }
 
-    // 2. Restore Step 2 saved date if available
+    // 2. Restore Step 2 saved values if available
     const savedStep2 = loadStep2FromStorage();
     if (savedStep2.harvest_date) {
       setHarvestDate(savedStep2.harvest_date);
+    }
+    if (savedStep2.land_extent_acres) {
+      setLandExtent(savedStep2.land_extent_acres);
     }
   }, [router]);
 
@@ -103,7 +110,10 @@ export default function HarvestDetailsPage() {
     setIsStep2Saved(false);
 
     // Persist immediately to session storage
-    saveStep2ToStorage({ harvest_date: newDate });
+    saveStep2ToStorage({
+      harvest_date: newDate,
+      land_extent_acres: landExtent,
+    });
 
     // Clear inline error if user fixes input
     if (hasAttemptedSubmit) {
@@ -112,20 +122,46 @@ export default function HarvestDetailsPage() {
     }
   };
 
+  // Handle land extent input change
+  const handleLandExtentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLandExtent(val);
+    setIsStep2Saved(false);
+
+    // Persist immediately to session storage
+    saveStep2ToStorage({
+      harvest_date: harvestDate,
+      land_extent_acres: val,
+    });
+
+    // Clear inline error if user fixes input
+    if (hasAttemptedSubmit) {
+      const validation = validateLandExtent(val);
+      setExtentError(validation.error);
+    }
+  };
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setHasAttemptedSubmit(true);
 
-    const validation = validateStep2({ harvest_date: harvestDate });
+    const validation = validateStep2({
+      harvest_date: harvestDate,
+      land_extent_acres: landExtent,
+    });
+
+    setDateError(validation.errors.harvest_date);
+    setExtentError(validation.errors.land_extent_acres);
 
     if (!validation.isValid) {
-      setDateError(validation.errors.harvest_date);
       setIsStep2Saved(false);
       return;
     }
 
-    setDateError(undefined);
-    saveStep2ToStorage({ harvest_date: harvestDate });
+    saveStep2ToStorage({
+      harvest_date: harvestDate,
+      land_extent_acres: landExtent,
+    });
     setIsStep2Saved(true);
   };
 
@@ -297,14 +333,74 @@ export default function HarvestDetailsPage() {
             )}
           </div>
 
+          {/* Land Extent Input Field */}
+          <div className="max-w-md space-y-2 pt-4 border-t border-slate-100">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#15803d]">
+                <Compass className="h-4 w-4" />
+                <span>Step 2.2 — Land Extent</span>
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight mt-0.5">
+                Cultivation Land Extent
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Enter the land area you plan to cultivate.
+              </p>
+            </div>
+
+            <label
+              htmlFor="land_extent"
+              className="block text-sm font-semibold text-slate-700"
+            >
+              Cultivation Land Extent (Acres) <span className="text-red-500">*</span>
+            </label>
+
+            <div className="relative">
+              <input
+                type="number"
+                id="land_extent"
+                name="land_extent"
+                step="any"
+                min="0.01"
+                placeholder="1.5"
+                value={landExtent}
+                onChange={handleLandExtentChange}
+                aria-describedby="land_extent_help land_extent_error"
+                className={`w-full rounded-xl border pl-4 pr-20 py-3 text-sm text-slate-900 shadow-2xs transition-colors focus:outline-hidden ${
+                  extentError
+                    ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-400/20 bg-red-50/20"
+                    : "border-slate-300 focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 bg-white"
+                }`}
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-xs font-bold text-slate-500 bg-slate-100/80 border-l border-slate-200 px-3 rounded-r-xl">
+                Acres
+              </div>
+            </div>
+
+            <p id="land_extent_help" className="text-xs text-slate-500">
+              Enter the land area you plan to cultivate. Decimal values are supported (e.g. 0.5, 1.25, 2.5). Must be greater than 0 acres.
+            </p>
+
+            {extentError && (
+              <p
+                id="land_extent_error"
+                role="alert"
+                className="text-xs font-semibold text-red-600 flex items-center gap-1.5 pt-1"
+              >
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{extentError}</span>
+              </p>
+            )}
+          </div>
+
           {/* Informational Guidance Box */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-xs text-slate-600 space-y-1.5 max-w-xl">
             <div className="flex items-center gap-2 font-semibold text-slate-800">
               <Clock className="h-4 w-4 text-[#15803d]" />
-              <span>How the harvest date is used</span>
+              <span>How your harvest details are used</span>
             </div>
             <p className="leading-relaxed">
-              AgroDecision evaluates seasonal wholesale price fluctuations and demand trends for the month of your harvest to project revenue and assess financial risk.
+              AgroDecision evaluates seasonal wholesale price fluctuations and demand trends for the month of your harvest, and calculates production scale based on your cultivation land extent to project revenue and assess financial risk.
             </p>
           </div>
         </section>
@@ -318,10 +414,10 @@ export default function HarvestDetailsPage() {
               </div>
               <div className="text-sm space-y-1">
                 <span className="font-bold">
-                  Expected Harvest Date Saved: {harvestDate}
+                  Harvest Date &amp; Land Extent Saved: {harvestDate} • {landExtent} Acres
                 </span>
                 <p className="text-xs text-emerald-800 leading-relaxed">
-                  Your timeline selection is preserved. Land Extent, Expected Yield, and Step 3 (Selling Market) will be available in upcoming sprint tasks.
+                  Your timeline and cultivation extent are preserved. Expected Yield input and Step 3 (Selling Market) will be available in upcoming sprint tasks.
                 </p>
               </div>
             </div>

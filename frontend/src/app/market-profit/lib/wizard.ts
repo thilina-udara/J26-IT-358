@@ -457,17 +457,47 @@ export function clearStep2Storage(): void {
 }
 
 // ============================================================================
-// Step 3: Selling Market Selection
+// Step 3: Selling Market & Price Type Selection
 // ============================================================================
 
+export type PriceType = "wholesale" | "retail";
+
+export const VALID_PRICE_TYPES: readonly PriceType[] = ["wholesale", "retail"] as const;
+
+export interface PriceTypeOption {
+  value: PriceType;
+  label: string;
+  description: string;
+  badge?: string;
+}
+
+export const PRICE_TYPE_OPTIONS: readonly PriceTypeOption[] = [
+  {
+    value: "wholesale",
+    label: "Wholesale",
+    description: "Use wholesale market prices for your analysis.",
+    badge: "Bulk / Trade",
+  },
+  {
+    value: "retail",
+    label: "Retail",
+    description: "Use retail market prices for your analysis.",
+    badge: "Consumer",
+  },
+] as const;
+
 export interface Step3FormData {
-  selling_market_id: string; // Validated market ID from STANDARD_MARKETS (e.g. "DEC_EMBILIPITIYA")
+  target_market_id: string; // Primary market identifier (e.g. "DEC_EMBILIPITIYA")
+  selling_market_id?: string; // Backward compatibility alias
+  price_type: PriceType | ""; // "wholesale" | "retail" | ""
 }
 
 export interface Step3ValidationResult {
   isValid: boolean;
   errors: {
+    target_market_id?: string;
     selling_market_id?: string;
+    price_type?: string;
   };
 }
 
@@ -500,21 +530,56 @@ export function validateSellingMarket(
 }
 
 /**
- * Validates Step 3 form input (Selling Market Selection).
+ * Validates the price type ("wholesale" or "retail").
+ * Rejects empty, whitespace, null/undefined, and unrecognized strings.
+ */
+export function validatePriceType(
+  priceType: string | undefined | null
+): { isValid: boolean; error?: string } {
+  if (!priceType || priceType.trim() === "") {
+    return {
+      isValid: false,
+      error: "Please select a price type (Wholesale or Retail).",
+    };
+  }
+
+  const clean = priceType.trim().toLowerCase();
+  if (clean !== "wholesale" && clean !== "retail") {
+    return {
+      isValid: false,
+      error: "Invalid price type. Please select either Wholesale or Retail.",
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validates Step 3 form input (Selling Market Selection + Price Type Selection).
+ * Requires both a valid recognized selling market and a valid price type.
  */
 export function validateStep3(data: Partial<Step3FormData>): Step3ValidationResult {
-  const marketVal = validateSellingMarket(data.selling_market_id);
+  const marketId = data.target_market_id || data.selling_market_id;
+  const marketVal = validateSellingMarket(marketId);
+  const priceTypeVal = validatePriceType(data.price_type);
 
   const errors: {
+    target_market_id?: string;
     selling_market_id?: string;
+    price_type?: string;
   } = {};
 
   if (!marketVal.isValid) {
+    errors.target_market_id = marketVal.error;
     errors.selling_market_id = marketVal.error;
   }
 
+  if (!priceTypeVal.isValid) {
+    errors.price_type = priceTypeVal.error;
+  }
+
   return {
-    isValid: marketVal.isValid,
+    isValid: marketVal.isValid && priceTypeVal.isValid,
     errors,
   };
 }
@@ -528,35 +593,65 @@ export function isStep3Complete(data: Partial<Step3FormData>): boolean {
 
 /**
  * Safely reads Step 3 state from browser session storage.
+ * Maintains backward compatibility for existing records containing only target_market_id or selling_market_id.
  */
 export function loadStep3FromStorage(): Step3FormData {
   if (typeof window === "undefined") {
-    return { selling_market_id: "" };
+    return { target_market_id: "", selling_market_id: "", price_type: "" };
   }
 
   try {
     const stored = window.sessionStorage.getItem(STEP3_STORAGE_KEY);
     if (!stored) {
-      return { selling_market_id: "" };
+      return { target_market_id: "", selling_market_id: "", price_type: "" };
     }
     const parsed = JSON.parse(stored);
+
+    // Support both target_market_id and legacy selling_market_id
+    const marketId =
+      typeof parsed.target_market_id === "string"
+        ? parsed.target_market_id
+        : typeof parsed.selling_market_id === "string"
+        ? parsed.selling_market_id
+        : "";
+
+    // Normalize price_type if present and valid, otherwise empty string
+    const rawPriceType =
+      typeof parsed.price_type === "string" ? parsed.price_type.trim().toLowerCase() : "";
+    const priceType: PriceType | "" =
+      rawPriceType === "wholesale" || rawPriceType === "retail" ? rawPriceType : "";
+
     return {
-      selling_market_id:
-        typeof parsed.selling_market_id === "string" ? parsed.selling_market_id : "",
+      target_market_id: marketId,
+      selling_market_id: marketId,
+      price_type: priceType,
     };
   } catch {
-    return { selling_market_id: "" };
+    return { target_market_id: "", selling_market_id: "", price_type: "" };
   }
 }
 
 /**
  * Safely saves Step 3 state into browser session storage.
+ * Ensures both target_market_id and selling_market_id are populated for backward compatibility.
  */
 export function saveStep3ToStorage(data: Step3FormData): void {
   if (typeof window === "undefined") return;
 
   try {
-    window.sessionStorage.setItem(STEP3_STORAGE_KEY, JSON.stringify(data));
+    const marketId = data.target_market_id || data.selling_market_id || "";
+    const cleanMarketId = typeof marketId === "string" ? marketId.trim() : "";
+    const rawPriceType =
+      typeof data.price_type === "string" ? data.price_type.trim().toLowerCase() : "";
+    const normalizedPriceType: PriceType | "" =
+      rawPriceType === "wholesale" || rawPriceType === "retail" ? rawPriceType : "";
+
+    const payload = {
+      target_market_id: cleanMarketId,
+      selling_market_id: cleanMarketId,
+      price_type: normalizedPriceType,
+    };
+    window.sessionStorage.setItem(STEP3_STORAGE_KEY, JSON.stringify(payload));
   } catch {
     // Ignore storage quota errors silently
   }
@@ -565,14 +660,23 @@ export function saveStep3ToStorage(data: Step3FormData): void {
 /**
  * Safely saves Step 3 state into browser session storage ONLY if data is fully valid.
  * Protects existing valid session records from being overwritten with invalid values.
+ * Normalizes price_type to exact backend-compatible lowercase value before saving.
  */
 export function saveValidatedStep3ToStorage(data: Partial<Step3FormData>): boolean {
   const validation = validateStep3(data);
   if (!validation.isValid) {
     return false;
   }
+  const marketId = data.target_market_id || data.selling_market_id || "";
+  const cleanMarketId = typeof marketId === "string" ? marketId.trim() : "";
+  const rawPriceType =
+    typeof data.price_type === "string" ? data.price_type.trim().toLowerCase() : "";
+  const normalizedPriceType = rawPriceType as PriceType;
+
   saveStep3ToStorage({
-    selling_market_id: data.selling_market_id || "",
+    target_market_id: cleanMarketId,
+    selling_market_id: cleanMarketId,
+    price_type: normalizedPriceType,
   });
   return true;
 }
@@ -589,6 +693,7 @@ export function clearStep3Storage(): void {
     // Ignore silently
   }
 }
+
 
 
 

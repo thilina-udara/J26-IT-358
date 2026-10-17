@@ -45,6 +45,10 @@ import {
   saveStep2ToStorage,
   clearStep2Storage,
   validateSellingMarket,
+  validatePriceType,
+  VALID_PRICE_TYPES,
+  PRICE_TYPE_OPTIONS,
+  type PriceType,
   validateStep3,
   isStep3Complete,
   STEP3_STORAGE_KEY,
@@ -1196,38 +1200,166 @@ test("Wizard Step 3: Unrecognized or invalid market ID is rejected", () => {
   );
 });
 
-test("Wizard Step 3: validateStep3 and isStep3Complete evaluate full and empty states correctly", () => {
-  // Valid
-  const valid = validateStep3({ selling_market_id: "DEC_EMBILIPITIYA" });
-  assert.equal(valid.isValid, true);
-  assert.deepEqual(valid.errors, {});
-  assert.equal(isStep3Complete({ selling_market_id: "DEC_EMBILIPITIYA" }), true);
+test("Wizard Step 3: Valid wholesale selection passes validation", () => {
+  const result = validatePriceType("wholesale");
+  assert.equal(result.isValid, true);
+  assert.equal(result.error, undefined);
 
-  // Missing
-  const missing = validateStep3({ selling_market_id: "" });
-  assert.equal(missing.isValid, false);
-  assert.equal(missing.errors.selling_market_id, "Please select a target selling market.");
-  assert.equal(isStep3Complete({ selling_market_id: "" }), false);
+  // Case insensitivity and whitespace trimming
+  const upper = validatePriceType("WHOLESALE");
+  assert.equal(upper.isValid, true);
 
-  // Invalid
-  const invalid = validateStep3({ selling_market_id: "UNKNOWN_MARKET" });
-  assert.equal(invalid.isValid, false);
-  assert.equal(
-    invalid.errors.selling_market_id,
-    "The selected market is not recognized in verified Dedicated Economic Centres."
-  );
-  assert.equal(isStep3Complete({ selling_market_id: "UNKNOWN_MARKET" }), false);
+  const padded = validatePriceType("  wholesale  ");
+  assert.equal(padded.isValid, true);
 });
 
-test("Wizard Step 3: Session storage helpers store, restore, and clear market selection safely", () => {
+test("Wizard Step 3: Valid retail selection passes validation", () => {
+  const result = validatePriceType("retail");
+  assert.equal(result.isValid, true);
+  assert.equal(result.error, undefined);
+
+  // Case insensitivity and whitespace trimming
+  const mixed = validatePriceType("Retail");
+  assert.equal(mixed.isValid, true);
+
+  const padded = validatePriceType("  retail  ");
+  assert.equal(padded.isValid, true);
+});
+
+test("Wizard Step 3: Missing, empty, or whitespace price type is rejected", () => {
+  const emptyStr = validatePriceType("");
+  assert.equal(emptyStr.isValid, false);
+  assert.equal(emptyStr.error, "Please select a price type (Wholesale or Retail).");
+
+  const spacesOnly = validatePriceType("   ");
+  assert.equal(spacesOnly.isValid, false);
+  assert.equal(spacesOnly.error, "Please select a price type (Wholesale or Retail).");
+
+  const nullVal = validatePriceType(null);
+  assert.equal(nullVal.isValid, false);
+  assert.equal(nullVal.error, "Please select a price type (Wholesale or Retail).");
+
+  const undefinedVal = validatePriceType(undefined);
+  assert.equal(undefinedVal.isValid, false);
+  assert.equal(undefinedVal.error, "Please select a price type (Wholesale or Retail).");
+});
+
+test("Wizard Step 3: Invalid or unsupported price type values are rejected", () => {
+  const farmgate = validatePriceType("farmgate");
+  assert.equal(farmgate.isValid, false);
+  assert.equal(farmgate.error, "Invalid price type. Please select either Wholesale or Retail.");
+
+  const exportVal = validatePriceType("export");
+  assert.equal(exportVal.isValid, false);
+  assert.equal(exportVal.error, "Invalid price type. Please select either Wholesale or Retail.");
+
+  const numericVal = validatePriceType("123");
+  assert.equal(numericVal.isValid, false);
+  assert.equal(numericVal.error, "Invalid price type. Please select either Wholesale or Retail.");
+});
+
+test("Wizard Step 3: validateStep3 and isStep3Complete evaluate full, partial, and empty states correctly", () => {
+  // 1. Valid with target_market_id and wholesale
+  const validWholesale = validateStep3({
+    target_market_id: "DEC_EMBILIPITIYA",
+    price_type: "wholesale",
+  });
+  assert.equal(validWholesale.isValid, true);
+  assert.deepEqual(validWholesale.errors, {});
+  assert.equal(
+    isStep3Complete({ target_market_id: "DEC_EMBILIPITIYA", price_type: "wholesale" }),
+    true
+  );
+
+  // 2. Valid with selling_market_id alias and retail
+  const validRetail = validateStep3({
+    selling_market_id: "DEC_DAMBULLA",
+    price_type: "retail",
+  });
+  assert.equal(validRetail.isValid, true);
+  assert.deepEqual(validRetail.errors, {});
+  assert.equal(
+    isStep3Complete({ selling_market_id: "DEC_DAMBULLA", price_type: "retail" }),
+    true
+  );
+
+  // 3. Missing price type only
+  const missingPriceType = validateStep3({
+    target_market_id: "DEC_EMBILIPITIYA",
+    price_type: "",
+  });
+  assert.equal(missingPriceType.isValid, false);
+  assert.equal(
+    missingPriceType.errors.price_type,
+    "Please select a price type (Wholesale or Retail)."
+  );
+  assert.equal(missingPriceType.errors.target_market_id, undefined);
+  assert.equal(
+    isStep3Complete({ target_market_id: "DEC_EMBILIPITIYA", price_type: "" }),
+    false
+  );
+
+  // 4. Missing market only
+  const missingMarket = validateStep3({
+    target_market_id: "",
+    price_type: "wholesale",
+  });
+  assert.equal(missingMarket.isValid, false);
+  assert.equal(
+    missingMarket.errors.target_market_id,
+    "Please select a target selling market."
+  );
+  assert.equal(missingMarket.errors.price_type, undefined);
+  assert.equal(isStep3Complete({ target_market_id: "", price_type: "wholesale" }), false);
+
+  // 5. Both missing
+  const bothMissing = validateStep3({
+    target_market_id: "",
+    price_type: "",
+  });
+  assert.equal(bothMissing.isValid, false);
+  assert.equal(bothMissing.errors.target_market_id, "Please select a target selling market.");
+  assert.equal(bothMissing.errors.price_type, "Please select a price type (Wholesale or Retail).");
+  assert.equal(isStep3Complete({ target_market_id: "", price_type: "" }), false);
+
+  // 6. Invalid market, valid price type
+  const invalidMarket = validateStep3({
+    target_market_id: "DEC_LONDON",
+    price_type: "wholesale",
+  });
+  assert.equal(invalidMarket.isValid, false);
+  assert.equal(
+    invalidMarket.errors.target_market_id,
+    "The selected market is not recognized in verified Dedicated Economic Centres."
+  );
+  assert.equal(invalidMarket.errors.price_type, undefined);
+
+  // 7. Valid market, invalid price type
+  const invalidPriceType = validateStep3({
+    target_market_id: "DEC_EMBILIPITIYA",
+    price_type: "farmgate" as unknown as PriceType,
+  });
+  assert.equal(invalidPriceType.isValid, false);
+  assert.equal(
+    invalidPriceType.errors.price_type,
+    "Invalid price type. Please select either Wholesale or Retail."
+  );
+  assert.equal(invalidPriceType.errors.target_market_id, undefined);
+});
+
+test("Wizard Step 3: Session storage helpers store, restore, and clear market and price type safely", () => {
   assert.equal(STEP3_STORAGE_KEY, "agrodecision_wizard_step3");
 
-  // In Node environment, helpers return default gracefully without throwing
+  // In Node environment, helpers return defaults gracefully without throwing
   const initial = loadStep3FromStorage();
-  assert.deepEqual(initial, { selling_market_id: "" });
+  assert.deepEqual(initial, { target_market_id: "", selling_market_id: "", price_type: "" });
 
   assert.doesNotThrow(() => {
-    saveStep3ToStorage({ selling_market_id: "DEC_EMBILIPITIYA" });
+    saveStep3ToStorage({
+      target_market_id: "DEC_EMBILIPITIYA",
+      selling_market_id: "DEC_EMBILIPITIYA",
+      price_type: "wholesale",
+    });
     clearStep3Storage();
   });
 
@@ -1242,19 +1374,122 @@ test("Wizard Step 3: Session storage helpers store, restore, and clear market se
   };
 
   try {
-    // 1. Save valid market
-    const saved = saveValidatedStep3ToStorage({ selling_market_id: "DEC_EMBILIPITIYA" });
+    // 1. Save valid market and wholesale price type
+    const saved = saveValidatedStep3ToStorage({
+      target_market_id: "DEC_EMBILIPITIYA",
+      price_type: "wholesale",
+    });
     assert.equal(saved, true);
-    assert.deepEqual(loadStep3FromStorage(), { selling_market_id: "DEC_EMBILIPITIYA" });
+    assert.deepEqual(loadStep3FromStorage(), {
+      target_market_id: "DEC_EMBILIPITIYA",
+      selling_market_id: "DEC_EMBILIPITIYA",
+      price_type: "wholesale",
+    });
 
-    // 2. Reject saving invalid market, leaving existing record protected
-    const rejectInvalid = saveValidatedStep3ToStorage({ selling_market_id: "INVALID_XYZ" });
+    // 2. Save valid market and retail price type
+    const savedRetail = saveValidatedStep3ToStorage({
+      target_market_id: "DEC_PETTAH",
+      price_type: "retail",
+    });
+    assert.equal(savedRetail, true);
+    assert.deepEqual(loadStep3FromStorage(), {
+      target_market_id: "DEC_PETTAH",
+      selling_market_id: "DEC_PETTAH",
+      price_type: "retail",
+    });
+
+    // 2b. Case-insensitive and padded price type input is normalized to lowercase before persistence
+    const savedNormalized = saveValidatedStep3ToStorage({
+      target_market_id: "  DEC_EMBILIPITIYA  ",
+      price_type: "  Wholesale  " as unknown as PriceType,
+    });
+    assert.equal(savedNormalized, true);
+    assert.deepEqual(loadStep3FromStorage(), {
+      target_market_id: "DEC_EMBILIPITIYA",
+      selling_market_id: "DEC_EMBILIPITIYA",
+      price_type: "wholesale",
+    });
+
+    // 3. Reject saving invalid price type, protecting existing stored record
+    const rejectInvalid = saveValidatedStep3ToStorage({
+      target_market_id: "DEC_PETTAH",
+      price_type: "farmgate" as unknown as PriceType,
+    });
     assert.equal(rejectInvalid, false);
-    assert.deepEqual(loadStep3FromStorage(), { selling_market_id: "DEC_EMBILIPITIYA" });
+    assert.deepEqual(loadStep3FromStorage(), {
+      target_market_id: "DEC_EMBILIPITIYA",
+      selling_market_id: "DEC_EMBILIPITIYA",
+      price_type: "wholesale",
+    });
 
-    // 3. Clear
+    // 4. Reject saving missing price type, protecting existing stored record
+    const rejectMissingPriceType = saveValidatedStep3ToStorage({
+      target_market_id: "DEC_PETTAH",
+      price_type: "",
+    });
+    assert.equal(rejectMissingPriceType, false);
+    assert.deepEqual(loadStep3FromStorage(), {
+      target_market_id: "DEC_EMBILIPITIYA",
+      selling_market_id: "DEC_EMBILIPITIYA",
+      price_type: "wholesale",
+    });
+
+    // 5. Clear
     clearStep3Storage();
-    assert.deepEqual(loadStep3FromStorage(), { selling_market_id: "" });
+    assert.deepEqual(loadStep3FromStorage(), {
+      target_market_id: "",
+      selling_market_id: "",
+      price_type: "",
+    });
+  } finally {
+    delete (globalThis as unknown as { window?: unknown }).window;
+  }
+});
+
+test("Wizard Step 3: Backward compatibility for existing records containing only market ID", () => {
+  const mockStorage = new Map<string, string>();
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => mockStorage.get(key) ?? null,
+      setItem: (key: string, val: string) => mockStorage.set(key, val),
+      removeItem: (key: string) => mockStorage.delete(key),
+    },
+  };
+
+  try {
+    // Scenario 1: Legacy record containing only selling_market_id (Commit 19 format)
+    mockStorage.set(
+      STEP3_STORAGE_KEY,
+      JSON.stringify({ selling_market_id: "DEC_EMBILIPITIYA" })
+    );
+
+    const loaded1 = loadStep3FromStorage();
+    assert.equal(loaded1.target_market_id, "DEC_EMBILIPITIYA");
+    assert.equal(loaded1.selling_market_id, "DEC_EMBILIPITIYA");
+    assert.equal(loaded1.price_type, "");
+    // Step 3 is incomplete until farmer chooses price_type
+    assert.equal(isStep3Complete(loaded1), false);
+
+    // Scenario 2: Legacy record containing only target_market_id
+    mockStorage.set(
+      STEP3_STORAGE_KEY,
+      JSON.stringify({ target_market_id: "DEC_DAMBULLA" })
+    );
+
+    const loaded2 = loadStep3FromStorage();
+    assert.equal(loaded2.target_market_id, "DEC_DAMBULLA");
+    assert.equal(loaded2.selling_market_id, "DEC_DAMBULLA");
+    assert.equal(loaded2.price_type, "");
+    assert.equal(isStep3Complete(loaded2), false);
+
+    // Scenario 3: Corrupt JSON string in storage
+    mockStorage.set(STEP3_STORAGE_KEY, "{ invalid json corrupt");
+    const corruptLoaded = loadStep3FromStorage();
+    assert.deepEqual(corruptLoaded, {
+      target_market_id: "",
+      selling_market_id: "",
+      price_type: "",
+    });
   } finally {
     delete (globalThis as unknown as { window?: unknown }).window;
   }
@@ -1282,14 +1517,24 @@ test("Wizard Step 3: Wizard navigation guards require valid Step 1 and Step 2 be
   );
   assert.equal(incompleteStep2.isValid, false);
 
-  // Scenario C: Steps 1, 2, and 3 all complete
+  // Scenario C: Steps 1 and 2 complete, Step 3 missing price type
   const completeStep2 = validateStep2(
     { harvest_date: "2027-05-15", land_extent_acres: "2.5", expected_yield_kg: "1500" },
     FIXED_TODAY
   );
   assert.equal(completeStep2.isValid, true);
 
-  const completeStep3 = validateStep3({ selling_market_id: "DEC_EMBILIPITIYA" });
+  const partialStep3 = validateStep3({
+    target_market_id: "DEC_EMBILIPITIYA",
+    price_type: "",
+  });
+  assert.equal(partialStep3.isValid, false);
+
+  // Scenario D: Steps 1, 2, and 3 all complete
+  const completeStep3 = validateStep3({
+    target_market_id: "DEC_EMBILIPITIYA",
+    price_type: "wholesale",
+  });
   assert.equal(completeStep3.isValid, true);
 });
 

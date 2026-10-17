@@ -20,6 +20,7 @@ import {
   Building2,
   HelpCircle,
   Clock,
+  Tag,
 } from "lucide-react";
 
 import { WizardProgress } from "../../components/WizardProgress";
@@ -43,7 +44,9 @@ import {
   validateStep3,
   isStep3Complete,
   loadStep3FromStorage,
+  saveStep3ToStorage,
   saveValidatedStep3ToStorage,
+  PriceType,
 } from "../../lib/wizard";
 
 // Statically import the 6 verified crop photographs for summary cards
@@ -66,6 +69,7 @@ const CROP_IMAGE_MAP: Record<string, StaticImageData> = {
 export default function SellingMarketPage() {
   const router = useRouter();
   const marketSelectionSectionRef = useRef<HTMLDivElement>(null);
+  const priceTypeSectionRef = useRef<HTMLDivElement>(null);
 
   // Wizard state from Step 1 and Step 2
   const [step1Data, setStep1Data] = useState<Step1FormData>({
@@ -83,9 +87,11 @@ export default function SellingMarketPage() {
   const [guardMessage, setGuardMessage] = useState<string>("");
   const [guardTarget, setGuardTarget] = useState<string>("");
 
-  // Step 3 state
+  // Step 3 state: market and price type
   const [selectedMarketId, setSelectedMarketId] = useState<string>("");
+  const [selectedPriceType, setSelectedPriceType] = useState<PriceType | "">("");
   const [marketError, setMarketError] = useState<string | undefined>(undefined);
+  const [priceTypeError, setPriceTypeError] = useState<string | undefined>(undefined);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isStep3Saved, setIsStep3Saved] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,11 +129,15 @@ export default function SellingMarketPage() {
 
     // 3. Restore Step 3 if previously selected
     const s3 = loadStep3FromStorage();
-    if (s3.selling_market_id) {
-      setSelectedMarketId(s3.selling_market_id);
-      if (isStep3Complete(s3)) {
-        setIsStep3Saved(true);
-      }
+    const market = s3.target_market_id || s3.selling_market_id || "";
+    if (market) {
+      setSelectedMarketId(market);
+    }
+    if (s3.price_type) {
+      setSelectedPriceType(s3.price_type);
+    }
+    if (isStep3Complete(s3)) {
+      setIsStep3Saved(true);
     }
 
     setGuardStatus("ready");
@@ -139,8 +149,26 @@ export default function SellingMarketPage() {
     setMarketError(undefined);
     setIsStep3Saved(false);
 
-    // Persist immediately if valid
-    saveValidatedStep3ToStorage({ selling_market_id: marketId });
+    // Persist draft immediately so page refresh preserves choices
+    saveStep3ToStorage({
+      target_market_id: marketId,
+      selling_market_id: marketId,
+      price_type: selectedPriceType,
+    });
+  };
+
+  // Handle price type selection
+  const handlePriceTypeSelect = (priceType: PriceType) => {
+    setSelectedPriceType(priceType);
+    setPriceTypeError(undefined);
+    setIsStep3Saved(false);
+
+    // Persist draft immediately so page refresh preserves choices
+    saveStep3ToStorage({
+      target_market_id: selectedMarketId,
+      selling_market_id: selectedMarketId,
+      price_type: priceType,
+    });
   };
 
   // Handle Step 3 submission
@@ -152,17 +180,36 @@ export default function SellingMarketPage() {
     setHasAttemptedSubmit(true);
 
     try {
-      const validation = validateStep3({ selling_market_id: selectedMarketId });
+      const validation = validateStep3({
+        target_market_id: selectedMarketId,
+        selling_market_id: selectedMarketId,
+        price_type: selectedPriceType,
+      });
+
+      const mError = validation.errors.target_market_id || validation.errors.selling_market_id;
+      const pError = validation.errors.price_type;
+
+      setMarketError(mError);
+      setPriceTypeError(pError);
 
       if (!validation.isValid) {
-        setMarketError(validation.errors.selling_market_id);
         setIsStep3Saved(false);
-        marketSelectionSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Focus or scroll to the first invalid field
+        if (mError) {
+          marketSelectionSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else if (pError) {
+          priceTypeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
         return;
       }
 
       setMarketError(undefined);
-      saveValidatedStep3ToStorage({ selling_market_id: selectedMarketId });
+      setPriceTypeError(undefined);
+      saveValidatedStep3ToStorage({
+        target_market_id: selectedMarketId,
+        selling_market_id: selectedMarketId,
+        price_type: selectedPriceType,
+      });
       setIsStep3Saved(true);
       setIsStep4ModalOpen(true);
     } finally {
@@ -336,16 +383,20 @@ export default function SellingMarketPage() {
         </div>
       </section>
 
-      {/* Main Market Selection Form */}
+      {/* Main Market & Price Type Selection Form */}
       <form onSubmit={handleFormSubmit} className="space-y-8" noValidate>
         {/* Error Alert Banner */}
-        {hasAttemptedSubmit && marketError && (
+        {hasAttemptedSubmit && (marketError || priceTypeError) && (
           <div
             role="alert"
             className="rounded-2xl border border-red-200 bg-red-50/80 p-4 text-red-900 shadow-2xs flex items-center gap-3 animate-in fade-in"
           >
             <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
-            <div className="text-sm font-semibold">{marketError}</div>
+            <div className="text-sm font-semibold">
+              {marketError && priceTypeError
+                ? "Please select a target selling market and a price type."
+                : marketError || priceTypeError}
+            </div>
           </div>
         )}
 
@@ -366,6 +417,17 @@ export default function SellingMarketPage() {
               Choose ONE Dedicated Economic Centre (DEC) or commercial terminal market from the verified national catalog.
             </p>
           </div>
+
+          {/* Market-level Error */}
+          {hasAttemptedSubmit && marketError && (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 bg-red-50/80 p-3.5 text-red-900 text-xs font-semibold flex items-center gap-2.5 animate-in fade-in"
+            >
+              <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+              <span>{marketError}</span>
+            </div>
+          )}
 
           {/* 1. Highlighted Pilot Hubs */}
           <div className="space-y-3">
@@ -476,8 +538,165 @@ export default function SellingMarketPage() {
           </div>
         </section>
 
+        {/* Price Type Selection Section */}
+        <section
+          ref={priceTypeSectionRef}
+          className="rounded-2xl bg-white p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-5"
+        >
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#15803d]">
+              <Tag className="h-4 w-4" />
+              <span>Step 3 — Price Valuation Type</span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
+              Which price type would you like to use? <span className="text-red-500">*</span>
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Select whether your financial assessment should use wholesale or retail market prices.
+            </p>
+          </div>
+
+          {/* Field-level Error */}
+          {hasAttemptedSubmit && priceTypeError && (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 bg-red-50/80 p-3.5 text-red-900 text-xs font-semibold flex items-center gap-2.5 animate-in fade-in"
+            >
+              <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+              <span>{priceTypeError}</span>
+            </div>
+          )}
+
+          {/* Accessible Radio Cards */}
+          <div
+            role="radiogroup"
+            aria-label="Which price type would you like to use?"
+            aria-required="true"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+          >
+            {/* Wholesale */}
+            <div
+              role="radio"
+              aria-checked={selectedPriceType === "wholesale"}
+              tabIndex={0}
+              onClick={() => handlePriceTypeSelect("wholesale")}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  handlePriceTypeSelect("wholesale");
+                }
+              }}
+              className={`relative rounded-2xl border-2 p-5 cursor-pointer transition-all shadow-2xs flex flex-col justify-between gap-3 focus:outline-hidden focus:ring-2 focus:ring-[#15803d]/40 ${
+                selectedPriceType === "wholesale"
+                  ? "border-[#15803d] bg-emerald-50/60 ring-2 ring-emerald-500/20 shadow-xs"
+                  : "border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50/60"
+              }`}
+            >
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#166534]">
+                    Bulk / Trade
+                  </span>
+
+                  {/* Radio indicator */}
+                  <div
+                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      selectedPriceType === "wholesale"
+                        ? "border-[#15803d] bg-white"
+                        : "border-slate-300 bg-white"
+                    }`}
+                  >
+                    {selectedPriceType === "wholesale" && (
+                      <div className="h-2.5 w-2.5 rounded-full bg-[#15803d]" />
+                    )}
+                  </div>
+                </div>
+
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  Wholesale
+                </h3>
+
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Use wholesale market prices for your analysis.
+                </p>
+              </div>
+
+              <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Standard market transactions</span>
+                <span className="font-semibold text-emerald-700">
+                  {selectedPriceType === "wholesale" ? "Selected" : "Select wholesale"}
+                </span>
+              </div>
+            </div>
+
+            {/* Retail */}
+            <div
+              role="radio"
+              aria-checked={selectedPriceType === "retail"}
+              tabIndex={0}
+              onClick={() => handlePriceTypeSelect("retail")}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  handlePriceTypeSelect("retail");
+                }
+              }}
+              className={`relative rounded-2xl border-2 p-5 cursor-pointer transition-all shadow-2xs flex flex-col justify-between gap-3 focus:outline-hidden focus:ring-2 focus:ring-[#15803d]/40 ${
+                selectedPriceType === "retail"
+                  ? "border-[#15803d] bg-emerald-50/60 ring-2 ring-emerald-500/20 shadow-xs"
+                  : "border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50/60"
+              }`}
+            >
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800">
+                    Consumer
+                  </span>
+
+                  {/* Radio indicator */}
+                  <div
+                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      selectedPriceType === "retail"
+                        ? "border-[#15803d] bg-white"
+                        : "border-slate-300 bg-white"
+                    }`}
+                  >
+                    {selectedPriceType === "retail" && (
+                      <div className="h-2.5 w-2.5 rounded-full bg-[#15803d]" />
+                    )}
+                  </div>
+                </div>
+
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  Retail
+                </h3>
+
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Use retail market prices for your analysis.
+                </p>
+              </div>
+
+              <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Direct-to-consumer pricing</span>
+                <span className="font-semibold text-emerald-700">
+                  {selectedPriceType === "retail" ? "Selected" : "Select retail"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Educational disclaimer notice */}
+          <div className="rounded-xl border border-amber-200/90 bg-amber-50/60 p-3.5 text-xs text-amber-900 flex items-start gap-2.5">
+            <Info className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <span className="font-semibold text-amber-950">Price Type &amp; Market Data Availability:</span>{" "}
+              Selecting a price type indicates your analysis preference. It does not confirm that corresponding historical prices are available for the chosen market, nor does it imply that all regional Dedicated Economic Centres conduct retail transactions.
+            </div>
+          </div>
+        </section>
+
         {/* Farmer-Friendly Step 3 Completion Summary */}
-        {isStep3Saved && selectedMarketMeta && (
+        {isStep3Saved && selectedMarketMeta && selectedPriceType && (
           <section className="rounded-2xl border-2 border-emerald-300 bg-linear-to-br from-emerald-50/90 via-emerald-50/50 to-white p-6 sm:p-7 shadow-xs space-y-5 animate-in fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-200/80 pb-4">
               <div className="flex items-center gap-3">
@@ -486,10 +705,10 @@ export default function SellingMarketPage() {
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                    Step 3 Complete — Selling Market Confirmed
+                    Step 3 Complete — Selling Market &amp; Price Type Confirmed
                   </h3>
                   <p className="text-xs text-emerald-800 font-medium">
-                    Your candidate crop, cultivation district, harvest timeline, and target selling hub are verified.
+                    Your candidate crop, cultivation district, harvest timeline, target selling hub, and price valuation type are verified.
                   </p>
                 </div>
               </div>
@@ -504,7 +723,7 @@ export default function SellingMarketPage() {
               </button>
             </div>
 
-            {/* Complete 6-parameter Grid */}
+            {/* Complete 7-parameter Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {/* Crop */}
               <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
@@ -610,6 +829,24 @@ export default function SellingMarketPage() {
                   </span>
                 </div>
               </div>
+
+              {/* Analysis Price Type */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+                <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
+                  <Tag className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Analysis Price Type
+                  </span>
+                  <span className="text-sm font-bold text-slate-900 truncate block capitalize">
+                    {selectedPriceType} Market Price
+                    <span className="ml-1 text-[10px] bg-emerald-100 text-[#166534] px-1.5 py-0.2 rounded font-semibold capitalize">
+                      {selectedPriceType === "retail" ? "Consumer" : "Bulk"}
+                    </span>
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Next Step Guidance Notice */}
@@ -660,6 +897,7 @@ export default function SellingMarketPage() {
           marketName={selectedMarketMeta.name}
           marketRegion={selectedMarketMeta.region}
           isPilotMarket={Boolean(selectedMarketMeta.is_pilot_recommended)}
+          priceType={selectedPriceType}
         />
       )}
     </div>

@@ -11,6 +11,7 @@ import {
   MapPin,
   Store,
   Calculator,
+  Tag,
   X,
 } from "lucide-react";
 import { formatDateDisplay, formatKg } from "../lib/formatters";
@@ -29,6 +30,7 @@ export interface Step4ComingSoonModalProps {
   marketName: string;
   marketRegion: string;
   isPilotMarket: boolean;
+  priceType?: string;
 }
 
 export function Step4ComingSoonModal({
@@ -45,6 +47,7 @@ export function Step4ComingSoonModal({
   marketName,
   marketRegion,
   isPilotMarket,
+  priceType,
 }: Step4ComingSoonModalProps) {
   if (!isOpen) return null;
 
@@ -198,6 +201,24 @@ export function Step4ComingSoonModal({
                 </span>
               </div>
             </div>
+
+            {/* Price Valuation Type */}
+            <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-emerald-100">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-[#15803d] shrink-0">
+                <Tag className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[10px] font-semibold text-slate-500 block uppercase">
+                  Price Valuation Type
+                </span>
+                <span className="text-sm font-bold text-slate-900 truncate block capitalize">
+                  {priceType || "Wholesale"}
+                  <span className="ml-1.5 text-[10px] bg-emerald-100 text-[#166534] px-1 py-0.5 rounded font-semibold capitalize">
+                    {priceType === "retail" ? "Consumer" : "Bulk / Trade"}
+                  </span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -208,7 +229,7 @@ export function Step4ComingSoonModal({
             <span>Next Stage: Step 4 — Cultivation Costs &amp; Financial Risk</span>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Your crop, cultivation district, harvest timing, production yield, and target selling market are verified and saved. Step 4 (Cultivation Costs) will be implemented in the upcoming sprint task, allowing you to enter cost parameters to evaluate projected profit margins, break-even unit prices, and financial risk.
+            Your crop, cultivation district, harvest timing, production yield, target selling market, and price valuation type are verified and saved. Step 4 (Cultivation Costs) will be implemented in the upcoming sprint task, allowing you to enter cost parameters to evaluate projected profit margins, break-even unit prices, and financial risk.
           </p>
         </div>
 

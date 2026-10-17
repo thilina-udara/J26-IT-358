@@ -1,0 +1,253 @@
+{
+  "system_name": "Climate-Yield Decision Support Service",
+  "evaluation_period": "2021 - 2025 (Unseen Test)",
+  "total_samples": 1662,
+  "group_importance_percentages": {
+    "climate_hazards": 21.65,
+    "crop_agronomy": 61.23,
+    "irrigation_zones": 0.26,
+    "spatial_districts": 14.98
+  },
+  "feature_rankings": [
+    {
+      "rank": 1,
+      "feature": "Crop: Green Gram",
+      "mean_abs_shap_mt_ha": 1.161,
+      "relative_importance_pct": 13.81
+    },
+    {
+      "rank": 2,
+      "feature": "Crop: Maize",
+      "mean_abs_shap_mt_ha": 0.9599,
+      "relative_importance_pct": 11.42
+    },
+    {
+      "rank": 3,
+      "feature": "Crop: Pumpkin",
+      "mean_abs_shap_mt_ha": 0.883,
+      "relative_importance_pct": 10.51
+    },
+    {
+      "rank": 4,
+      "feature": "Crop: Chilli",
+      "mean_abs_shap_mt_ha": 0.8499,
+      "relative_importance_pct": 10.11
+    },
+    {
+      "rank": 5,
+      "feature": "Seasonal Rainfall (mm)",
+      "mean_abs_shap_mt_ha": 0.6581,
+      "relative_importance_pct": 7.83
+    },
+    {
+      "rank": 6,
+      "feature": "Crop: Brinjal",
+      "mean_abs_shap_mt_ha": 0.6085,
+      "relative_importance_pct": 7.24
+    },
+    {
+      "rank": 7,
+      "feature": "Min Soil Moisture (m\u00b3/m\u00b3)",
+      "mean_abs_shap_mt_ha": 0.5861,
+      "relative_importance_pct": 6.97
+    },
+    {
+      "rank": 8,
+      "feature": "Crop: Tomato",
+      "mean_abs_shap_mt_ha": 0.492,
+      "relative_importance_pct": 5.85
+    },
+    {
+      "rank": 9,
+      "feature": "Mean Temperature (\u00b0C)",
+      "mean_abs_shap_mt_ha": 0.3473,
+      "relative_importance_pct": 4.13
+    },
+    {
+      "rank": 10,
+      "feature": "Worst SPI-3 (Drought/Wet Index)",
+      "mean_abs_shap_mt_ha": 0.2284,
+      "relative_importance_pct": 2.72
+    },
+    {
+      "rank": 11,
+      "feature": "Crop: Okra",
+      "mean_abs_shap_mt_ha": 0.1921,
+      "relative_importance_pct": 2.29
+    },
+    {
+      "rank": 12,
+      "feature": "District: Mannar",
+      "mean_abs_shap_mt_ha": 0.1869,
+      "relative_importance_pct": 2.22
+    },
+    {
+      "rank": 13,
+      "feature": "District: Kandy",
+      "mean_abs_shap_mt_ha": 0.165,
+      "relative_importance_pct": 1.96
+    },
+    {
+      "rank": 14,
+      "feature": "District: Ampara",
+      "mean_abs_shap_mt_ha": 0.1437,
+      "relative_importance_pct": 1.71
+    },
+    {
+      "rank": 15,
+      "feature": "Season: Maha (NE Monsoon)",
+      "mean_abs_shap_mt_ha": 0.1299,
+      "relative_importance_pct": 1.55
+    },
+    {
+      "rank": 16,
+      "feature": "District: Batticaloa",
+      "mean_abs_shap_mt_ha": 0.1232,
+      "relative_importance_pct": 1.47
+    },
+    {
+      "rank": 17,
+      "feature": "District: Nuwara Eliya",
+      "mean_abs_shap_mt_ha": 0.1087,
+      "relative_importance_pct": 1.29
+    },
+    {
+      "rank": 18,
+      "feature": "District: Kurunegala",
+      "mean_abs_shap_mt_ha": 0.0882,
+      "relative_importance_pct": 1.05
+    },
+    {
+      "rank": 19,
+      "feature": "District: Mullaitivu",
+      "mean_abs_shap_mt_ha": 0.0672,
+      "relative_importance_pct": 0.8
+    },
+    {
+      "rank": 20,
+      "feature": "District: Vavuniya",
+      "mean_abs_shap_mt_ha": 0.0665,
+      "relative_importance_pct": 0.79
+    },
+    {
+      "rank": 21,
+      "feature": "District: Galle",
+      "mean_abs_shap_mt_ha": 0.0597,
+      "relative_importance_pct": 0.71
+    },
+    {
+      "rank": 22,
+      "feature": "District: Anuradhapura",
+      "mean_abs_shap_mt_ha": 0.0486,
+      "relative_importance_pct": 0.58
+    },
+    {
+      "rank": 23,
+      "feature": "District: Ratnapura",
+      "mean_abs_shap_mt_ha": 0.0398,
+      "relative_importance_pct": 0.47
+    },
+    {
+      "rank": 24,
+      "feature": "Season: Yala (SW Monsoon)",
+      "mean_abs_shap_mt_ha": 0.0289,
+      "relative_importance_pct": 0.34
+    },
+    {
+      "rank": 25,
+      "feature": "District: Kalutara",
+      "mean_abs_shap_mt_ha": 0.0241,
+      "relative_importance_pct": 0.29
+    },
+    {
+      "rank": 26,
+      "feature": "District: Puttalam",
+      "mean_abs_shap_mt_ha": 0.0237,
+      "relative_importance_pct": 0.28
+    },
+    {
+      "rank": 27,
+      "feature": "District: Monaragala",
+      "mean_abs_shap_mt_ha": 0.0196,
+      "relative_importance_pct": 0.23
+    },
+    {
+      "rank": 28,
+      "feature": "District: Polonnaruwa",
+      "mean_abs_shap_mt_ha": 0.0191,
+      "relative_importance_pct": 0.23
+    },
+    {
+      "rank": 29,
+      "feature": "District: Gampaha",
+      "mean_abs_shap_mt_ha": 0.0169,
+      "relative_importance_pct": 0.2
+    },
+    {
+      "rank": 30,
+      "feature": "Zone: Major Irrigation",
+      "mean_abs_shap_mt_ha": 0.0156,
+      "relative_importance_pct": 0.19
+    },
+    {
+      "rank": 31,
+      "feature": "District: Hambantota",
+      "mean_abs_shap_mt_ha": 0.0136,
+      "relative_importance_pct": 0.16
+    },
+    {
+      "rank": 32,
+      "feature": "District: Jaffna",
+      "mean_abs_shap_mt_ha": 0.0116,
+      "relative_importance_pct": 0.14
+    },
+    {
+      "rank": 33,
+      "feature": "District: Trincomalee",
+      "mean_abs_shap_mt_ha": 0.0088,
+      "relative_importance_pct": 0.11
+    },
+    {
+      "rank": 34,
+      "feature": "Zone: Rainfed / Minor",
+      "mean_abs_shap_mt_ha": 0.0056,
+      "relative_importance_pct": 0.07
+    },
+    {
+      "rank": 35,
+      "feature": "District: Matara",
+      "mean_abs_shap_mt_ha": 0.0051,
+      "relative_importance_pct": 0.06
+    },
+    {
+      "rank": 36,
+      "feature": "District: Colombo",
+      "mean_abs_shap_mt_ha": 0.0049,
+      "relative_importance_pct": 0.06
+    },
+    {
+      "rank": 37,
+      "feature": "District: Matale",
+      "mean_abs_shap_mt_ha": 0.0044,
+      "relative_importance_pct": 0.05
+    },
+    {
+      "rank": 38,
+      "feature": "District: Kilinochchi",
+      "mean_abs_shap_mt_ha": 0.0039,
+      "relative_importance_pct": 0.05
+    },
+    {
+      "rank": 39,
+      "feature": "District: Badulla",
+      "mean_abs_shap_mt_ha": 0.0035,
+      "relative_importance_pct": 0.04
+    },
+    {
+      "rank": 40,
+      "feature": "District: Kegalle",
+      "mean_abs_shap_mt_ha": 0.0028,
+      "relative_importance_pct": 0.03
+    }
+  ]
+}

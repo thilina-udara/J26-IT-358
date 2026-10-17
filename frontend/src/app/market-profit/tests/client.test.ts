@@ -59,6 +59,17 @@ import {
   clearStep3Storage,
   checkPreviousStepsForStep3,
   isWizardReadyForStep4,
+  validateCultivationCost,
+  validateStep4,
+  isStep4Complete,
+  loadStep4FromStorage,
+  saveStep4ToStorage,
+  saveValidatedStep4ToStorage,
+  clearStep4Storage,
+  checkPreviousStepsForStep4,
+  STEP4_STORAGE_KEY,
+  type Step4FormData,
+  type Step4ValidationResult,
 } from "../lib/wizard";
 
 import type {
@@ -1649,6 +1660,224 @@ test("Wizard Step 3: Step 3 Final Validation preserves user selections and maint
   assert.equal(wizardSteps[3].step, 4);
   assert.equal(wizardSteps[3].label, "Cultivation Costs");
   assert.equal(wizardSteps[3].route, "/market-profit/new-analysis/cultivation-costs");
+});
+
+// ============================================================================
+// Wizard Step 4: Quick Cultivation Budget Tests
+// ============================================================================
+
+test("Wizard Step 4: Valid positive whole and decimal cultivation costs pass validation", () => {
+  // Whole numbers
+  const r1 = validateCultivationCost("150000");
+  assert.equal(r1.isValid, true);
+  assert.equal(r1.parsedValue, 150000);
+  assert.equal(r1.isZeroCost, false);
+  assert.equal(r1.warning, undefined);
+
+  // Decimal amounts
+  const r2 = validateCultivationCost("25450.75");
+  assert.equal(r2.isValid, true);
+  assert.equal(r2.parsedValue, 25450.75);
+  assert.equal(r2.isZeroCost, false);
+
+  // High production budget
+  const r3 = validateCultivationCost(1200000);
+  assert.equal(r3.isValid, true);
+  assert.equal(r3.parsedValue, 1200000);
+  assert.equal(r3.isZeroCost, false);
+
+  // Preserves decimal precision in input string without silent rounding
+  const rawDecimal = "45000.12345";
+  const r4 = validateCultivationCost(rawDecimal);
+  assert.equal(r4.isValid, true);
+  assert.equal(r4.parsedValue, 45000.12345);
+});
+
+test("Wizard Step 4: Zero cost is accepted as valid but flags a clear advisory warning", () => {
+  // String zero
+  const r1 = validateCultivationCost("0");
+  assert.equal(r1.isValid, true);
+  assert.equal(r1.parsedValue, 0);
+  assert.equal(r1.isZeroCost, true);
+  assert.ok(r1.warning);
+  assert.match(r1.warning, /profit percentage and risk evaluation may be unavailable when cost is zero/i);
+
+  // Numeric zero
+  const r2 = validateCultivationCost(0);
+  assert.equal(r2.isValid, true);
+  assert.equal(r2.parsedValue, 0);
+  assert.equal(r2.isZeroCost, true);
+  assert.ok(r2.warning);
+
+  // Decimal zero
+  const r3 = validateCultivationCost("0.00");
+  assert.equal(r3.isValid, true);
+  assert.equal(r3.parsedValue, 0);
+  assert.equal(r3.isZeroCost, true);
+  assert.ok(r3.warning);
+});
+
+test("Wizard Step 4: Missing, empty, or whitespace cultivation cost is rejected", () => {
+  const r1 = validateCultivationCost("");
+  assert.equal(r1.isValid, false);
+  assert.match(r1.error!, /Please enter your total expected cultivation cost in LKR/i);
+
+  const r2 = validateCultivationCost("   ");
+  assert.equal(r2.isValid, false);
+  assert.match(r2.error!, /Please enter your total expected cultivation cost in LKR/i);
+
+  const r3 = validateCultivationCost(null);
+  assert.equal(r3.isValid, false);
+
+  const r4 = validateCultivationCost(undefined);
+  assert.equal(r4.isValid, false);
+});
+
+test("Wizard Step 4: Negative cultivation cost is rejected", () => {
+  const r1 = validateCultivationCost("-15000");
+  assert.equal(r1.isValid, false);
+  assert.match(r1.error!, /Cultivation cost cannot be negative/i);
+
+  const r2 = validateCultivationCost(-1);
+  assert.equal(r2.isValid, false);
+  assert.match(r2.error!, /Cultivation cost cannot be negative/i);
+
+  const r3 = validateCultivationCost("-0.01");
+  assert.equal(r3.isValid, false);
+  assert.match(r3.error!, /Cultivation cost cannot be negative/i);
+});
+
+test("Wizard Step 4: Non-numeric values, NaN, and Infinity are rejected", () => {
+  const r1 = validateCultivationCost("abc");
+  assert.equal(r1.isValid, false);
+  assert.match(r1.error!, /must be a valid numeric amount/i);
+
+  const r2 = validateCultivationCost("15,000 LKR");
+  assert.equal(r2.isValid, false);
+
+  const r3 = validateCultivationCost(NaN);
+  assert.equal(r3.isValid, false);
+
+  const r4 = validateCultivationCost("NaN");
+  assert.equal(r4.isValid, false);
+
+  const r5 = validateCultivationCost(Infinity);
+  assert.equal(r5.isValid, false);
+
+  const r6 = validateCultivationCost("-Infinity");
+  assert.equal(r6.isValid, false);
+});
+
+test("Wizard Step 4: validateStep4 and isStep4Complete evaluate valid, zero, and invalid states", () => {
+  // Valid positive cost
+  const v1 = validateStep4({ total_cultivation_cost_lkr: "175000" });
+  assert.equal(v1.isValid, true);
+  assert.equal(v1.parsedCost, 175000);
+  assert.equal(v1.isZeroCost, false);
+  assert.equal(isStep4Complete({ total_cultivation_cost_lkr: "175000" }), true);
+
+  // Valid zero cost with warning
+  const v2 = validateStep4({ total_cultivation_cost_lkr: "0" });
+  assert.equal(v2.isValid, true);
+  assert.equal(v2.isZeroCost, true);
+  assert.ok(v2.warnings?.total_cultivation_cost_lkr);
+  assert.equal(isStep4Complete({ total_cultivation_cost_lkr: "0" }), true);
+
+  // Invalid missing cost
+  const v3 = validateStep4({ total_cultivation_cost_lkr: "" });
+  assert.equal(v3.isValid, false);
+  assert.ok(v3.errors.total_cultivation_cost_lkr);
+  assert.equal(isStep4Complete({ total_cultivation_cost_lkr: "" }), false);
+
+  // Invalid negative cost
+  const v4 = validateStep4({ total_cultivation_cost_lkr: "-500" });
+  assert.equal(v4.isValid, false);
+  assert.ok(v4.errors.total_cultivation_cost_lkr);
+  assert.equal(isStep4Complete({ total_cultivation_cost_lkr: "-500" }), false);
+});
+
+test("Wizard Step 4: Session storage helpers save, restore, clear, and guard against invalid overwrite", () => {
+  const mockStorage: Record<string, string> = {};
+  const originalWindow = globalThis.window;
+
+  // Mock sessionStorage in Node environment
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => mockStorage[key] ?? null,
+      setItem: (key: string, val: string) => {
+        mockStorage[key] = val;
+      },
+      removeItem: (key: string) => {
+        delete mockStorage[key];
+      },
+    },
+  };
+
+  try {
+    // 1. Initial empty storage
+    const initial = loadStep4FromStorage();
+    assert.equal(initial.total_cultivation_cost_lkr, "");
+
+    // 2. Save valid budget
+    saveStep4ToStorage({ total_cultivation_cost_lkr: "185000.50" });
+    const loaded = loadStep4FromStorage();
+    assert.equal(loaded.total_cultivation_cost_lkr, "185000.50");
+
+    // 3. saveValidatedStep4ToStorage with invalid cost protects existing storage
+    const invalidResult = saveValidatedStep4ToStorage({ total_cultivation_cost_lkr: "-500" });
+    assert.equal(invalidResult, false);
+    // Previous valid budget must be retained
+    assert.equal(loadStep4FromStorage().total_cultivation_cost_lkr, "185000.50");
+
+    // 4. saveValidatedStep4ToStorage with valid zero cost saves successfully
+    const zeroResult = saveValidatedStep4ToStorage({ total_cultivation_cost_lkr: "0" });
+    assert.equal(zeroResult, true);
+    assert.equal(loadStep4FromStorage().total_cultivation_cost_lkr, "0");
+
+    // 5. Clear storage
+    clearStep4Storage();
+    assert.equal(loadStep4FromStorage().total_cultivation_cost_lkr, "");
+  } finally {
+    (globalThis as unknown as { window: unknown }).window = originalWindow;
+  }
+});
+
+test("Wizard Step 4: checkPreviousStepsForStep4 identifies earliest incomplete step and redirect target", () => {
+  const FIXED_TODAY = new Date(2026, 9, 17); // October 17, 2026
+
+  const validStep1 = { crop_id: "CR_OKRA", cultivation_district_id: "LK-82" };
+  const validStep2 = { harvest_date: "2027-05-15", land_extent_acres: "2.5", expected_yield_kg: "1500" };
+  const validStep3 = { target_market_id: "DEC_EMBILIPITIYA", price_type: "wholesale" as PriceType };
+
+  // All 3 previous steps valid
+  const resAllValid = checkPreviousStepsForStep4(validStep1, validStep2, validStep3, FIXED_TODAY);
+  assert.equal(resAllValid.isValid, true);
+  assert.equal(resAllValid.earliestIncompleteStep, undefined);
+  assert.equal(resAllValid.redirectTarget, undefined);
+
+  // Incomplete Step 1 -> points to /market-profit/new-analysis
+  const resMissingStep1 = checkPreviousStepsForStep4({ crop_id: "" }, validStep2, validStep3, FIXED_TODAY);
+  assert.equal(resMissingStep1.isValid, false);
+  assert.equal(resMissingStep1.earliestIncompleteStep, 1);
+  assert.equal(resMissingStep1.redirectTarget, "/market-profit/new-analysis");
+
+  // Valid Step 1 but incomplete Step 2 -> points to /market-profit/new-analysis/harvest-details
+  const resMissingStep2 = checkPreviousStepsForStep4(validStep1, { harvest_date: "" }, validStep3, FIXED_TODAY);
+  assert.equal(resMissingStep2.isValid, false);
+  assert.equal(resMissingStep2.earliestIncompleteStep, 2);
+  assert.equal(resMissingStep2.redirectTarget, "/market-profit/new-analysis/harvest-details");
+
+  // Valid Step 1 & 2 but missing market in Step 3 -> points to /market-profit/new-analysis/selling-market
+  const resMissingMarket = checkPreviousStepsForStep4(validStep1, validStep2, { target_market_id: "", price_type: "wholesale" }, FIXED_TODAY);
+  assert.equal(resMissingMarket.isValid, false);
+  assert.equal(resMissingMarket.earliestIncompleteStep, 3);
+  assert.equal(resMissingMarket.redirectTarget, "/market-profit/new-analysis/selling-market");
+
+  // Valid Step 1 & 2 but missing price type in Step 3 -> points to /market-profit/new-analysis/selling-market
+  const resMissingPriceType = checkPreviousStepsForStep4(validStep1, validStep2, { target_market_id: "DEC_EMBILIPITIYA", price_type: "" }, FIXED_TODAY);
+  assert.equal(resMissingPriceType.isValid, false);
+  assert.equal(resMissingPriceType.earliestIncompleteStep, 3);
+  assert.equal(resMissingPriceType.redirectTarget, "/market-profit/new-analysis/selling-market");
 });
 
 

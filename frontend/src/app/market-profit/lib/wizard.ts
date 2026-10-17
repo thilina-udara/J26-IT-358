@@ -646,11 +646,65 @@ export function isWizardReadyForStep4(
   step3: Partial<Step3FormData>,
   referenceDate?: Date
 ): boolean {
-  const prev = checkPreviousStepsForStep3(step1, step2, referenceDate);
-  if (!prev.isValid) {
-    return false;
+  return checkPreviousStepsForStep4(step1, step2, step3, referenceDate).isValid;
+}
+
+/**
+ * Result structure when checking previous wizard steps integrity before Step 4.
+ */
+export interface PreviousStepsForStep4Result {
+  isValid: boolean;
+  earliestIncompleteStep?: 1 | 2 | 3;
+  redirectTarget?: string;
+  errorMessage?: string;
+}
+
+/**
+ * Evaluates earlier wizard steps integrity (Steps 1, 2, and 3) before allowing Step 4 progression.
+ * Returns the earliest incomplete step and its redirection route.
+ */
+export function checkPreviousStepsForStep4(
+  step1: Partial<Step1FormData>,
+  step2: Partial<Step2FormData>,
+  step3: Partial<Step3FormData>,
+  referenceDate?: Date
+): PreviousStepsForStep4Result {
+  const v1 = validateStep1(step1);
+  if (!v1.isValid) {
+    return {
+      isValid: false,
+      earliestIncompleteStep: 1,
+      redirectTarget: "/market-profit/new-analysis",
+      errorMessage:
+        "Step 1 (Crop & Location) is incomplete. Please select your crop and cultivation district first.",
+    };
   }
-  return isStep3Complete(step3);
+
+  const v2 = validateStep2(step2, referenceDate);
+  if (!v2.isValid) {
+    return {
+      isValid: false,
+      earliestIncompleteStep: 2,
+      redirectTarget: "/market-profit/new-analysis/harvest-details",
+      errorMessage:
+        "Step 2 (Harvest Details) is incomplete. Please provide your harvest timing, land extent, and expected yield first.",
+    };
+  }
+
+  const v3 = validateStep3(step3);
+  if (!v3.isValid) {
+    return {
+      isValid: false,
+      earliestIncompleteStep: 3,
+      redirectTarget: "/market-profit/new-analysis/selling-market",
+      errorMessage:
+        "Step 3 (Selling Market) is incomplete. Please choose your target market and price type first.",
+    };
+  }
+
+  return {
+    isValid: true,
+  };
 }
 
 /**
@@ -751,6 +805,205 @@ export function clearStep3Storage(): void {
 
   try {
     window.sessionStorage.removeItem(STEP3_STORAGE_KEY);
+  } catch {
+    // Ignore silently
+  }
+}
+
+// ============================================================================
+// Step 4: Cultivation Costs (Quick Cultivation Budget)
+// ============================================================================
+
+export interface Step4FormData {
+  total_cultivation_cost_lkr: string; // Numeric string preserving farmer's exact decimal input (e.g. "150000" or "25000.50")
+}
+
+export interface Step4ValidationResult {
+  isValid: boolean;
+  errors: {
+    total_cultivation_cost_lkr?: string;
+  };
+  warnings?: {
+    total_cultivation_cost_lkr?: string;
+  };
+  parsedCost?: number;
+  isZeroCost?: boolean;
+}
+
+export const STEP4_STORAGE_KEY = "agrodecision_wizard_step4";
+
+/**
+ * Validates the total expected cultivation cost in Sri Lankan Rupees (LKR).
+ * Requirements:
+ * 1. Numeric input supporting positive decimal values.
+ * 2. Required field.
+ * 3. Rejects missing, negative, non-numeric, NaN, and Infinity values.
+ * 4. Allows zero as a valid numeric input, but displays a clear warning that
+ *    profit percentage and risk evaluation may be unavailable when cost is zero.
+ * 5. Preserves the farmer's decimal precision without silent rounding.
+ */
+export function validateCultivationCost(
+  costInput: string | number | undefined | null
+): {
+  isValid: boolean;
+  error?: string;
+  warning?: string;
+  parsedValue?: number;
+  isZeroCost?: boolean;
+} {
+  if (costInput === undefined || costInput === null) {
+    return {
+      isValid: false,
+      error: "Please enter your total expected cultivation cost in LKR.",
+    };
+  }
+
+  const str = String(costInput).trim();
+  if (str === "") {
+    return {
+      isValid: false,
+      error: "Please enter your total expected cultivation cost in LKR.",
+    };
+  }
+
+  const num = Number(str);
+  if (!Number.isFinite(num) || Number.isNaN(num)) {
+    return {
+      isValid: false,
+      error: "Cultivation cost must be a valid numeric amount.",
+    };
+  }
+
+  if (num < 0) {
+    return {
+      isValid: false,
+      error: "Cultivation cost cannot be negative. Please enter 0 or a positive amount in LKR.",
+    };
+  }
+
+  if (num === 0) {
+    return {
+      isValid: true,
+      parsedValue: 0,
+      isZeroCost: true,
+      warning:
+        "Cultivation cost is set to Rs. 0. Profit percentage and risk evaluation may be unavailable when cost is zero.",
+    };
+  }
+
+  return {
+    isValid: true,
+    parsedValue: num,
+    isZeroCost: false,
+  };
+}
+
+/**
+ * Validates Step 4 form input (Total Expected Cultivation Cost).
+ */
+export function validateStep4(data: Partial<Step4FormData>): Step4ValidationResult {
+  const costVal = validateCultivationCost(data.total_cultivation_cost_lkr);
+  const errors: { total_cultivation_cost_lkr?: string } = {};
+  const warnings: { total_cultivation_cost_lkr?: string } = {};
+
+  if (!costVal.isValid) {
+    errors.total_cultivation_cost_lkr = costVal.error;
+  } else if (costVal.warning) {
+    warnings.total_cultivation_cost_lkr = costVal.warning;
+  }
+
+  return {
+    isValid: costVal.isValid,
+    errors,
+    warnings: Object.keys(warnings).length > 0 ? warnings : undefined,
+    parsedCost: costVal.parsedValue,
+    isZeroCost: costVal.isZeroCost,
+  };
+}
+
+/**
+ * Checks whether Step 4 has all required fields populated and valid.
+ */
+export function isStep4Complete(data: Partial<Step4FormData>): boolean {
+  return validateStep4(data).isValid;
+}
+
+/**
+ * Safely reads Step 4 state from browser session storage.
+ */
+export function loadStep4FromStorage(): Step4FormData {
+  if (typeof window === "undefined") {
+    return { total_cultivation_cost_lkr: "" };
+  }
+
+  try {
+    const stored = window.sessionStorage.getItem(STEP4_STORAGE_KEY);
+    if (!stored) {
+      return { total_cultivation_cost_lkr: "" };
+    }
+    const parsed = JSON.parse(stored);
+    const rawCost =
+      typeof parsed.total_cultivation_cost_lkr === "string"
+        ? parsed.total_cultivation_cost_lkr
+        : typeof parsed.total_cultivation_cost_lkr === "number"
+        ? String(parsed.total_cultivation_cost_lkr)
+        : "";
+
+    return {
+      total_cultivation_cost_lkr: rawCost,
+    };
+  } catch {
+    return { total_cultivation_cost_lkr: "" };
+  }
+}
+
+/**
+ * Safely saves Step 4 state into browser session storage.
+ */
+export function saveStep4ToStorage(data: Step4FormData): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    const rawCost =
+      typeof data.total_cultivation_cost_lkr === "string"
+        ? data.total_cultivation_cost_lkr.trim()
+        : typeof data.total_cultivation_cost_lkr === "number"
+        ? String(data.total_cultivation_cost_lkr)
+        : "";
+
+    const payload = {
+      total_cultivation_cost_lkr: rawCost,
+    };
+    window.sessionStorage.setItem(STEP4_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // Ignore storage quota errors silently
+  }
+}
+
+/**
+ * Safely saves Step 4 state into browser session storage ONLY if data is fully valid.
+ * Protects existing valid session records from being overwritten with invalid values.
+ */
+export function saveValidatedStep4ToStorage(data: Partial<Step4FormData>): boolean {
+  const validation = validateStep4(data);
+  if (!validation.isValid) {
+    return false;
+  }
+  const rawCost = String(data.total_cultivation_cost_lkr).trim();
+  saveStep4ToStorage({
+    total_cultivation_cost_lkr: rawCost,
+  });
+  return true;
+}
+
+/**
+ * Clears Step 4 state from session storage.
+ */
+export function clearStep4Storage(): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.removeItem(STEP4_STORAGE_KEY);
   } catch {
     // Ignore silently
   }

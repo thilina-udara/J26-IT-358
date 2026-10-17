@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 
 import { WizardProgress } from "../../components/WizardProgress";
-import { Step4ComingSoonModal } from "../../components/Step4ComingSoonModal";
 import {
   SUPPORTED_FRONTEND_CROPS,
   SRI_LANKA_DISTRICTS,
@@ -99,7 +98,6 @@ export default function SellingMarketPage() {
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isStep3Saved, setIsStep3Saved] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isStep4ModalOpen, setIsStep4ModalOpen] = useState(false);
 
   // Validate Step 1 and Step 2 prerequisites on mount
   useEffect(() => {
@@ -221,7 +219,7 @@ export default function SellingMarketPage() {
         price_type: selectedPriceType,
       });
       setIsStep3Saved(true);
-      setIsStep4ModalOpen(true);
+      router.push("/market-profit/new-analysis/cultivation-costs");
     } finally {
       setIsSubmitting(false);
     }
@@ -734,14 +732,13 @@ export default function SellingMarketPage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsStep4ModalOpen(true)}
+              <Link
+                href="/market-profit/new-analysis/cultivation-costs"
                 className="inline-flex items-center gap-1.5 self-start sm:self-auto text-xs font-bold text-[#15803d] bg-white border border-emerald-200 px-3.5 py-2 rounded-lg hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer"
               >
-                <Clock className="h-3.5 w-3.5" />
-                <span>Next Stage Preview</span>
-              </button>
+                <span>Proceed to Step 4</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
 
             {/* Complete 7-parameter Grid */}
@@ -902,26 +899,6 @@ export default function SellingMarketPage() {
           </button>
         </div>
       </form>
-
-      {/* Step 4 Coming Soon Modal */}
-      {selectedMarketMeta && (
-        <Step4ComingSoonModal
-          isOpen={isStep4ModalOpen}
-          onClose={() => setIsStep4ModalOpen(false)}
-          cropName={selectedCropMeta?.name_en || "Selected Crop"}
-          cropNameSi={selectedCropMeta?.name_si || ""}
-          cropImage={cropImage}
-          districtName={selectedDistrictMeta?.name || "Selected District"}
-          isPilotDistrict={Boolean(selectedDistrictMeta?.is_pilot)}
-          harvestDate={step2Data.harvest_date}
-          landExtentAcres={step2Data.land_extent_acres}
-          expectedYieldKg={step2Data.expected_yield_kg}
-          marketName={selectedMarketMeta.name}
-          marketRegion={selectedMarketMeta.region}
-          isPilotMarket={Boolean(selectedMarketMeta.is_pilot_recommended)}
-          priceType={selectedPriceType}
-        />
-      )}
     </div>
   );
 }

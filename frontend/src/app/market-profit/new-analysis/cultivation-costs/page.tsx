@@ -60,6 +60,8 @@ import {
   saveValidatedStep4ToStorage,
   checkPreviousStepsForStep4,
   Step4FormData,
+  loadAndValidateWizardFromStorage,
+  saveAnalysisSnapshot,
 } from "../../lib/wizard";
 
 // Statically import verified crop photographs for the summary badge
@@ -327,6 +329,13 @@ export default function CultivationCostsPage() {
       // 3. Persist valid selections preserving mode isolation and decimal precision
       saveValidatedStep4ToStorage(step4Payload);
       setIsStep4Saved(true);
+
+      // Pre-save validated analysis snapshot so results page is immediately ready
+      const fullVal = loadAndValidateWizardFromStorage();
+      if (fullVal.isValid && fullVal.snapshot) {
+        saveAnalysisSnapshot(fullVal.snapshot);
+      }
+
       setIsComingNextModalOpen(true);
     } finally {
       setIsSubmitting(false);

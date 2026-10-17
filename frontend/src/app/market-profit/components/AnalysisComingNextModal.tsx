@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image, { StaticImageData } from "next/image";
 import {
   CheckCircle2,
@@ -14,6 +15,7 @@ import {
   Wallet,
   Receipt,
   Sparkles,
+  ArrowRight,
   X,
 } from "lucide-react";
 import {
@@ -21,7 +23,11 @@ import {
   formatKg,
   formatLKR,
 } from "../lib/formatters";
-import { BudgetMode } from "../lib/wizard";
+import {
+  BudgetMode,
+  loadAndValidateWizardFromStorage,
+  saveAnalysisSnapshot,
+} from "../lib/wizard";
 
 export interface AnalysisComingNextModalProps {
   isOpen: boolean;
@@ -60,7 +66,37 @@ export function AnalysisComingNextModal({
   budgetMode,
   effectiveCultivationCost,
 }: AnalysisComingNextModalProps) {
+  const router = useRouter();
+  const [isNavigating, setIsNavigating] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleViewResults = () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+
+    try {
+      // 1. Validate all four wizard steps
+      const fullValidation = loadAndValidateWizardFromStorage();
+
+      if (!fullValidation.isValid) {
+        onClose();
+        router.replace(fullValidation.redirectTarget || "/market-profit/new-analysis");
+        return;
+      }
+
+      // 2. Persist validated analysis snapshot using Component 1 sessionStorage
+      if (fullValidation.snapshot) {
+        saveAnalysisSnapshot(fullValidation.snapshot);
+      }
+
+      // 3. Navigate to /market-profit/results
+      onClose();
+      router.push("/market-profit/results");
+    } finally {
+      setIsNavigating(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -277,12 +313,15 @@ export function AnalysisComingNextModal({
           >
             Review Step 4 Inputs
           </button>
-          <Link
-            href="/market-profit"
-            className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-bold bg-[#15803d] hover:bg-[#166534] text-white shadow-sm transition-colors text-center"
+          <button
+            type="button"
+            onClick={handleViewResults}
+            disabled={isNavigating}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white shadow-sm shadow-emerald-800/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed text-center"
           >
-            Return to Dashboard
-          </Link>
+            <span>{isNavigating ? "Validating Steps..." : "View Analysis Results"}</span>
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </div>

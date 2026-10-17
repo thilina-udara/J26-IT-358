@@ -1554,6 +1554,336 @@ export function clearStep4Storage(): void {
   }
 }
 
+// ============================================================================
+// Wizard Completion & Analysis Results Handoff (Commit 25)
+// ============================================================================
+
+export interface ValidatedAnalysisSnapshot {
+  crop_id: string;
+  cultivation_district_id: string;
+  harvest_date: string;
+  forecast_target_date: string; // strictly aligns with backend forecast request contracts
+  expected_yield_kg: number;
+  expected_yield_kg_string: string;
+  target_market_id: string;
+  price_type: "wholesale" | "retail";
+  total_cultivation_cost: number;
+  total_cultivation_cost_string: string;
+  metadata: {
+    land_extent_acres: number;
+    land_extent_acres_string: string;
+    budget_mode: BudgetMode;
+    detailed_expenses?: DetailedExpensesData;
+    is_zero_cultivation_cost: boolean;
+    zero_cost_warning?: string;
+    created_at: string;
+    version: string;
+  };
+}
+
+export interface FullWizardValidationResult {
+  isValid: boolean;
+  earliestIncompleteStep?: 1 | 2 | 3 | 4;
+  redirectTarget?: string;
+  errorMessage?: string;
+  step1Validation?: Step1ValidationResult;
+  step2Validation?: Step2ValidationResult;
+  step3Validation?: Step3ValidationResult;
+  step4Validation?: Step4ValidationResult;
+  snapshot?: ValidatedAnalysisSnapshot;
+}
+
+export const ANALYSIS_SNAPSHOT_STORAGE_KEY = "agrodecision_analysis_snapshot";
+
+/**
+ * Validates all four steps of the New Analysis wizard composite.
+ * Enforces strict integrity across all farmer inputs:
+ * - Step 1: Supported crop & registered district
+ * - Step 2: Future harvest date, positive land extent, positive yield
+ * - Step 3: Standard Dedicated Economic Centre & price type (wholesale/retail)
+ * - Step 4: Cultivation budget >= 0 (zero cost accepted with advisory warning). No manual selling price required.
+ *
+ * If any step is invalid, identifies the earliest incomplete step and appropriate redirect target.
+ * If all steps are valid, constructs the typed ValidatedAnalysisSnapshot ready for handoff.
+ */
+export function validateFullWizard(
+  step1: Partial<Step1FormData>,
+  step2: Partial<Step2FormData>,
+  step3: Partial<Step3FormData>,
+  step4: Partial<Step4FormData>,
+  referenceDate?: Date
+): FullWizardValidationResult {
+  // 1. Step 1 Validation
+  const s1Val = validateStep1(step1);
+  if (!s1Val.isValid) {
+    return {
+      isValid: false,
+      earliestIncompleteStep: 1,
+      redirectTarget: "/market-profit/new-analysis",
+      errorMessage:
+        s1Val.errors.crop_id ||
+        s1Val.errors.cultivation_district_id ||
+        "Step 1 (Crop & Location) is incomplete. Please select a supported crop and district.",
+      step1Validation: s1Val,
+    };
+  }
+
+  // 2. Step 2 Validation
+  const s2Val = validateStep2(step2, referenceDate);
+  if (!s2Val.isValid) {
+    return {
+      isValid: false,
+      earliestIncompleteStep: 2,
+      redirectTarget: "/market-profit/new-analysis/harvest-details",
+      errorMessage:
+        s2Val.errors.harvest_date ||
+        s2Val.errors.land_extent_acres ||
+        s2Val.errors.expected_yield_kg ||
+        "Step 2 (Harvest Details) is incomplete. Please provide a valid harvest date, land extent, and expected yield.",
+      step1Validation: s1Val,
+      step2Validation: s2Val,
+    };
+  }
+
+  // 3. Step 3 Validation
+  const s3Val = validateStep3(step3);
+  if (!s3Val.isValid) {
+    return {
+      isValid: false,
+      earliestIncompleteStep: 3,
+      redirectTarget: "/market-profit/new-analysis/selling-market",
+      errorMessage:
+        s3Val.errors.target_market_id ||
+        s3Val.errors.price_type ||
+        "Step 3 (Selling Market) is incomplete. Please select a target selling market and price type.",
+      step1Validation: s1Val,
+      step2Validation: s2Val,
+      step3Validation: s3Val,
+    };
+  }
+
+  // 4. Step 4 Validation
+  const s4Val = validateStep4(step4);
+  if (!s4Val.isValid) {
+    return {
+      isValid: false,
+      earliestIncompleteStep: 4,
+      redirectTarget: "/market-profit/new-analysis/cultivation-costs",
+      errorMessage:
+        s4Val.errors.total_cultivation_cost_lkr ||
+        s4Val.errors.quick_total_cultivation_cost_lkr ||
+        "Step 4 (Cultivation Costs) is incomplete. Please provide your planned cultivation budget.",
+      step1Validation: s1Val,
+      step2Validation: s2Val,
+      step3Validation: s3Val,
+      step4Validation: s4Val,
+    };
+  }
+
+  // 5. Construct Validated Analysis Snapshot
+  const cleanCropId = String(step1.crop_id).trim();
+  const cleanDistrictId = String(step1.cultivation_district_id).trim();
+  const cleanHarvestDate = String(step2.harvest_date).trim();
+  const cleanYieldStr = String(step2.expected_yield_kg).trim();
+  const parsedYield = Number(cleanYieldStr);
+  const cleanMarketId = String(step3.target_market_id || step3.selling_market_id).trim();
+  const rawPriceType = String(step3.price_type).trim().toLowerCase();
+  const cleanPriceType: "wholesale" | "retail" = rawPriceType === "retail" ? "retail" : "wholesale";
+  const parsedCost = s4Val.parsedCost ?? 0;
+  const cleanCostStr = s4Val.effectiveTotalString || String(parsedCost);
+  const cleanAcresStr = String(step2.land_extent_acres).trim();
+  const parsedAcres = Number(cleanAcresStr);
+  const budgetMode: BudgetMode = s4Val.budget_mode;
+
+  const snapshot: ValidatedAnalysisSnapshot = {
+    crop_id: cleanCropId,
+    cultivation_district_id: cleanDistrictId,
+    harvest_date: cleanHarvestDate,
+    forecast_target_date: cleanHarvestDate,
+    expected_yield_kg: parsedYield,
+    expected_yield_kg_string: cleanYieldStr,
+    target_market_id: cleanMarketId,
+    price_type: cleanPriceType,
+    total_cultivation_cost: parsedCost,
+    total_cultivation_cost_string: cleanCostStr,
+    metadata: {
+      land_extent_acres: parsedAcres,
+      land_extent_acres_string: cleanAcresStr,
+      budget_mode: budgetMode,
+      detailed_expenses: budgetMode === "detailed" ? step4.detailed_expenses : undefined,
+      is_zero_cultivation_cost: Boolean(s4Val.isZeroCost),
+      zero_cost_warning: s4Val.warnings?.total_cultivation_cost_lkr,
+      created_at: new Date().toISOString(),
+      version: "1.0",
+    },
+  };
+
+  return {
+    isValid: true,
+    step1Validation: s1Val,
+    step2Validation: s2Val,
+    step3Validation: s3Val,
+    step4Validation: s4Val,
+    snapshot,
+  };
+}
+
+/**
+ * Checks whether all 4 wizard steps are fully completed and valid.
+ */
+export function isFullWizardComplete(
+  step1: Partial<Step1FormData>,
+  step2: Partial<Step2FormData>,
+  step3: Partial<Step3FormData>,
+  step4: Partial<Step4FormData>,
+  referenceDate?: Date
+): boolean {
+  return validateFullWizard(step1, step2, step3, step4, referenceDate).isValid;
+}
+
+/**
+ * Builds a reusable typed analysis payload mapping from wizard inputs.
+ * Returns null if any wizard step is invalid or incomplete.
+ */
+export function buildValidatedAnalysisPayload(
+  step1: Partial<Step1FormData>,
+  step2: Partial<Step2FormData>,
+  step3: Partial<Step3FormData>,
+  step4: Partial<Step4FormData>,
+  referenceDate?: Date
+): ValidatedAnalysisSnapshot | null {
+  const result = validateFullWizard(step1, step2, step3, step4, referenceDate);
+  return result.isValid && result.snapshot ? result.snapshot : null;
+}
+
+/**
+ * Loads and validates all 4 wizard steps from browser session storage.
+ */
+export function loadAndValidateWizardFromStorage(
+  referenceDate?: Date
+): FullWizardValidationResult {
+  const s1 = loadStep1FromStorage();
+  const s2 = loadStep2FromStorage();
+  const s3 = loadStep3FromStorage();
+  const s4 = loadStep4FromStorage();
+  return validateFullWizard(s1, s2, s3, s4, referenceDate);
+}
+
+/**
+ * Validates the schema and values of a stored analysis snapshot.
+ */
+export function isAnalysisSnapshotValid(
+  snapshot: unknown,
+  referenceDate?: Date
+): snapshot is ValidatedAnalysisSnapshot {
+  if (!snapshot || typeof snapshot !== "object") return false;
+
+  const s = snapshot as Partial<ValidatedAnalysisSnapshot>;
+
+  // 1. Core mapped fields
+  if (typeof s.crop_id !== "string" || !SUPPORTED_FRONTEND_CROPS.some((c) => c.crop_id === s.crop_id)) {
+    return false;
+  }
+  if (
+    typeof s.cultivation_district_id !== "string" ||
+    !SRI_LANKA_DISTRICTS.some((d) => d.id === s.cultivation_district_id)
+  ) {
+    return false;
+  }
+  if (typeof s.harvest_date !== "string" || !validateHarvestDate(s.harvest_date, referenceDate).isValid) {
+    return false;
+  }
+  if (
+    typeof s.expected_yield_kg !== "number" ||
+    !Number.isFinite(s.expected_yield_kg) ||
+    s.expected_yield_kg <= 0 ||
+    s.expected_yield_kg > 1000000
+  ) {
+    return false;
+  }
+  if (
+    typeof s.target_market_id !== "string" ||
+    !STANDARD_MARKETS.some((m) => m.id === s.target_market_id)
+  ) {
+    return false;
+  }
+  if (s.price_type !== "wholesale" && s.price_type !== "retail") {
+    return false;
+  }
+  if (
+    typeof s.total_cultivation_cost !== "number" ||
+    !Number.isFinite(s.total_cultivation_cost) ||
+    s.total_cultivation_cost < 0
+  ) {
+    return false;
+  }
+
+  // 2. Metadata fields
+  if (!s.metadata || typeof s.metadata !== "object") {
+    return false;
+  }
+  if (
+    typeof s.metadata.land_extent_acres !== "number" ||
+    !Number.isFinite(s.metadata.land_extent_acres) ||
+    s.metadata.land_extent_acres <= 0 ||
+    s.metadata.land_extent_acres > 10000
+  ) {
+    return false;
+  }
+  if (s.metadata.budget_mode !== "quick" && s.metadata.budget_mode !== "detailed") {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Safely saves a validated analysis snapshot into browser session storage.
+ */
+export function saveAnalysisSnapshot(snapshot: ValidatedAnalysisSnapshot): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (!isAnalysisSnapshotValid(snapshot)) {
+      return false;
+    }
+    window.sessionStorage.setItem(ANALYSIS_SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Safely reads and validates the analysis snapshot from browser session storage.
+ * Returns null if snapshot is missing, corrupted, or invalid.
+ */
+export function loadAnalysisSnapshot(referenceDate?: Date): ValidatedAnalysisSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(ANALYSIS_SNAPSHOT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!isAnalysisSnapshotValid(parsed, referenceDate)) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clears the stored analysis snapshot from browser session storage.
+ */
+export function clearAnalysisSnapshot(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(ANALYSIS_SNAPSHOT_STORAGE_KEY);
+  } catch {
+    // Ignore silently
+  }
+}
+
 
 
 

@@ -27,6 +27,7 @@ import {
   loadStep1FromStorage,
   saveStep1ToStorage,
   Step1FormData,
+  clearAnalysisSnapshot,
 } from "../lib/wizard";
 
 // Statically import the 6 verified crop photographs
@@ -66,6 +67,9 @@ export default function NewAnalysisPage() {
 
   // Update session storage whenever selections change
   const handleSelectCrop = (cropId: string) => {
+    if (cropId !== selectedCrop) {
+      clearAnalysisSnapshot();
+    }
     setSelectedCrop(cropId);
     saveStep1ToStorage({
       crop_id: cropId,
@@ -77,6 +81,9 @@ export default function NewAnalysisPage() {
   };
 
   const handleSelectDistrict = (districtId: string) => {
+    if (districtId !== selectedDistrict) {
+      clearAnalysisSnapshot();
+    }
     setSelectedDistrict(districtId);
     saveStep1ToStorage({
       crop_id: selectedCrop,

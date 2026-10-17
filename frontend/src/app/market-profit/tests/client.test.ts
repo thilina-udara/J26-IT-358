@@ -28,6 +28,7 @@ import {
 import { MarketProfitApiClient, ApiError } from "../lib/api";
 import {
   validateStep1,
+  STEP1_STORAGE_KEY,
   validateStep2,
   validateHarvestDate,
   validateLandExtent,
@@ -82,6 +83,16 @@ import {
   safeMultiplyDecimalStrings,
   calculatePredictedRevenue,
   calculatePredictedProfit,
+  validateFullWizard,
+  isFullWizardComplete,
+  buildValidatedAnalysisPayload,
+  loadAndValidateWizardFromStorage,
+  isAnalysisSnapshotValid,
+  saveAnalysisSnapshot,
+  loadAnalysisSnapshot,
+  clearAnalysisSnapshot,
+  ANALYSIS_SNAPSHOT_STORAGE_KEY,
+  type ValidatedAnalysisSnapshot,
 } from "../lib/wizard";
 
 import type {
@@ -2469,6 +2480,261 @@ test("Wizard Step 4 Storage Protection: saveValidatedStep4ToStorage guards again
     assert.equal(loadedAfter.budget_mode, "detailed");
     assert.equal(loadedAfter.detailed_expenses.seeds, "25000");
     assert.equal(loadedAfter.effective_total_cultivation_cost_lkr, "65000");
+  } finally {
+    (globalThis as unknown as { window: unknown }).window = originalWindow;
+  }
+});
+
+// ============================================================================
+// Wizard Completion & Analysis Results Handoff Tests (Commit 25)
+// ============================================================================
+
+test("Wizard Completion: validateFullWizard and isFullWizardComplete validate all 4 steps composite", () => {
+  const FIXED_TODAY = new Date(2026, 9, 17); // October 17, 2026
+
+  const step1 = { crop_id: "CR_OKRA", cultivation_district_id: "LK-82" };
+  const step2 = { harvest_date: "2027-05-15", land_extent_acres: "2.5", expected_yield_kg: "1500" };
+  const step3 = { target_market_id: "DEC_EMBILIPITIYA", price_type: "wholesale" as PriceType };
+  const step4Quick = { budget_mode: "quick" as BudgetMode, quick_total_cultivation_cost_lkr: "185000" };
+
+  // 1. Fully valid Quick Budget wizard
+  const fullValQuick = validateFullWizard(step1, step2, step3, step4Quick, FIXED_TODAY);
+  assert.equal(fullValQuick.isValid, true);
+  assert.equal(fullValQuick.earliestIncompleteStep, undefined);
+  assert.ok(fullValQuick.snapshot);
+  assert.equal(fullValQuick.snapshot.crop_id, "CR_OKRA");
+  assert.equal(fullValQuick.snapshot.cultivation_district_id, "LK-82");
+  assert.equal(fullValQuick.snapshot.harvest_date, "2027-05-15");
+  assert.equal(fullValQuick.snapshot.forecast_target_date, "2027-05-15");
+  assert.equal(fullValQuick.snapshot.expected_yield_kg, 1500);
+  assert.equal(fullValQuick.snapshot.target_market_id, "DEC_EMBILIPITIYA");
+  assert.equal(fullValQuick.snapshot.price_type, "wholesale");
+  assert.equal(fullValQuick.snapshot.total_cultivation_cost, 185000);
+  assert.equal(fullValQuick.snapshot.metadata.land_extent_acres, 2.5);
+  assert.equal(fullValQuick.snapshot.metadata.budget_mode, "quick");
+  assert.equal(fullValQuick.snapshot.metadata.is_zero_cultivation_cost, false);
+  assert.equal(isFullWizardComplete(step1, step2, step3, step4Quick, FIXED_TODAY), true);
+
+  // 2. Fully valid Detailed Budget wizard
+  const step4Detailed = {
+    budget_mode: "detailed" as BudgetMode,
+    detailed_expenses: {
+      ...createDefaultDetailedExpenses(),
+      seeds: "25000",
+      fertilizer: "35000",
+      labour: "40000",
+    },
+  };
+  const fullValDetailed = validateFullWizard(step1, step2, step3, step4Detailed, FIXED_TODAY);
+  assert.equal(fullValDetailed.isValid, true);
+  assert.ok(fullValDetailed.snapshot);
+  assert.equal(fullValDetailed.snapshot.total_cultivation_cost, 100000);
+  assert.equal(fullValDetailed.snapshot.metadata.budget_mode, "detailed");
+  assert.equal(fullValDetailed.snapshot.metadata.detailed_expenses?.seeds, "25000");
+  assert.equal(isFullWizardComplete(step1, step2, step3, step4Detailed, FIXED_TODAY), true);
+});
+
+test("Wizard Completion: Earliest invalid step detection and redirection targeting", () => {
+  const FIXED_TODAY = new Date(2026, 9, 17);
+
+  const validStep1 = { crop_id: "CR_OKRA", cultivation_district_id: "LK-82" };
+  const validStep2 = { harvest_date: "2027-05-15", land_extent_acres: "2.5", expected_yield_kg: "1500" };
+  const validStep3 = { target_market_id: "DEC_EMBILIPITIYA", price_type: "wholesale" as PriceType };
+  const validStep4 = { budget_mode: "quick" as BudgetMode, quick_total_cultivation_cost_lkr: "185000" };
+
+  // Scenario 1: Step 1 incomplete (missing crop) -> points to /market-profit/new-analysis
+  const r1 = validateFullWizard({ crop_id: "", cultivation_district_id: "LK-82" }, validStep2, validStep3, validStep4, FIXED_TODAY);
+  assert.equal(r1.isValid, false);
+  assert.equal(r1.earliestIncompleteStep, 1);
+  assert.equal(r1.redirectTarget, "/market-profit/new-analysis");
+
+  // Scenario 2: Step 1 complete, Step 2 incomplete (past date) -> points to /market-profit/new-analysis/harvest-details
+  const r2 = validateFullWizard(validStep1, { ...validStep2, harvest_date: "2024-01-01" }, validStep3, validStep4, FIXED_TODAY);
+  assert.equal(r2.isValid, false);
+  assert.equal(r2.earliestIncompleteStep, 2);
+  assert.equal(r2.redirectTarget, "/market-profit/new-analysis/harvest-details");
+
+  // Scenario 3: Step 1 & 2 complete, Step 3 incomplete (missing price type) -> points to /market-profit/new-analysis/selling-market
+  const r3 = validateFullWizard(validStep1, validStep2, { target_market_id: "DEC_EMBILIPITIYA", price_type: "" as PriceType }, validStep4, FIXED_TODAY);
+  assert.equal(r3.isValid, false);
+  assert.equal(r3.earliestIncompleteStep, 3);
+  assert.equal(r3.redirectTarget, "/market-profit/new-analysis/selling-market");
+
+  // Scenario 4: Steps 1, 2, 3 complete, Step 4 incomplete (missing cost) -> points to /market-profit/new-analysis/cultivation-costs
+  const r4 = validateFullWizard(validStep1, validStep2, validStep3, { budget_mode: "quick" as BudgetMode, quick_total_cultivation_cost_lkr: "" }, FIXED_TODAY);
+  assert.equal(r4.isValid, false);
+  assert.equal(r4.earliestIncompleteStep, 4);
+  assert.equal(r4.redirectTarget, "/market-profit/new-analysis/cultivation-costs");
+});
+
+test("Wizard Completion: Zero cultivation cost is accepted with advisory warning and no selling price required", () => {
+  const FIXED_TODAY = new Date(2026, 9, 17);
+
+  const step1 = { crop_id: "CR_BRINJAL", cultivation_district_id: "LK-81" };
+  const step2 = { harvest_date: "2027-06-20", land_extent_acres: "1.0", expected_yield_kg: "2500" };
+  const step3 = { target_market_id: "DEC_DAMBULLA", price_type: "retail" as PriceType };
+  const step4Zero = { budget_mode: "quick" as BudgetMode, quick_total_cultivation_cost_lkr: "0" };
+
+  const result = validateFullWizard(step1, step2, step3, step4Zero, FIXED_TODAY);
+  assert.equal(result.isValid, true);
+  assert.ok(result.snapshot);
+  assert.equal(result.snapshot.total_cultivation_cost, 0);
+  assert.equal(result.snapshot.metadata.is_zero_cultivation_cost, true);
+  assert.ok(result.snapshot.metadata.zero_cost_warning);
+  assert.match(result.snapshot.metadata.zero_cost_warning!, /profit percentage and risk evaluation may be unavailable when cost is zero/i);
+
+  // Payload does NOT contain any manual selling price
+  assert.equal((result.snapshot as unknown as Record<string, unknown>).manual_selling_price_lkr_per_kg, undefined);
+});
+
+test("Wizard Completion: buildValidatedAnalysisPayload maps backend contracts cleanly without invented fields", () => {
+  const FIXED_TODAY = new Date(2026, 9, 17);
+
+  const step1 = { crop_id: "CR_MAIZE", cultivation_district_id: "LK-82" };
+  const step2 = { harvest_date: "2027-07-15", land_extent_acres: "3.5", expected_yield_kg: "4200" };
+  const step3 = { target_market_id: "DEC_PETTAH", price_type: "wholesale" as PriceType };
+  const step4 = { budget_mode: "quick" as BudgetMode, quick_total_cultivation_cost_lkr: "240000" };
+
+  const payload = buildValidatedAnalysisPayload(step1, step2, step3, step4, FIXED_TODAY);
+  assert.ok(payload);
+  assert.equal(payload.crop_id, "CR_MAIZE");
+  assert.equal(payload.cultivation_district_id, "LK-82");
+  assert.equal(payload.harvest_date, "2027-07-15");
+  assert.equal(payload.forecast_target_date, "2027-07-15");
+  assert.equal(payload.expected_yield_kg, 4200);
+  assert.equal(payload.target_market_id, "DEC_PETTAH");
+  assert.equal(payload.price_type, "wholesale");
+  assert.equal(payload.total_cultivation_cost, 240000);
+  assert.equal(payload.metadata.land_extent_acres, 3.5);
+
+  // Incomplete wizard returns null
+  const incompletePayload = buildValidatedAnalysisPayload({ crop_id: "" }, step2, step3, step4, FIXED_TODAY);
+  assert.equal(incompletePayload, null);
+});
+
+test("Wizard Completion: Snapshot session persistence survives refresh and rejects corrupted payloads", () => {
+  const mockStorage: Record<string, string> = {};
+  const originalWindow = globalThis.window;
+
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => mockStorage[key] ?? null,
+      setItem: (key: string, val: string) => {
+        mockStorage[key] = val;
+      },
+      removeItem: (key: string) => {
+        delete mockStorage[key];
+      },
+    },
+  };
+
+  try {
+    const validSnapshot: ValidatedAnalysisSnapshot = {
+      crop_id: "CR_OKRA",
+      cultivation_district_id: "LK-82",
+      harvest_date: "2027-05-15",
+      forecast_target_date: "2027-05-15",
+      expected_yield_kg: 1500,
+      expected_yield_kg_string: "1500",
+      target_market_id: "DEC_EMBILIPITIYA",
+      price_type: "wholesale",
+      total_cultivation_cost: 185000,
+      total_cultivation_cost_string: "185000",
+      metadata: {
+        land_extent_acres: 2.5,
+        land_extent_acres_string: "2.5",
+        budget_mode: "quick",
+        is_zero_cultivation_cost: false,
+        created_at: new Date().toISOString(),
+        version: "1.0",
+      },
+    };
+
+    // 1. Validator passes for valid snapshot
+    assert.equal(isAnalysisSnapshotValid(validSnapshot), true);
+
+    // 2. Save and load from storage
+    const saved = saveAnalysisSnapshot(validSnapshot);
+    assert.equal(saved, true);
+
+    const loaded = loadAnalysisSnapshot();
+    assert.ok(loaded);
+    assert.deepEqual(loaded, validSnapshot);
+
+    // 3. Clear storage
+    clearAnalysisSnapshot();
+    assert.equal(loadAnalysisSnapshot(), null);
+
+    // 4. Corrupted JSON string in storage returns null safely without throwing
+    mockStorage[ANALYSIS_SNAPSHOT_STORAGE_KEY] = "{ corrupt invalid json";
+    assert.equal(loadAnalysisSnapshot(), null);
+
+    // 5. Invalid snapshot payload (e.g. invalid crop or negative cost) is rejected
+    mockStorage[ANALYSIS_SNAPSHOT_STORAGE_KEY] = JSON.stringify({
+      ...validSnapshot,
+      crop_id: "CR_APPLE_UNSUPPORTED",
+    });
+    assert.equal(loadAnalysisSnapshot(), null);
+
+    mockStorage[ANALYSIS_SNAPSHOT_STORAGE_KEY] = JSON.stringify({
+      ...validSnapshot,
+      total_cultivation_cost: -500,
+    });
+    assert.equal(loadAnalysisSnapshot(), null);
+  } finally {
+    (globalThis as unknown as { window: unknown }).window = originalWindow;
+  }
+});
+
+test("Wizard Completion: loadAndValidateWizardFromStorage constructs snapshot from individual step records", () => {
+  const mockStorage: Record<string, string> = {};
+  const originalWindow = globalThis.window;
+
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => mockStorage[key] ?? null,
+      setItem: (key: string, val: string) => {
+        mockStorage[key] = val;
+      },
+      removeItem: (key: string) => {
+        delete mockStorage[key];
+      },
+    },
+  };
+
+  try {
+    const FIXED_TODAY = new Date(2026, 9, 17);
+
+    // Seed individual step records
+    mockStorage[STEP1_STORAGE_KEY] = JSON.stringify({
+      crop_id: "CR_CHILLI",
+      cultivation_district_id: "LK-82",
+    });
+    mockStorage[STEP2_STORAGE_KEY] = JSON.stringify({
+      harvest_date: "2027-08-20",
+      land_extent_acres: "1.5",
+      expected_yield_kg: "800",
+    });
+    mockStorage[STEP3_STORAGE_KEY] = JSON.stringify({
+      target_market_id: "DEC_EMBILIPITIYA",
+      price_type: "wholesale",
+    });
+    mockStorage[STEP4_STORAGE_KEY] = JSON.stringify({
+      budget_mode: "quick",
+      quick_total_cultivation_cost_lkr: "125000",
+      total_cultivation_cost_lkr: "125000",
+    });
+
+    const fullVal = loadAndValidateWizardFromStorage(FIXED_TODAY);
+    assert.equal(fullVal.isValid, true);
+    assert.ok(fullVal.snapshot);
+    assert.equal(fullVal.snapshot.crop_id, "CR_CHILLI");
+    assert.equal(fullVal.snapshot.expected_yield_kg, 800);
+    assert.equal(fullVal.snapshot.total_cultivation_cost, 125000);
+
+    // Save snapshot succeeds
+    assert.equal(saveAnalysisSnapshot(fullVal.snapshot), true);
+    assert.equal(loadAnalysisSnapshot(FIXED_TODAY)?.crop_id, "CR_CHILLI");
   } finally {
     (globalThis as unknown as { window: unknown }).window = originalWindow;
   }

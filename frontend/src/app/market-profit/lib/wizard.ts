@@ -1118,6 +1118,7 @@ export interface Step4FormData {
   detailed_expenses: DetailedExpensesData;
   effective_total_cultivation_cost_lkr: string;
   total_cultivation_cost_lkr: string; // Backward compatibility alias
+  manual_selling_price_lkr_per_kg?: string; // Optional obsolete field for backward compatibility with older session records
 }
 
 export interface Step4ValidationResult {
@@ -1205,9 +1206,139 @@ export function validateCultivationCost(
 }
 
 /**
+ * Safely multiplies two decimal strings without floating-point rounding errors.
+ * Uses integer scaling with BigInt.
+ */
+export function safeMultiplyDecimalStrings(
+  a: string,
+  b: string
+): { productNumber: number; productString: string } {
+  const strA = a.trim();
+  const strB = b.trim();
+
+  if (strA === "" || strB === "") {
+    return { productNumber: 0, productString: "0" };
+  }
+
+  const numA = Number(strA);
+  const numB = Number(strB);
+  if (!Number.isFinite(numA) || Number.isNaN(numA) || !Number.isFinite(numB) || Number.isNaN(numB)) {
+    return { productNumber: 0, productString: "0" };
+  }
+
+  const isNeg = (strA.startsWith("-") && !strB.startsWith("-")) || (!strA.startsWith("-") && strB.startsWith("-"));
+
+  const cleanA = strA.replace(/^-/, "");
+  const cleanB = strB.replace(/^-/, "");
+
+  const [intA = "0", fracA = ""] = cleanA.split(".");
+  const [intB = "0", fracB = ""] = cleanB.split(".");
+
+  const decA = fracA.length;
+  const decB = fracB.length;
+  const totalDecimals = decA + decB;
+
+  const combinedA = `${intA}${fracA}` || "0";
+  const combinedB = `${intB}${fracB}` || "0";
+  const bigA = BigInt(combinedA);
+  const bigB = BigInt(combinedB);
+  const bigProd = bigA * bigB;
+
+  if (bigProd === BigInt(0)) {
+    return { productNumber: 0, productString: "0" };
+  }
+
+  if (totalDecimals === 0) {
+    const s = (isNeg ? "-" : "") + bigProd.toString();
+    return { productNumber: Number(s), productString: s };
+  }
+
+  const rawStr = bigProd.toString().padStart(totalDecimals + 1, "0");
+  const intPart = rawStr.slice(0, -totalDecimals) || "0";
+  let fracPart = rawStr.slice(-totalDecimals).replace(/0+$/, "");
+
+  const finalStr = (isNeg ? "-" : "") + (fracPart ? `${intPart}.${fracPart}` : intPart);
+  return { productNumber: Number(finalStr), productString: finalStr };
+}
+
+/**
+ * Calculates predicted revenue from future AI-predicted selling price (LKR/kg) and expected yield (kg).
+ * Predicted Revenue = AI Predicted Price × Expected Yield
+ * Only computed when real backend prediction data is available from the ML model.
+ * Returns isAvailable: false when predictions are unavailable (no invented or mock values).
+ */
+export function calculatePredictedRevenue(
+  predictedPriceLkrPerKg: number | string | undefined | null,
+  expectedYieldKg: number | string | undefined | null
+): {
+  isAvailable: boolean;
+  revenueNumber: number;
+  revenueString: string;
+} {
+  if (
+    predictedPriceLkrPerKg === undefined ||
+    predictedPriceLkrPerKg === null ||
+    expectedYieldKg === undefined ||
+    expectedYieldKg === null
+  ) {
+    return { isAvailable: false, revenueNumber: 0, revenueString: "0" };
+  }
+
+  const pNum = Number(predictedPriceLkrPerKg);
+  const yNum = Number(expectedYieldKg);
+
+  if (!Number.isFinite(pNum) || Number.isNaN(pNum) || pNum <= 0 || !Number.isFinite(yNum) || Number.isNaN(yNum) || yNum <= 0) {
+    return { isAvailable: false, revenueNumber: 0, revenueString: "0" };
+  }
+
+  const { productNumber, productString } = safeMultiplyDecimalStrings(String(pNum), String(yNum));
+  return {
+    isAvailable: true,
+    revenueNumber: productNumber,
+    revenueString: productString,
+  };
+}
+
+/**
+ * Calculates predicted profit from predicted revenue and total cultivation cost.
+ * Predicted Profit = Predicted Revenue - Total Cultivation Cost
+ * Only computed when real backend prediction data is available from the ML model.
+ * Returns isAvailable: false when predictions are unavailable.
+ */
+export function calculatePredictedProfit(
+  predictedRevenueLkr: number | undefined | null,
+  totalCultivationCostLkr: number | undefined | null
+): {
+  isAvailable: boolean;
+  profitNumber: number;
+  profitString: string;
+} {
+  if (
+    predictedRevenueLkr === undefined ||
+    predictedRevenueLkr === null ||
+    totalCultivationCostLkr === undefined ||
+    totalCultivationCostLkr === null
+  ) {
+    return { isAvailable: false, profitNumber: 0, profitString: "0" };
+  }
+
+  if (!Number.isFinite(predictedRevenueLkr) || !Number.isFinite(totalCultivationCostLkr)) {
+    return { isAvailable: false, profitNumber: 0, profitString: "0" };
+  }
+
+  const profit = predictedRevenueLkr - totalCultivationCostLkr;
+  return {
+    isAvailable: true,
+    profitNumber: profit,
+    profitString: String(profit),
+  };
+}
+
+/**
  * Validates Step 4 form input based on the active budget mode.
  * - In Quick Budget mode: validates total_cultivation_cost_lkr / quick_total_cultivation_cost_lkr.
  * - In Detailed Budget mode: validates all 10 detailed expense categories and calculates total automatically.
+ * Cultivation cost must be zero or positive. No manual selling price is required.
  */
 export function validateStep4(data: Partial<Step4FormData>): Step4ValidationResult {
   const mode: BudgetMode = data.budget_mode === "detailed" ? "detailed" : "quick";
@@ -1257,7 +1388,7 @@ export function validateStep4(data: Partial<Step4FormData>): Step4ValidationResu
       errors,
       warnings: Object.keys(warnings).length > 0 ? warnings : undefined,
       parsedCost: costVal.parsedValue,
-      effectiveTotalString: costVal.isValid && costInput ? String(costInput).trim() : "0",
+      effectiveTotalString: costVal.isValid && costInput !== undefined && costInput !== null ? String(costInput).trim() : "0",
       isZeroCost: costVal.isZeroCost,
     };
   }
@@ -1265,6 +1396,7 @@ export function validateStep4(data: Partial<Step4FormData>): Step4ValidationResu
 
 /**
  * Checks whether Step 4 has all required fields populated and valid.
+ * Cultivation cost must be zero or positive. No manual selling price is required.
  */
 export function isStep4Complete(data: Partial<Step4FormData>): boolean {
   return validateStep4(data).isValid;
@@ -1272,7 +1404,8 @@ export function isStep4Complete(data: Partial<Step4FormData>): boolean {
 
 /**
  * Safely reads Step 4 state from browser session storage.
- * Maintains backward compatibility with older single-field records.
+ * Maintains backward compatibility with earlier Step 4 records.
+ * Safely ignores obsolete manual selling price field.
  */
 export function loadStep4FromStorage(): Step4FormData {
   if (typeof window === "undefined") {
@@ -1337,6 +1470,10 @@ export function loadStep4FromStorage(): Step4FormData {
       detailed_expenses: detailedExpenses,
       effective_total_cultivation_cost_lkr: effectiveTotal,
       total_cultivation_cost_lkr: effectiveTotal,
+      manual_selling_price_lkr_per_kg:
+        typeof parsed.manual_selling_price_lkr_per_kg === "string"
+          ? parsed.manual_selling_price_lkr_per_kg
+          : undefined,
     };
   } catch {
     return {
@@ -1351,7 +1488,7 @@ export function loadStep4FromStorage(): Step4FormData {
 
 /**
  * Safely saves Step 4 state into browser session storage.
- * Preserves both Quick and Detailed mode values independently without adding them together.
+ * Preserves Quick/Detailed Budget values independently.
  */
 export function saveStep4ToStorage(data: Partial<Step4FormData>): void {
   if (typeof window === "undefined") return;
@@ -1400,32 +1537,7 @@ export function saveValidatedStep4ToStorage(data: Partial<Step4FormData>): boole
   if (!validation.isValid) {
     return false;
   }
-  const budgetMode: BudgetMode = data.budget_mode === "detailed" ? "detailed" : "quick";
-  const quickCost = String(data.quick_total_cultivation_cost_lkr ?? data.total_cultivation_cost_lkr ?? "").trim();
-  const detailed = data.detailed_expenses || createDefaultDetailedExpenses();
-  const detailedExpenses: DetailedExpensesData = {
-    seeds: String(detailed.seeds ?? "").trim(),
-    fertilizer: String(detailed.fertilizer ?? "").trim(),
-    pesticides: String(detailed.pesticides ?? "").trim(),
-    labour: String(detailed.labour ?? "").trim(),
-    irrigation: String(detailed.irrigation ?? "").trim(),
-    harvesting: String(detailed.harvesting ?? "").trim(),
-    packaging: String(detailed.packaging ?? "").trim(),
-    transportation: String(detailed.transportation ?? "").trim(),
-    market_commission: String(detailed.market_commission ?? "").trim(),
-    other_expenses: String(detailed.other_expenses ?? "").trim(),
-  };
-
-  const detailedSum = calculateDetailedCultivationTotal(detailedExpenses).totalString;
-  const effectiveTotal = budgetMode === "detailed" ? detailedSum : quickCost;
-
-  saveStep4ToStorage({
-    budget_mode: budgetMode,
-    quick_total_cultivation_cost_lkr: quickCost,
-    detailed_expenses: detailedExpenses,
-    effective_total_cultivation_cost_lkr: effectiveTotal,
-    total_cultivation_cost_lkr: effectiveTotal,
-  });
+  saveStep4ToStorage(data);
   return true;
 }
 
@@ -1441,6 +1553,8 @@ export function clearStep4Storage(): void {
     // Ignore silently
   }
 }
+
+
 
 
 

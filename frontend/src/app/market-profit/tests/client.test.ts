@@ -79,6 +79,9 @@ import {
   calculateDetailedCultivationTotal,
   validateDetailedExpenseField,
   validateDetailedExpenses,
+  safeMultiplyDecimalStrings,
+  calculatePredictedRevenue,
+  calculatePredictedProfit,
 } from "../lib/wizard";
 
 import type {
@@ -2155,6 +2158,322 @@ test("Wizard Step 4 Detailed Budget: Session storage persistence and backward co
     (globalThis as unknown as { window: unknown }).window = originalWindow;
   }
 });
+
+// ============================================================================
+// Wizard Step 4: Research Alignment & ML Price Forecasting Readiness (Commit 24 Revision)
+// ============================================================================
+
+test("Wizard Step 4 Research Alignment: No manual expected selling price is required from the farmer", () => {
+  // Scenario 1: Quick Budget without manual selling price -> COMPLETES
+  const quickData: Partial<Step4FormData> = {
+    budget_mode: "quick",
+    quick_total_cultivation_cost_lkr: "185000",
+  };
+  const valQuick = validateStep4(quickData);
+  assert.equal(valQuick.isValid, true);
+  assert.equal(valQuick.budget_mode, "quick");
+  assert.equal(valQuick.parsedCost, 185000);
+  assert.equal(isStep4Complete(quickData), true);
+
+  // Scenario 2: Detailed Budget without manual selling price -> COMPLETES
+  const detailedData: Partial<Step4FormData> = {
+    budget_mode: "detailed",
+    detailed_expenses: {
+      ...createDefaultDetailedExpenses(),
+      seeds: "20000",
+      fertilizer: "30000",
+      labour: "40000",
+    },
+  };
+  const valDetailed = validateStep4(detailedData);
+  assert.equal(valDetailed.isValid, true);
+  assert.equal(valDetailed.budget_mode, "detailed");
+  assert.equal(valDetailed.parsedCost, 90000);
+  assert.equal(isStep4Complete(detailedData), true);
+});
+
+test("Wizard Step 4 ML Price Forecast Readiness: safeMultiplyDecimalStrings performs exact decimal arithmetic", () => {
+  // Integer multiplication
+  const r1 = safeMultiplyDecimalStrings("1500", "140");
+  assert.equal(r1.productString, "210000");
+  assert.equal(r1.productNumber, 210000);
+
+  // Decimal multiplication without floating-point precision loss
+  // 1250.5 * 120.25 = 150372.625
+  const r2 = safeMultiplyDecimalStrings("1250.5", "120.25");
+  assert.equal(r2.productString, "150372.625");
+  assert.equal(r2.productNumber, 150372.625);
+
+  // Sub-unit multiplication: 0.5 * 0.5 = 0.25
+  const r3 = safeMultiplyDecimalStrings("0.5", "0.5");
+  assert.equal(r3.productString, "0.25");
+  assert.equal(r3.productNumber, 0.25);
+
+  // Zero product
+  const r4 = safeMultiplyDecimalStrings("0", "140");
+  assert.equal(r4.productString, "0");
+  assert.equal(r4.productNumber, 0);
+
+  // Empty input handling
+  const r5 = safeMultiplyDecimalStrings("", "140");
+  assert.equal(r5.productString, "0");
+  assert.equal(r5.productNumber, 0);
+});
+
+test("Wizard Step 4 ML Price Forecast Readiness: calculatePredictedRevenue integrates future ML price predictions without mock data", () => {
+  // 1. Valid ML Predicted Price (Rs. 135.50/kg) and Harvest Yield (1,500 kg)
+  // Revenue = 135.50 * 1500 = 203,250 LKR
+  const validRev = calculatePredictedRevenue("135.50", "1500");
+  assert.equal(validRev.isAvailable, true);
+  assert.equal(validRev.revenueNumber, 203250);
+  assert.equal(validRev.revenueString, "203250");
+
+  // Numeric arguments also accepted
+  const numRev = calculatePredictedRevenue(140, 2000);
+  assert.equal(numRev.isAvailable, true);
+  assert.equal(numRev.revenueNumber, 280000);
+
+  // 2. Unavailable predictions return isAvailable: false (strictly NO invented or mock values)
+  const nullPrice = calculatePredictedRevenue(null, "1500");
+  assert.equal(nullPrice.isAvailable, false);
+  assert.equal(nullPrice.revenueNumber, 0);
+
+  const undefinedPrice = calculatePredictedRevenue(undefined, "1500");
+  assert.equal(undefinedPrice.isAvailable, false);
+  assert.equal(undefinedPrice.revenueNumber, 0);
+
+  const emptyPrice = calculatePredictedRevenue("", "1500");
+  assert.equal(emptyPrice.isAvailable, false);
+  assert.equal(emptyPrice.revenueNumber, 0);
+
+  const missingYield = calculatePredictedRevenue("140", undefined);
+  assert.equal(missingYield.isAvailable, false);
+  assert.equal(missingYield.revenueNumber, 0);
+
+  // Non-positive or non-numeric values
+  const zeroPrice = calculatePredictedRevenue("0", "1500");
+  assert.equal(zeroPrice.isAvailable, false);
+
+  const negPrice = calculatePredictedRevenue("-50", "1500");
+  assert.equal(negPrice.isAvailable, false);
+
+  const nonNumPrice = calculatePredictedRevenue("abc", "1500");
+  assert.equal(nonNumPrice.isAvailable, false);
+});
+
+test("Wizard Step 4 ML Price Forecast Readiness: calculatePredictedProfit computes net return based on predicted revenue and cultivation cost", () => {
+  // 1. Profitable harvest scenario
+  // Revenue = 250,000 LKR, Cultivation Cost = 150,000 LKR -> Net Profit = 100,000 LKR
+  const profit1 = calculatePredictedProfit(250000, 150000);
+  assert.equal(profit1.isAvailable, true);
+  assert.equal(profit1.profitNumber, 100000);
+  assert.equal(profit1.profitString, "100000");
+
+  // 2. Breakeven scenario
+  const breakeven = calculatePredictedProfit(150000, 150000);
+  assert.equal(breakeven.isAvailable, true);
+  assert.equal(breakeven.profitNumber, 0);
+
+  // 3. Loss-making scenario
+  // Revenue = 120,000 LKR, Cultivation Cost = 160,000 LKR -> Net Loss = -40,000 LKR
+  const loss = calculatePredictedProfit(120000, 160000);
+  assert.equal(loss.isAvailable, true);
+  assert.equal(loss.profitNumber, -40000);
+
+  // 4. Missing inputs return isAvailable: false
+  const nullRev = calculatePredictedProfit(null, 150000);
+  assert.equal(nullRev.isAvailable, false);
+  assert.equal(nullRev.profitNumber, 0);
+
+  const undefCost = calculatePredictedProfit(250000, undefined);
+  assert.equal(undefCost.isAvailable, false);
+  assert.equal(undefCost.profitNumber, 0);
+
+  const nanCost = calculatePredictedProfit(250000, NaN);
+  assert.equal(nanCost.isAvailable, false);
+});
+
+test("Wizard Step 4 Session Storage: Saves, restores, and isolates budget modes without manual selling price", () => {
+  const mockStorage: Record<string, string> = {};
+  const originalWindow = globalThis.window;
+
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => mockStorage[key] ?? null,
+      setItem: (key: string, val: string) => {
+        mockStorage[key] = val;
+      },
+      removeItem: (key: string) => {
+        delete mockStorage[key];
+      },
+    },
+  };
+
+  try {
+    // 1. Save Quick Budget
+    const quickData: Partial<Step4FormData> = {
+      budget_mode: "quick",
+      quick_total_cultivation_cost_lkr: "175000.50",
+    };
+    saveStep4ToStorage(quickData);
+
+    const loadedQuick = loadStep4FromStorage();
+    assert.equal(loadedQuick.budget_mode, "quick");
+    assert.equal(loadedQuick.quick_total_cultivation_cost_lkr, "175000.50");
+    assert.equal(loadedQuick.effective_total_cultivation_cost_lkr, "175000.50");
+    assert.equal(isStep4Complete(loadedQuick), true);
+
+    // 2. Save Detailed Budget
+    const detailedData: Partial<Step4FormData> = {
+      budget_mode: "detailed",
+      quick_total_cultivation_cost_lkr: "175000.50",
+      detailed_expenses: {
+        ...createDefaultDetailedExpenses(),
+        seeds: "20000",
+        fertilizer: "35000",
+      },
+    };
+    saveStep4ToStorage(detailedData);
+
+    const loadedDetailed = loadStep4FromStorage();
+    assert.equal(loadedDetailed.budget_mode, "detailed");
+    assert.equal(loadedDetailed.detailed_expenses.seeds, "20000");
+    assert.equal(loadedDetailed.detailed_expenses.fertilizer, "35000");
+    assert.equal(loadedDetailed.effective_total_cultivation_cost_lkr, "55000");
+    // Quick budget input was preserved in storage without double counting
+    assert.equal(loadedDetailed.quick_total_cultivation_cost_lkr, "175000.50");
+    assert.equal(isStep4Complete(loadedDetailed), true);
+
+    // 3. Clear storage
+    clearStep4Storage();
+    const emptyLoaded = loadStep4FromStorage();
+    assert.equal(emptyLoaded.quick_total_cultivation_cost_lkr, "");
+    assert.equal(emptyLoaded.effective_total_cultivation_cost_lkr, "");
+    assert.equal(isStep4Complete(emptyLoaded), false);
+  } finally {
+    (globalThis as unknown as { window: unknown }).window = originalWindow;
+  }
+});
+
+test("Wizard Step 4 Backward Compatibility: Legacy records with obsolete manual_selling_price load safely", () => {
+  const mockStorage: Record<string, string> = {};
+  const originalWindow = globalThis.window;
+
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => mockStorage[key] ?? null,
+      setItem: (key: string, val: string) => {
+        mockStorage[key] = val;
+      },
+      removeItem: (key: string) => {
+        delete mockStorage[key];
+      },
+    },
+  };
+
+  try {
+    // 1. Session record containing obsolete manual_selling_price_lkr_per_kg
+    mockStorage[STEP4_STORAGE_KEY] = JSON.stringify({
+      budget_mode: "quick",
+      quick_total_cultivation_cost_lkr: "160000",
+      total_cultivation_cost_lkr: "160000",
+      manual_selling_price_lkr_per_kg: "140.00",
+    });
+
+    const loaded = loadStep4FromStorage();
+    assert.equal(loaded.budget_mode, "quick");
+    assert.equal(loaded.quick_total_cultivation_cost_lkr, "160000");
+    assert.equal(loaded.effective_total_cultivation_cost_lkr, "160000");
+    // Obsolete manual selling price is preserved or ignored safely without crashing
+    assert.equal(loaded.manual_selling_price_lkr_per_kg, "140.00");
+    assert.equal(isStep4Complete(loaded), true);
+
+    // 2. Corrupt JSON in storage returns safe defaults
+    mockStorage[STEP4_STORAGE_KEY] = "{ corrupted json payload";
+    const corruptLoaded = loadStep4FromStorage();
+    assert.equal(corruptLoaded.budget_mode, "quick");
+    assert.equal(corruptLoaded.quick_total_cultivation_cost_lkr, "");
+    assert.equal(isStep4Complete(corruptLoaded), false);
+  } finally {
+    (globalThis as unknown as { window: unknown }).window = originalWindow;
+  }
+});
+
+test("Wizard Step 4 Storage Protection: saveValidatedStep4ToStorage guards against invalid budget overwrites", () => {
+  const mockStorage: Record<string, string> = {};
+  const originalWindow = globalThis.window;
+
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => mockStorage[key] ?? null,
+      setItem: (key: string, val: string) => {
+        mockStorage[key] = val;
+      },
+      removeItem: (key: string) => {
+        delete mockStorage[key];
+      },
+    },
+  };
+
+  try {
+    // 1. Seed valid session storage
+    const validData: Partial<Step4FormData> = {
+      budget_mode: "quick",
+      quick_total_cultivation_cost_lkr: "175000",
+      effective_total_cultivation_cost_lkr: "175000",
+    };
+    const saved = saveValidatedStep4ToStorage(validData);
+    assert.equal(saved, true);
+    assert.equal(loadStep4FromStorage().quick_total_cultivation_cost_lkr, "175000");
+
+    // 2. Attempt save with negative cost -> MUST REJECT and preserve previous valid data
+    const invalidNegative = {
+      budget_mode: "quick" as BudgetMode,
+      quick_total_cultivation_cost_lkr: "-500",
+    };
+    const rejectNegative = saveValidatedStep4ToStorage(invalidNegative);
+    assert.equal(rejectNegative, false);
+    assert.equal(loadStep4FromStorage().quick_total_cultivation_cost_lkr, "175000");
+
+    // 3. Attempt save with non-numeric cost -> MUST REJECT
+    const rejectNonNum = saveValidatedStep4ToStorage({
+      budget_mode: "quick" as BudgetMode,
+      quick_total_cultivation_cost_lkr: "not-a-number",
+    });
+    assert.equal(rejectNonNum, false);
+    assert.equal(loadStep4FromStorage().quick_total_cultivation_cost_lkr, "175000");
+
+    // 4. Attempt save with negative category in Detailed mode -> MUST REJECT
+    const rejectDetailedNeg = saveValidatedStep4ToStorage({
+      budget_mode: "detailed" as BudgetMode,
+      detailed_expenses: {
+        ...createDefaultDetailedExpenses(),
+        seeds: "-2000",
+      },
+    });
+    assert.equal(rejectDetailedNeg, false);
+    assert.equal(loadStep4FromStorage().quick_total_cultivation_cost_lkr, "175000");
+
+    // 5. Valid update with Detailed Budget -> SUCCESS
+    const validDetailedUpdate = saveValidatedStep4ToStorage({
+      budget_mode: "detailed" as BudgetMode,
+      quick_total_cultivation_cost_lkr: "175000",
+      detailed_expenses: {
+        ...createDefaultDetailedExpenses(),
+        seeds: "25000",
+        fertilizer: "40000",
+      },
+    });
+    assert.equal(validDetailedUpdate, true);
+    const loadedAfter = loadStep4FromStorage();
+    assert.equal(loadedAfter.budget_mode, "detailed");
+    assert.equal(loadedAfter.detailed_expenses.seeds, "25000");
+    assert.equal(loadedAfter.effective_total_cultivation_cost_lkr, "65000");
+  } finally {
+    (globalThis as unknown as { window: unknown }).window = originalWindow;
+  }
+});
+
 
 
 

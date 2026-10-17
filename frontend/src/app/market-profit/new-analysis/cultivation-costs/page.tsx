@@ -21,11 +21,11 @@ import {
   Info,
   Check,
   Calculator,
-  ListFilter,
   Receipt,
 } from "lucide-react";
 
 import { WizardProgress } from "../../components/WizardProgress";
+import { AnalysisComingNextModal } from "../../components/AnalysisComingNextModal";
 import {
   SUPPORTED_FRONTEND_CROPS,
   SRI_LANKA_DISTRICTS,
@@ -124,6 +124,7 @@ export default function CultivationCostsPage() {
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isStep4Saved, setIsStep4Saved] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isComingNextModalOpen, setIsComingNextModalOpen] = useState(false);
 
   // Validate Step 1, 2, and 3 prerequisites on mount
   useEffect(() => {
@@ -279,7 +280,7 @@ export default function CultivationCostsPage() {
         return;
       }
 
-      // 2. Validate active Step 4 budget mode
+      // 2. Validate Step 4 budget
       const step4Payload: Partial<Step4FormData> = {
         budget_mode: budgetMode,
         quick_total_cultivation_cost_lkr: quickCostInput,
@@ -288,11 +289,13 @@ export default function CultivationCostsPage() {
 
       const validation = validateStep4(step4Payload);
 
+      // Check budget errors
       if (budgetMode === "detailed") {
         setDetailedErrors(validation.errors.detailed_expenses || {});
         setDetailedWarning(validation.warnings?.total_cultivation_cost_lkr);
 
-        if (!validation.isValid) {
+        const hasDetailedErrors = Object.keys(validation.errors.detailed_expenses || {}).length > 0;
+        if (hasDetailedErrors) {
           setIsStep4Saved(false);
           // Find first invalid detailed field and focus it accessibly
           const firstErrKey = DETAILED_EXPENSE_CATEGORIES.find(
@@ -308,7 +311,7 @@ export default function CultivationCostsPage() {
         setQuickCostError(validation.errors.quick_total_cultivation_cost_lkr);
         setQuickCostWarning(validation.warnings?.total_cultivation_cost_lkr);
 
-        if (!validation.isValid) {
+        if (validation.errors.quick_total_cultivation_cost_lkr) {
           setIsStep4Saved(false);
           costInputRef.current?.focus();
           costInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -316,9 +319,15 @@ export default function CultivationCostsPage() {
         }
       }
 
+      if (!validation.isValid) {
+        setIsStep4Saved(false);
+        return;
+      }
+
       // 3. Persist valid selections preserving mode isolation and decimal precision
       saveValidatedStep4ToStorage(step4Payload);
       setIsStep4Saved(true);
+      setIsComingNextModalOpen(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -830,23 +839,32 @@ export default function CultivationCostsPage() {
 
         {/* Confirmation Status Badge if Saved */}
         {isStep4Saved && (
-          <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 animate-in fade-in duration-300">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
                 <Check className="h-5 w-5" />
               </div>
               <div>
                 <h4 className="text-sm font-bold">
-                  Cultivation Budget Saved ({budgetMode === "detailed" ? "Detailed Budget" : "Quick Budget"})
+                  Step 4 Confirmed &amp; Ready for Analysis
                 </h4>
                 <p className="text-xs text-emerald-700">
-                  Effective cultivation cost: {formatLKR(effectiveTotalNumber)}. All 4 wizard steps are complete and ready for analysis!
+                  Effective cost: {formatLKR(effectiveTotalNumber)} ({budgetMode === "detailed" ? "Detailed Budget" : "Quick Budget"}) • Ready for Price Forecasting &amp; Profit Risk Analysis
                 </p>
               </div>
             </div>
-            <span className="text-xs font-extrabold uppercase tracking-wide bg-emerald-200/80 text-emerald-900 px-3 py-1 rounded-full">
-              Ready
-            </span>
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setIsComingNextModalOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-emerald-100/70 text-emerald-800 border border-emerald-300 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+              >
+                View Analysis Summary
+              </button>
+              <span className="text-xs font-extrabold uppercase tracking-wide bg-emerald-200/80 text-emerald-900 px-3 py-1 rounded-full">
+                Ready
+              </span>
+            </div>
           </div>
         )}
 
@@ -866,11 +884,32 @@ export default function CultivationCostsPage() {
             aria-busy={isSubmitting}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white px-8 py-3.5 text-sm font-bold shadow-sm shadow-emerald-800/20 transition-all cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>{isSubmitting ? "Validating Budget..." : isStep4Saved ? "Update Cultivation Budget" : "Save Cultivation Budget"}</span>
+            <span>{isSubmitting ? "Validating Parameters..." : isStep4Saved ? "Update Parameters & Review" : "Save Parameters & Review"}</span>
             <CheckCircle2 className="h-4 w-4 text-emerald-100 group-hover:scale-110 transition-transform" />
           </button>
         </div>
       </form>
+
+      {/* Analysis Coming Next Modal */}
+      <AnalysisComingNextModal
+        isOpen={isComingNextModalOpen}
+        onClose={() => setIsComingNextModalOpen(false)}
+        cropName={selectedCropMeta?.name_en || "Selected Crop"}
+        cropNameSi={selectedCropMeta?.name_si || ""}
+        cropImage={cropImage}
+        districtName={selectedDistrictMeta?.name || step1Data.cultivation_district_id}
+        isPilotDistrict={Boolean(selectedDistrictMeta?.is_pilot)}
+        harvestDate={step2Data.harvest_date}
+        landExtentAcres={step2Data.land_extent_acres}
+        expectedYieldKg={step2Data.expected_yield_kg}
+        marketName={selectedMarketMeta?.name || targetMarketId || "Economic Centre"}
+        marketRegion={selectedMarketMeta?.region || ""}
+        isPilotMarket={Boolean(selectedMarketMeta?.is_pilot_recommended)}
+        priceType={step3Data.price_type}
+        budgetMode={budgetMode}
+        effectiveCultivationCost={effectiveTotalNumber}
+      />
     </div>
   );
 }
+

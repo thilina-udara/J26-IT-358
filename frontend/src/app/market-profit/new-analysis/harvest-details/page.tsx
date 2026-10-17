@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 
 import { WizardProgress } from "../../components/WizardProgress";
-import { Step3ComingSoonModal } from "../../components/Step3ComingSoonModal";
 import {
   SUPPORTED_FRONTEND_CROPS,
   SRI_LANKA_DISTRICTS,
@@ -84,7 +83,6 @@ export default function HarvestDetailsPage() {
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isStep2Saved, setIsStep2Saved] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isComingSoonModalOpen, setIsComingSoonModalOpen] = useState(false);
 
   // Minimum allowed date is today's local date
   const todayString = getTodayDateString();
@@ -226,7 +224,7 @@ export default function HarvestDetailsPage() {
       });
 
       setIsStep2Saved(true);
-      setIsComingSoonModalOpen(true);
+      router.push("/market-profit/new-analysis/selling-market");
     } finally {
       setIsSubmitting(false);
     }
@@ -570,14 +568,14 @@ export default function HarvestDetailsPage() {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsComingSoonModalOpen(true)}
-                className="inline-flex items-center gap-1.5 self-start sm:self-auto text-xs font-bold text-[#15803d] bg-white border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer"
+              <Link
+                href="/market-profit/new-analysis/selling-market"
+                className="inline-flex items-center gap-1.5 self-start sm:self-auto text-xs font-bold text-[#15803d] bg-white border border-emerald-200 px-3.5 py-2 rounded-lg hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer group"
               >
                 <Store className="h-3.5 w-3.5" />
-                <span>Next Stage Preview</span>
-              </button>
+                <span>Proceed to Selling Market</span>
+                <ArrowRight className="h-3.5 w-3.5 text-emerald-600 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
             </div>
 
             {/* Summary Parameters Grid */}
@@ -704,20 +702,6 @@ export default function HarvestDetailsPage() {
           </button>
         </div>
       </form>
-
-      {/* Step 3 Coming Soon Modal */}
-      <Step3ComingSoonModal
-        isOpen={isComingSoonModalOpen}
-        onClose={() => setIsComingSoonModalOpen(false)}
-        cropName={selectedCropMeta?.name_en || "Selected Crop"}
-        cropNameSi={selectedCropMeta?.name_si || ""}
-        cropImage={cropImage}
-        districtName={selectedDistrictMeta?.name || "Selected District"}
-        isPilotDistrict={Boolean(selectedDistrictMeta?.is_pilot)}
-        harvestDate={harvestDate}
-        landExtentAcres={landExtent}
-        expectedYieldKg={expectedYield}
-      />
     </div>
   );
 }

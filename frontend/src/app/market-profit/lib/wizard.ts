@@ -3,7 +3,11 @@
  * Supports session persistence and validation for Crop & Location selection.
  */
 
-import { SUPPORTED_FRONTEND_CROPS, SRI_LANKA_DISTRICTS } from "./constants";
+import {
+  SUPPORTED_FRONTEND_CROPS,
+  SRI_LANKA_DISTRICTS,
+  STANDARD_MARKETS,
+} from "./constants";
 
 export interface Step1FormData {
   crop_id: string;
@@ -451,5 +455,140 @@ export function clearStep2Storage(): void {
     // Ignore silently
   }
 }
+
+// ============================================================================
+// Step 3: Selling Market Selection
+// ============================================================================
+
+export interface Step3FormData {
+  selling_market_id: string; // Validated market ID from STANDARD_MARKETS (e.g. "DEC_EMBILIPITIYA")
+}
+
+export interface Step3ValidationResult {
+  isValid: boolean;
+  errors: {
+    selling_market_id?: string;
+  };
+}
+
+export const STEP3_STORAGE_KEY = "agrodecision_wizard_step3";
+
+/**
+ * Validates the selected selling market ID against STANDARD_MARKETS.
+ */
+export function validateSellingMarket(
+  marketId: string | undefined | null
+): { isValid: boolean; error?: string } {
+  if (!marketId || marketId.trim() === "") {
+    return {
+      isValid: false,
+      error: "Please select a target selling market.",
+    };
+  }
+
+  const clean = marketId.trim();
+  const exists = STANDARD_MARKETS.some((m) => m.id === clean);
+
+  if (!exists) {
+    return {
+      isValid: false,
+      error: "The selected market is not recognized in verified Dedicated Economic Centres.",
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validates Step 3 form input (Selling Market Selection).
+ */
+export function validateStep3(data: Partial<Step3FormData>): Step3ValidationResult {
+  const marketVal = validateSellingMarket(data.selling_market_id);
+
+  const errors: {
+    selling_market_id?: string;
+  } = {};
+
+  if (!marketVal.isValid) {
+    errors.selling_market_id = marketVal.error;
+  }
+
+  return {
+    isValid: marketVal.isValid,
+    errors,
+  };
+}
+
+/**
+ * Checks whether Step 3 has all required fields populated and valid.
+ */
+export function isStep3Complete(data: Partial<Step3FormData>): boolean {
+  return validateStep3(data).isValid;
+}
+
+/**
+ * Safely reads Step 3 state from browser session storage.
+ */
+export function loadStep3FromStorage(): Step3FormData {
+  if (typeof window === "undefined") {
+    return { selling_market_id: "" };
+  }
+
+  try {
+    const stored = window.sessionStorage.getItem(STEP3_STORAGE_KEY);
+    if (!stored) {
+      return { selling_market_id: "" };
+    }
+    const parsed = JSON.parse(stored);
+    return {
+      selling_market_id:
+        typeof parsed.selling_market_id === "string" ? parsed.selling_market_id : "",
+    };
+  } catch {
+    return { selling_market_id: "" };
+  }
+}
+
+/**
+ * Safely saves Step 3 state into browser session storage.
+ */
+export function saveStep3ToStorage(data: Step3FormData): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.setItem(STEP3_STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore storage quota errors silently
+  }
+}
+
+/**
+ * Safely saves Step 3 state into browser session storage ONLY if data is fully valid.
+ * Protects existing valid session records from being overwritten with invalid values.
+ */
+export function saveValidatedStep3ToStorage(data: Partial<Step3FormData>): boolean {
+  const validation = validateStep3(data);
+  if (!validation.isValid) {
+    return false;
+  }
+  saveStep3ToStorage({
+    selling_market_id: data.selling_market_id || "",
+  });
+  return true;
+}
+
+/**
+ * Clears Step 3 state from session storage.
+ */
+export function clearStep3Storage(): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.removeItem(STEP3_STORAGE_KEY);
+  } catch {
+    // Ignore silently
+  }
+}
+
 
 

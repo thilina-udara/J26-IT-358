@@ -44,6 +44,14 @@ import {
   loadStep2FromStorage,
   saveStep2ToStorage,
   clearStep2Storage,
+  validateSellingMarket,
+  validateStep3,
+  isStep3Complete,
+  STEP3_STORAGE_KEY,
+  loadStep3FromStorage,
+  saveStep3ToStorage,
+  saveValidatedStep3ToStorage,
+  clearStep3Storage,
 } from "../lib/wizard";
 
 import type {
@@ -1128,6 +1136,163 @@ test("Wizard Step 2: Navigation readiness preserves backward links and avoids no
   assert.equal(wizardSteps[2].step, 3);
   assert.equal(wizardSteps[2].label, "Selling Market");
 });
+
+// ============================================================================
+// Step 3: Selling Market Tests
+// ============================================================================
+
+test("Wizard Step 3: Valid market IDs from STANDARD_MARKETS pass validation", () => {
+  // Embilipitiya DEC (recommended pilot hub)
+  const embilipitiya = validateSellingMarket("DEC_EMBILIPITIYA");
+  assert.equal(embilipitiya.isValid, true);
+  assert.equal(embilipitiya.error, undefined);
+
+  // Other standard markets
+  const dambulla = validateSellingMarket("DEC_DAMBULLA");
+  assert.equal(dambulla.isValid, true);
+
+  const pettah = validateSellingMarket("DEC_PETTAH");
+  assert.equal(pettah.isValid, true);
+
+  const meegoda = validateSellingMarket("DEC_MEEGODA");
+  assert.equal(meegoda.isValid, true);
+
+  // Whitespace-padded input
+  const padded = validateSellingMarket("  DEC_EMBILIPITIYA  ");
+  assert.equal(padded.isValid, true);
+});
+
+test("Wizard Step 3: Missing, empty, or whitespace market ID is rejected", () => {
+  const emptyStr = validateSellingMarket("");
+  assert.equal(emptyStr.isValid, false);
+  assert.equal(emptyStr.error, "Please select a target selling market.");
+
+  const spacesOnly = validateSellingMarket("   ");
+  assert.equal(spacesOnly.isValid, false);
+  assert.equal(spacesOnly.error, "Please select a target selling market.");
+
+  const nullVal = validateSellingMarket(null);
+  assert.equal(nullVal.isValid, false);
+  assert.equal(nullVal.error, "Please select a target selling market.");
+
+  const undefinedVal = validateSellingMarket(undefined);
+  assert.equal(undefinedVal.isValid, false);
+  assert.equal(undefinedVal.error, "Please select a target selling market.");
+});
+
+test("Wizard Step 3: Unrecognized or invalid market ID is rejected", () => {
+  const fakeMarket = validateSellingMarket("DEC_LONDON");
+  assert.equal(fakeMarket.isValid, false);
+  assert.equal(
+    fakeMarket.error,
+    "The selected market is not recognized in verified Dedicated Economic Centres."
+  );
+
+  const numericCode = validateSellingMarket("12345");
+  assert.equal(numericCode.isValid, false);
+  assert.equal(
+    numericCode.error,
+    "The selected market is not recognized in verified Dedicated Economic Centres."
+  );
+});
+
+test("Wizard Step 3: validateStep3 and isStep3Complete evaluate full and empty states correctly", () => {
+  // Valid
+  const valid = validateStep3({ selling_market_id: "DEC_EMBILIPITIYA" });
+  assert.equal(valid.isValid, true);
+  assert.deepEqual(valid.errors, {});
+  assert.equal(isStep3Complete({ selling_market_id: "DEC_EMBILIPITIYA" }), true);
+
+  // Missing
+  const missing = validateStep3({ selling_market_id: "" });
+  assert.equal(missing.isValid, false);
+  assert.equal(missing.errors.selling_market_id, "Please select a target selling market.");
+  assert.equal(isStep3Complete({ selling_market_id: "" }), false);
+
+  // Invalid
+  const invalid = validateStep3({ selling_market_id: "UNKNOWN_MARKET" });
+  assert.equal(invalid.isValid, false);
+  assert.equal(
+    invalid.errors.selling_market_id,
+    "The selected market is not recognized in verified Dedicated Economic Centres."
+  );
+  assert.equal(isStep3Complete({ selling_market_id: "UNKNOWN_MARKET" }), false);
+});
+
+test("Wizard Step 3: Session storage helpers store, restore, and clear market selection safely", () => {
+  assert.equal(STEP3_STORAGE_KEY, "agrodecision_wizard_step3");
+
+  // In Node environment, helpers return default gracefully without throwing
+  const initial = loadStep3FromStorage();
+  assert.deepEqual(initial, { selling_market_id: "" });
+
+  assert.doesNotThrow(() => {
+    saveStep3ToStorage({ selling_market_id: "DEC_EMBILIPITIYA" });
+    clearStep3Storage();
+  });
+
+  // Mock window session storage tests
+  const mockStorage = new Map<string, string>();
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => mockStorage.get(key) ?? null,
+      setItem: (key: string, val: string) => mockStorage.set(key, val),
+      removeItem: (key: string) => mockStorage.delete(key),
+    },
+  };
+
+  try {
+    // 1. Save valid market
+    const saved = saveValidatedStep3ToStorage({ selling_market_id: "DEC_EMBILIPITIYA" });
+    assert.equal(saved, true);
+    assert.deepEqual(loadStep3FromStorage(), { selling_market_id: "DEC_EMBILIPITIYA" });
+
+    // 2. Reject saving invalid market, leaving existing record protected
+    const rejectInvalid = saveValidatedStep3ToStorage({ selling_market_id: "INVALID_XYZ" });
+    assert.equal(rejectInvalid, false);
+    assert.deepEqual(loadStep3FromStorage(), { selling_market_id: "DEC_EMBILIPITIYA" });
+
+    // 3. Clear
+    clearStep3Storage();
+    assert.deepEqual(loadStep3FromStorage(), { selling_market_id: "" });
+  } finally {
+    delete (globalThis as unknown as { window?: unknown }).window;
+  }
+});
+
+test("Wizard Step 3: Embilipitiya Dedicated Economic Centre is present and flagged as pilot recommended hub", () => {
+  const embilipitiya = STANDARD_MARKETS.find((m) => m.id === "DEC_EMBILIPITIYA");
+  assert.ok(embilipitiya, "DEC_EMBILIPITIYA must exist in STANDARD_MARKETS");
+  assert.equal(embilipitiya.name, "Embilipitiya Dedicated Economic Centre");
+  assert.equal(embilipitiya.is_pilot_recommended, true);
+});
+
+test("Wizard Step 3: Wizard navigation guards require valid Step 1 and Step 2 before Step 3", () => {
+  // Scenario A: Step 1 incomplete
+  const incompleteStep1 = validateStep1({ crop_id: "", cultivation_district_id: "" });
+  assert.equal(incompleteStep1.isValid, false);
+
+  // Scenario B: Step 1 complete, Step 2 incomplete
+  const completeStep1 = validateStep1({ crop_id: "CR_OKRA", cultivation_district_id: "LK-32" });
+  assert.equal(completeStep1.isValid, true);
+
+  const incompleteStep2 = validateStep2(
+    { harvest_date: "", land_extent_acres: "", expected_yield_kg: "" },
+    FIXED_TODAY
+  );
+  assert.equal(incompleteStep2.isValid, false);
+
+  // Scenario C: Steps 1, 2, and 3 all complete
+  const completeStep2 = validateStep2(
+    { harvest_date: "2027-05-15", land_extent_acres: "2.5", expected_yield_kg: "1500" },
+    FIXED_TODAY
+  );
+  assert.equal(completeStep2.isValid, true);
+
+  const completeStep3 = validateStep3({ selling_market_id: "DEC_EMBILIPITIYA" });
+  assert.equal(completeStep3.isValid, true);
+});
+
 
 
 

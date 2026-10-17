@@ -47,7 +47,7 @@
     },
     {
       "rank": 7,
-      "feature": "Min Soil Moisture (m\u00b3/m\u00b3)",
+      "feature": "Min Soil Moisture (m3/m3)",
       "mean_abs_shap_mt_ha": 0.5861,
       "relative_importance_pct": 6.97
     },
@@ -59,7 +59,7 @@
     },
     {
       "rank": 9,
-      "feature": "Mean Temperature (\u00b0C)",
+      "feature": "Mean Temperature (C)",
       "mean_abs_shap_mt_ha": 0.3473,
       "relative_importance_pct": 4.13
     },

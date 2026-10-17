@@ -77,8 +77,38 @@ export default function AuthForm({ registration = false }: { registration?: bool
   }
 
   return (
-    <section className="cp-auth-layout cp-container">
-      <aside className="cp-auth-story">
+    <div className="cp-root cp-public cp-auth-page">
+      <header className="portal-navbar">
+        <div className="portal-navbar-inner">
+          <Link href="/" className="portal-logo-group">
+            <div className="portal-logo-icon"><Sprout size={26} /></div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span className="portal-logo-text">AgroDecision</span>
+                <span style={{ fontSize: "11px", fontWeight: 800, padding: "2px 6px", borderRadius: "4px", backgroundColor: "#dcfce7", color: "#166534" }}>AI</span>
+              </div>
+              <div className="portal-logo-tag">Your Farming Partner • AIMS Research</div>
+            </div>
+          </Link>
+          <nav className="portal-nav-links" aria-label="Main navigation">
+            <Link href="/">Home</Link>
+            <Link href="/#about">About Us</Link>
+            <Link href="/#features">Key Features</Link>
+            <Link href="/#how-it-works">How It Works</Link>
+            <Link href="/#services">Our Services</Link>
+            <Link href="/#sdgs">SDGs</Link>
+            <Link href="/#testimonials">Testimonials</Link>
+          </nav>
+          <div className="portal-nav-actions">
+            <Link href="/crop-planning/login" className="portal-btn-login">Login</Link>
+            <Link href="/crop-planning/register" className="portal-btn-signup">Sign Up <ArrowRight size={15} /></Link>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section className="cp-auth-layout cp-container">
+          <aside className="cp-auth-story">
         <Image
           src="/crop-planning/agfarm_aerial.jpg"
           alt="Aerial view of lush green agricultural paddy fields"
@@ -104,9 +134,9 @@ export default function AuthForm({ registration = false }: { registration?: bool
             Thoughtful planning · Complete privacy preservation
           </span>
         </div>
-      </aside>
+          </aside>
 
-      <div className="cp-auth-form-panel">
+          <div className="cp-auth-form-panel">
         <div className="cp-auth-card">
           <div className="cp-auth-card-header">
             <span className="cp-brand-mark mb-3">
@@ -255,7 +285,63 @@ export default function AuthForm({ registration = false }: { registration?: bool
             <span>Your session stays in this tab. Refreshing requires login again.</span>
           </div>
         </div>
-      </div>
-    </section>
+          </div>
+        </section>
+      </main>
+
+      <footer className="portal-footer">
+        <div className="portal-container">
+          <div className="portal-footer-grid">
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+                <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "#15803d", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff" }}><Sprout size={22} /></div>
+                <div>
+                  <div style={{ fontSize: "18px", fontWeight: 800, color: "#ffffff" }}>AgroDecision AI</div>
+                  <div style={{ fontSize: "11px", color: "#4ade80" }}>Better Farmers • Brighter Future</div>
+                </div>
+              </div>
+              <p style={{ fontSize: "13px", lineHeight: 1.65, color: "#94a3b8", marginBottom: "16px" }}>
+                Data-Driven Farmer Decision System for Collaborative Crop Planning and Market Risk Reduction.
+              </p>
+              <div style={{ fontSize: "12px", color: "#cbd5e1" }}>
+                <strong>AIMS</strong> - Autonomous Intelligent Machines and Systems
+                <br />Faculty of Computing • Information Technology (IT)
+              </div>
+            </div>
+            <div className="portal-footer-col">
+              <h4>Quick Links</h4>
+              <ul>
+                <li><Link href="/">Home</Link></li>
+                <li><Link href="/#about">About Us</Link></li>
+                <li><Link href="/#features">Key Features</Link></li>
+                <li><Link href="/#services">Our Services</Link></li>
+                <li><Link href="/crop-planning/login">Farmer Login</Link></li>
+              </ul>
+            </div>
+            <div className="portal-footer-col">
+              <h4>Research Modules</h4>
+              <ul>
+                <li><Link href="/crop-planning" style={{ color: "#4ade80", fontWeight: 700 }}>Component 02: Crop Planning (Live)</Link></li>
+                <li><Link href="/#services">Component 01: Market Profit AI</Link></li>
+                <li><Link href="/#services">Component 03: Produce Traceability & Waste</Link></li>
+                <li><Link href="/#services">Component 04: Climate GIS Early Warning</Link></li>
+              </ul>
+            </div>
+            <div className="portal-footer-col">
+              <h4>Contact & Support</h4>
+              <div style={{ fontSize: "13px", lineHeight: 1.8, color: "#94a3b8" }}>
+                <div>+94 (0) 11 234 5678 / Support</div>
+                <div>aims.research@agrodecision.lk</div>
+                <div style={{ marginTop: "6px" }}>Faculty of Computing, Sri Lanka</div>
+              </div>
+            </div>
+          </div>
+          <div style={{ paddingTop: "28px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#64748b" }}>
+            <div>© 2026 AgroDecision AI. All rights reserved.</div>
+            <div style={{ color: "#4ade80", fontWeight: 600 }}>Grow Together • Farmer • Technology • Prosperity 🌾</div>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

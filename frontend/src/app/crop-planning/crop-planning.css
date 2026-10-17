@@ -1303,12 +1303,18 @@
 /* ==========================================================================
    AUTHENTICATION PAGES
    ========================================================================== */
+.cp-auth-page {
+  min-height: 100dvh;
+  background: linear-gradient(180deg, #f0f7ef 0%, #fbfdfa 70%, #ffffff 100%);
+}
+
 .cp-auth-layout {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
   gap: 0;
   min-height: calc(100dvh - 80px);
   align-items: stretch;
+  background: transparent;
 }
 
 .cp-auth-story {
@@ -1378,7 +1384,7 @@
   align-items: center;
   justify-content: center;
   padding: 48px 56px;
-  background: var(--cp-warm-white);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .cp-auth-card {

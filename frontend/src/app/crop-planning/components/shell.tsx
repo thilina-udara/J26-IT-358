@@ -44,6 +44,7 @@ export function CropShell({ children }: { children: React.ReactNode }) {
   const { session, signOut, notice } = useSession();
   const [open, setOpen] = useState(false);
   const publicPage = isPublicRoute(pathname);
+  const authPage = pathname === `${ROOT}/login` || pathname === `${ROOT}/register`;
 
   useEffect(() => {
     setOpen(false);
@@ -98,6 +99,7 @@ export function CropShell({ children }: { children: React.ReactNode }) {
   );
 
   if (publicPage) {
+    if (authPage) return <>{children}</>;
     return (
       <div className="cp-root cp-public">
         <a href="#crop-main" className="cp-skip">

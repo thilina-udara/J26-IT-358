@@ -592,6 +592,68 @@ export function isStep3Complete(data: Partial<Step3FormData>): boolean {
 }
 
 /**
+ * Result structure when checking previous wizard steps integrity.
+ */
+export interface PreviousStepsIntegrityResult {
+  isValid: boolean;
+  earliestIncompleteStep?: 1 | 2;
+  redirectTarget?: string;
+  errorMessage?: string;
+}
+
+/**
+ * Evaluates earlier wizard steps integrity before allowing Step 3 completion.
+ * Returns the earliest incomplete step and its redirection route.
+ */
+export function checkPreviousStepsForStep3(
+  step1: Partial<Step1FormData>,
+  step2: Partial<Step2FormData>,
+  referenceDate?: Date
+): PreviousStepsIntegrityResult {
+  const v1 = validateStep1(step1);
+  if (!v1.isValid) {
+    return {
+      isValid: false,
+      earliestIncompleteStep: 1,
+      redirectTarget: "/market-profit/new-analysis",
+      errorMessage:
+        "Step 1 (Crop & Location) is incomplete. Please select your crop and cultivation district first.",
+    };
+  }
+
+  const v2 = validateStep2(step2, referenceDate);
+  if (!v2.isValid) {
+    return {
+      isValid: false,
+      earliestIncompleteStep: 2,
+      redirectTarget: "/market-profit/new-analysis/harvest-details",
+      errorMessage:
+        "Step 2 (Harvest Details) is incomplete. Please provide your harvest timing, land extent, and expected yield first.",
+    };
+  }
+
+  return {
+    isValid: true,
+  };
+}
+
+/**
+ * Checks overall wizard readiness across all 3 steps before transitioning to Step 4 (Cultivation Costs).
+ */
+export function isWizardReadyForStep4(
+  step1: Partial<Step1FormData>,
+  step2: Partial<Step2FormData>,
+  step3: Partial<Step3FormData>,
+  referenceDate?: Date
+): boolean {
+  const prev = checkPreviousStepsForStep3(step1, step2, referenceDate);
+  if (!prev.isValid) {
+    return false;
+  }
+  return isStep3Complete(step3);
+}
+
+/**
  * Safely reads Step 3 state from browser session storage.
  * Maintains backward compatibility for existing records containing only target_market_id or selling_market_id.
  */

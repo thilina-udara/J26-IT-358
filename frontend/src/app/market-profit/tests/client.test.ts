@@ -49,6 +49,7 @@ import {
   VALID_PRICE_TYPES,
   PRICE_TYPE_OPTIONS,
   type PriceType,
+  type Step3FormData,
   validateStep3,
   isStep3Complete,
   STEP3_STORAGE_KEY,
@@ -56,6 +57,8 @@ import {
   saveStep3ToStorage,
   saveValidatedStep3ToStorage,
   clearStep3Storage,
+  checkPreviousStepsForStep3,
+  isWizardReadyForStep4,
 } from "../lib/wizard";
 
 import type {
@@ -1536,6 +1539,116 @@ test("Wizard Step 3: Wizard navigation guards require valid Step 1 and Step 2 be
     price_type: "wholesale",
   });
   assert.equal(completeStep3.isValid, true);
+});
+
+test("Wizard Step 3: checkPreviousStepsForStep3 identifies earliest incomplete step and redirection target", () => {
+  // 1. Both Step 1 and Step 2 incomplete -> Earliest is Step 1
+  const step1Incomplete = checkPreviousStepsForStep3(
+    { crop_id: "", cultivation_district_id: "" },
+    { harvest_date: "", land_extent_acres: "", expected_yield_kg: "" },
+    FIXED_TODAY
+  );
+  assert.equal(step1Incomplete.isValid, false);
+  assert.equal(step1Incomplete.earliestIncompleteStep, 1);
+  assert.equal(step1Incomplete.redirectTarget, "/market-profit/new-analysis");
+  assert.ok(step1Incomplete.errorMessage?.includes("Step 1"));
+
+  // 2. Step 1 complete, Step 2 incomplete -> Earliest is Step 2
+  const step2Incomplete = checkPreviousStepsForStep3(
+    { crop_id: "CR_OKRA", cultivation_district_id: "LK-32" },
+    { harvest_date: "", land_extent_acres: "", expected_yield_kg: "" },
+    FIXED_TODAY
+  );
+  assert.equal(step2Incomplete.isValid, false);
+  assert.equal(step2Incomplete.earliestIncompleteStep, 2);
+  assert.equal(step2Incomplete.redirectTarget, "/market-profit/new-analysis/harvest-details");
+  assert.ok(step2Incomplete.errorMessage?.includes("Step 2"));
+
+  // 3. Both Step 1 and Step 2 complete -> Valid
+  const bothComplete = checkPreviousStepsForStep3(
+    { crop_id: "CR_OKRA", cultivation_district_id: "LK-32" },
+    { harvest_date: "2027-05-15", land_extent_acres: "2.5", expected_yield_kg: "1500" },
+    FIXED_TODAY
+  );
+  assert.equal(bothComplete.isValid, true);
+  assert.equal(bothComplete.earliestIncompleteStep, undefined);
+  assert.equal(bothComplete.redirectTarget, undefined);
+});
+
+test("Wizard Step 3: isWizardReadyForStep4 confirms full composite readiness across all 3 steps", () => {
+  const step1 = { crop_id: "CR_OKRA", cultivation_district_id: "LK-32" };
+  const step2 = { harvest_date: "2027-05-15", land_extent_acres: "2.5", expected_yield_kg: "1500" };
+  const step3Wholesale = { target_market_id: "DEC_EMBILIPITIYA", price_type: "wholesale" as PriceType };
+  const step3Retail = { target_market_id: "DEC_DAMBULLA", price_type: "retail" as PriceType };
+
+  // All 3 valid with Wholesale
+  assert.equal(isWizardReadyForStep4(step1, step2, step3Wholesale, FIXED_TODAY), true);
+
+  // All 3 valid with Retail
+  assert.equal(isWizardReadyForStep4(step1, step2, step3Retail, FIXED_TODAY), true);
+
+  // Incomplete Step 1
+  assert.equal(isWizardReadyForStep4({ crop_id: "" }, step2, step3Wholesale, FIXED_TODAY), false);
+
+  // Incomplete Step 2
+  assert.equal(isWizardReadyForStep4(step1, { harvest_date: "" }, step3Wholesale, FIXED_TODAY), false);
+
+  // Incomplete Step 3 (missing price type)
+  assert.equal(
+    isWizardReadyForStep4(
+      step1,
+      step2,
+      { target_market_id: "DEC_EMBILIPITIYA", price_type: "" },
+      FIXED_TODAY
+    ),
+    false
+  );
+
+  // Incomplete Step 3 (missing market)
+  assert.equal(
+    isWizardReadyForStep4(
+      step1,
+      step2,
+      { target_market_id: "", price_type: "wholesale" },
+      FIXED_TODAY
+    ),
+    false
+  );
+});
+
+test("Wizard Step 3: Step 3 Final Validation preserves user selections and maintains navigation readiness", () => {
+  // Test preserving valid market selection when price type is missing
+  const partialData1: Partial<Step3FormData> = {
+    target_market_id: "DEC_EMBILIPITIYA",
+    price_type: "",
+  };
+  const val1 = validateStep3(partialData1);
+  assert.equal(val1.isValid, false);
+  assert.equal(val1.errors.target_market_id, undefined); // Market is valid, preserved
+  assert.ok(val1.errors.price_type);
+
+  // Test preserving valid price type when market is missing
+  const partialData2: { target_market_id: string; price_type: PriceType } = {
+    target_market_id: "",
+    price_type: "wholesale",
+  };
+  const val2 = validateStep3(partialData2);
+  assert.equal(val2.isValid, false);
+  assert.ok(val2.errors.target_market_id);
+  assert.equal(val2.errors.price_type, undefined); // Price type is valid, preserved
+
+  // Navigation metadata confirms Step 3 is Selling Market and Step 4 is Cultivation Costs
+  const wizardSteps = [
+    { step: 1, label: "Crop & Location", route: "/market-profit/new-analysis" },
+    { step: 2, label: "Harvest Details", route: "/market-profit/new-analysis/harvest-details" },
+    { step: 3, label: "Selling Market", route: "/market-profit/new-analysis/selling-market" },
+    { step: 4, label: "Cultivation Costs", route: "/market-profit/new-analysis/cultivation-costs" },
+  ];
+  assert.equal(wizardSteps[2].step, 3);
+  assert.equal(wizardSteps[2].label, "Selling Market");
+  assert.equal(wizardSteps[3].step, 4);
+  assert.equal(wizardSteps[3].label, "Cultivation Costs");
+  assert.equal(wizardSteps[3].route, "/market-profit/new-analysis/cultivation-costs");
 });
 
 

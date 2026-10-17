@@ -46,6 +46,8 @@ import {
   loadStep3FromStorage,
   saveStep3ToStorage,
   saveValidatedStep3ToStorage,
+  checkPreviousStepsForStep3,
+  isWizardReadyForStep4,
   PriceType,
 } from "../../lib/wizard";
 
@@ -70,6 +72,8 @@ export default function SellingMarketPage() {
   const router = useRouter();
   const marketSelectionSectionRef = useRef<HTMLDivElement>(null);
   const priceTypeSectionRef = useRef<HTMLDivElement>(null);
+  const firstMarketCardRef = useRef<HTMLDivElement>(null);
+  const firstPriceTypeRadioRef = useRef<HTMLDivElement>(null);
 
   // Wizard state from Step 1 and Step 2
   const [step1Data, setStep1Data] = useState<Step1FormData>({
@@ -99,35 +103,28 @@ export default function SellingMarketPage() {
 
   // Validate Step 1 and Step 2 prerequisites on mount
   useEffect(() => {
-    // 1. Check Step 1
     const s1 = loadStep1FromStorage();
-    const v1 = validateStep1(s1);
-    if (!v1.isValid) {
-      setGuardStatus("invalid_step1");
-      setGuardMessage("Step 1 (Crop & Location) is incomplete. Please select your crop and cultivation district first.");
-      setGuardTarget("/market-profit/new-analysis");
-      const timer = setTimeout(() => {
-        router.replace("/market-profit/new-analysis");
-      }, 2500);
-      return () => clearTimeout(timer);
-    }
-    setStep1Data(s1);
-
-    // 2. Check Step 2
     const s2 = loadStep2FromStorage();
-    const v2 = validateStep2(s2);
-    if (!v2.isValid) {
-      setGuardStatus("invalid_step2");
-      setGuardMessage("Step 2 (Harvest Details) is incomplete. Please provide your harvest timing, land extent, and expected yield first.");
-      setGuardTarget("/market-profit/new-analysis/harvest-details");
+    const integrity = checkPreviousStepsForStep3(s1, s2);
+
+    if (!integrity.isValid) {
+      if (integrity.earliestIncompleteStep === 1) {
+        setGuardStatus("invalid_step1");
+      } else {
+        setGuardStatus("invalid_step2");
+      }
+      setGuardMessage(integrity.errorMessage || "Previous steps are incomplete.");
+      setGuardTarget(integrity.redirectTarget || "/market-profit/new-analysis");
       const timer = setTimeout(() => {
-        router.replace("/market-profit/new-analysis/harvest-details");
+        router.replace(integrity.redirectTarget || "/market-profit/new-analysis");
       }, 2500);
       return () => clearTimeout(timer);
     }
+
+    setStep1Data(s1);
     setStep2Data(s2);
 
-    // 3. Restore Step 3 if previously selected
+    // Restore Step 3 if previously selected
     const s3 = loadStep3FromStorage();
     const market = s3.target_market_id || s3.selling_market_id || "";
     if (market) {
@@ -171,7 +168,7 @@ export default function SellingMarketPage() {
     });
   };
 
-  // Handle Step 3 submission
+  // Handle Step 3 submission with previous steps re-verification and first-invalid focus
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -180,6 +177,16 @@ export default function SellingMarketPage() {
     setHasAttemptedSubmit(true);
 
     try {
+      // 1. Re-verify earlier steps integrity before submission
+      const s1 = loadStep1FromStorage();
+      const s2 = loadStep2FromStorage();
+      const integrity = checkPreviousStepsForStep3(s1, s2);
+      if (!integrity.isValid) {
+        router.replace(integrity.redirectTarget || "/market-profit/new-analysis");
+        return;
+      }
+
+      // 2. Validate Step 3 inputs together
       const validation = validateStep3({
         target_market_id: selectedMarketId,
         selling_market_id: selectedMarketId,
@@ -194,15 +201,18 @@ export default function SellingMarketPage() {
 
       if (!validation.isValid) {
         setIsStep3Saved(false);
-        // Focus or scroll to the first invalid field
+        // Focus first invalid field accessibly and scroll into view
         if (mError) {
+          firstMarketCardRef.current?.focus();
           marketSelectionSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         } else if (pError) {
+          firstPriceTypeRadioRef.current?.focus();
           priceTypeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         }
         return;
       }
 
+      // 3. Persist valid selections
       setMarketError(undefined);
       setPriceTypeError(undefined);
       saveValidatedStep3ToStorage({
@@ -437,15 +447,25 @@ export default function SellingMarketPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-              {recommendedMarkets.map((market) => {
+              {recommendedMarkets.map((market, idx) => {
                 const isSelected = selectedMarketId === market.id;
                 const isEmbilipitiya = market.id === "DEC_EMBILIPITIYA";
 
                 return (
                   <div
                     key={market.id}
+                    ref={idx === 0 ? firstMarketCardRef : undefined}
+                    tabIndex={0}
+                    role="button"
+                    aria-pressed={isSelected}
                     onClick={() => handleMarketSelect(market.id)}
-                    className={`relative rounded-2xl border-2 p-4.5 cursor-pointer transition-all shadow-2xs flex flex-col justify-between gap-3 ${
+                    onKeyDown={(e) => {
+                      if (e.key === " " || e.key === "Enter") {
+                        e.preventDefault();
+                        handleMarketSelect(market.id);
+                      }
+                    }}
+                    className={`relative rounded-2xl border-2 p-4.5 cursor-pointer transition-all shadow-2xs flex flex-col justify-between gap-3 focus:outline-hidden focus:ring-2 focus:ring-[#15803d]/40 ${
                       isSelected
                         ? "border-[#15803d] bg-emerald-50/60 ring-2 ring-emerald-500/20 shadow-xs"
                         : "border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50/60"
@@ -576,6 +596,7 @@ export default function SellingMarketPage() {
           >
             {/* Wholesale */}
             <div
+              ref={firstPriceTypeRadioRef}
               role="radio"
               aria-checked={selectedPriceType === "wholesale"}
               tabIndex={0}
@@ -873,9 +894,10 @@ export default function SellingMarketPage() {
           <button
             type="submit"
             disabled={isSubmitting}
+            aria-busy={isSubmitting}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white px-8 py-3.5 text-sm font-bold shadow-sm shadow-emerald-800/20 transition-all cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>Next: Cultivation Costs</span>
+            <span>{isSubmitting ? "Validating Selection..." : "Next: Cultivation Costs"}</span>
             <ArrowRight className="h-4 w-4 text-emerald-100 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>

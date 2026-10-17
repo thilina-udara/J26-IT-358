@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image, { StaticImageData } from "next/image";
@@ -11,7 +11,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   Calendar,
-  Compass,
   Scale,
   Sprout,
   MapPin,
@@ -21,6 +20,9 @@ import {
   Wallet,
   Info,
   Check,
+  Calculator,
+  ListFilter,
+  Receipt,
 } from "lucide-react";
 
 import { WizardProgress } from "../../components/WizardProgress";
@@ -43,13 +45,21 @@ import {
   validateStep3,
   loadStep3FromStorage,
   Step3FormData,
+  BudgetMode,
+  DetailedExpensesData,
+  DetailedExpenseKey,
+  DETAILED_EXPENSE_CATEGORIES,
+  createDefaultDetailedExpenses,
+  calculateDetailedCultivationTotal,
+  validateDetailedExpenseField,
+  validateDetailedExpenses,
   validateCultivationCost,
   validateStep4,
   isStep4Complete,
   loadStep4FromStorage,
   saveValidatedStep4ToStorage,
   checkPreviousStepsForStep4,
-  PriceType,
+  Step4FormData,
 } from "../../lib/wizard";
 
 // Statically import verified crop photographs for the summary badge
@@ -71,7 +81,10 @@ const CROP_IMAGE_MAP: Record<string, StaticImageData> = {
 
 export default function CultivationCostsPage() {
   const router = useRouter();
+
+  // Input element refs for accessibility and focus management
   const costInputRef = useRef<HTMLInputElement>(null);
+  const detailedInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Wizard state from Step 1, Step 2, and Step 3
   const [step1Data, setStep1Data] = useState<Step1FormData>({
@@ -94,10 +107,20 @@ export default function CultivationCostsPage() {
   const [guardMessage, setGuardMessage] = useState<string>("");
   const [guardTarget, setGuardTarget] = useState<string>("");
 
-  // Step 4 state: Quick Cultivation Budget
-  const [costInput, setCostInput] = useState<string>("");
-  const [costError, setCostError] = useState<string | undefined>(undefined);
-  const [costWarning, setCostWarning] = useState<string | undefined>(undefined);
+  // Step 4 state: Mode selection
+  const [budgetMode, setBudgetMode] = useState<BudgetMode>("quick");
+
+  // Quick Budget state
+  const [quickCostInput, setQuickCostInput] = useState<string>("");
+  const [quickCostError, setQuickCostError] = useState<string | undefined>(undefined);
+  const [quickCostWarning, setQuickCostWarning] = useState<string | undefined>(undefined);
+
+  // Detailed Budget state
+  const [detailedExpenses, setDetailedExpenses] = useState<DetailedExpensesData>(createDefaultDetailedExpenses());
+  const [detailedErrors, setDetailedErrors] = useState<Partial<Record<DetailedExpenseKey, string>>>({});
+  const [detailedWarning, setDetailedWarning] = useState<string | undefined>(undefined);
+
+  // Submission & Confirmation state
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isStep4Saved, setIsStep4Saved] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -134,35 +157,105 @@ export default function CultivationCostsPage() {
 
     // Restore Step 4 if previously saved
     const s4 = loadStep4FromStorage();
-    if (s4.total_cultivation_cost_lkr) {
-      setCostInput(s4.total_cultivation_cost_lkr);
-      const validation = validateStep4(s4);
-      if (validation.isValid) {
-        setIsStep4Saved(true);
-        if (validation.warnings?.total_cultivation_cost_lkr) {
-          setCostWarning(validation.warnings.total_cultivation_cost_lkr);
-        }
+    setBudgetMode(s4.budget_mode);
+
+    if (s4.quick_total_cultivation_cost_lkr) {
+      setQuickCostInput(s4.quick_total_cultivation_cost_lkr);
+    } else if (s4.total_cultivation_cost_lkr && s4.budget_mode === "quick") {
+      setQuickCostInput(s4.total_cultivation_cost_lkr);
+    }
+
+    if (s4.detailed_expenses) {
+      setDetailedExpenses(s4.detailed_expenses);
+    }
+
+    // Verify validity of restored data
+    const validation = validateStep4(s4);
+    if (validation.isValid) {
+      setIsStep4Saved(true);
+      if (s4.budget_mode === "detailed") {
+        setDetailedWarning(validation.warnings?.total_cultivation_cost_lkr);
+      } else {
+        setQuickCostWarning(validation.warnings?.total_cultivation_cost_lkr);
       }
     }
   }, [router]);
 
-  // Handle budget input change
-  const handleCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setCostInput(value);
+  // Running total calculation for Detailed Budget
+  const detailedCalculation = useMemo(() => {
+    return calculateDetailedCultivationTotal(detailedExpenses);
+  }, [detailedExpenses]);
+
+  // Handle mode switch between Quick and Detailed Budget
+  const handleModeChange = (newMode: BudgetMode) => {
+    if (newMode === budgetMode) return;
+    setBudgetMode(newMode);
     setIsStep4Saved(false);
 
-    if (hasAttemptedSubmit) {
-      const validation = validateStep4({ total_cultivation_cost_lkr: value });
-      setCostError(validation.errors.total_cultivation_cost_lkr);
-      setCostWarning(validation.warnings?.total_cultivation_cost_lkr);
-    } else {
-      // Live warning evaluation for zero cost
-      const validation = validateStep4({ total_cultivation_cost_lkr: value });
-      setCostWarning(validation.warnings?.total_cultivation_cost_lkr);
-      if (validation.isValid) {
-        setCostError(undefined);
+    // Re-evaluate validation for the newly selected mode
+    if (newMode === "detailed") {
+      const val = validateDetailedExpenses(detailedExpenses);
+      setDetailedWarning(val.warning);
+      if (hasAttemptedSubmit) {
+        setDetailedErrors(val.errors);
       }
+    } else {
+      const val = validateCultivationCost(quickCostInput);
+      setQuickCostWarning(val.warning);
+      if (hasAttemptedSubmit) {
+        setQuickCostError(val.error);
+      }
+    }
+  };
+
+  // Handle Quick Budget input change
+  const handleQuickCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuickCostInput(value);
+    setIsStep4Saved(false);
+
+    const validation = validateCultivationCost(value);
+    setQuickCostWarning(validation.warning);
+
+    if (hasAttemptedSubmit) {
+      setQuickCostError(validation.error);
+    } else if (validation.isValid) {
+      setQuickCostError(undefined);
+    }
+  };
+
+  // Handle Detailed Budget expense field change
+  const handleDetailedFieldChange = (key: DetailedExpenseKey, value: string) => {
+    const updated = {
+      ...detailedExpenses,
+      [key]: value,
+    };
+    setDetailedExpenses(updated);
+    setIsStep4Saved(false);
+
+    // Clear error for this field if it becomes valid or empty
+    const fieldVal = validateDetailedExpenseField(key, value);
+    if (fieldVal.isValid) {
+      setDetailedErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } else if (hasAttemptedSubmit) {
+      setDetailedErrors((prev) => ({
+        ...prev,
+        [key]: fieldVal.error,
+      }));
+    }
+
+    // Update zero-cost warning on running sum
+    const calc = calculateDetailedCultivationTotal(updated);
+    if (calc.isZeroCost) {
+      setDetailedWarning(
+        "Cultivation cost is set to Rs. 0. Profit percentage and risk evaluation may be unavailable when cost is zero."
+      );
+    } else {
+      setDetailedWarning(undefined);
     }
   };
 
@@ -186,25 +279,45 @@ export default function CultivationCostsPage() {
         return;
       }
 
-      // 2. Validate Step 4 input
-      const validation = validateStep4({
-        total_cultivation_cost_lkr: costInput,
-      });
+      // 2. Validate active Step 4 budget mode
+      const step4Payload: Partial<Step4FormData> = {
+        budget_mode: budgetMode,
+        quick_total_cultivation_cost_lkr: quickCostInput,
+        detailed_expenses: detailedExpenses,
+      };
 
-      setCostError(validation.errors.total_cultivation_cost_lkr);
-      setCostWarning(validation.warnings?.total_cultivation_cost_lkr);
+      const validation = validateStep4(step4Payload);
 
-      if (!validation.isValid) {
-        setIsStep4Saved(false);
-        costInputRef.current?.focus();
-        costInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-        return;
+      if (budgetMode === "detailed") {
+        setDetailedErrors(validation.errors.detailed_expenses || {});
+        setDetailedWarning(validation.warnings?.total_cultivation_cost_lkr);
+
+        if (!validation.isValid) {
+          setIsStep4Saved(false);
+          // Find first invalid detailed field and focus it accessibly
+          const firstErrKey = DETAILED_EXPENSE_CATEGORIES.find(
+            (c) => validation.errors.detailed_expenses?.[c.key]
+          )?.key;
+          if (firstErrKey && detailedInputRefs.current[firstErrKey]) {
+            detailedInputRefs.current[firstErrKey]?.focus();
+            detailedInputRefs.current[firstErrKey]?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+          return;
+        }
+      } else {
+        setQuickCostError(validation.errors.quick_total_cultivation_cost_lkr);
+        setQuickCostWarning(validation.warnings?.total_cultivation_cost_lkr);
+
+        if (!validation.isValid) {
+          setIsStep4Saved(false);
+          costInputRef.current?.focus();
+          costInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
       }
 
-      // 3. Persist valid cost preserving decimal precision
-      saveValidatedStep4ToStorage({
-        total_cultivation_cost_lkr: costInput,
-      });
+      // 3. Persist valid selections preserving mode isolation and decimal precision
+      saveValidatedStep4ToStorage(step4Payload);
       setIsStep4Saved(true);
     } finally {
       setIsSubmitting(false);
@@ -247,9 +360,13 @@ export default function CultivationCostsPage() {
     );
   }
 
-  // Parse numeric amount for live preview if valid
-  const parsedCost = parseFloat(costInput);
-  const isNumberValid = !Number.isNaN(parsedCost) && Number.isFinite(parsedCost) && parsedCost >= 0;
+  // Active effective total for display and status
+  const effectiveTotalNumber =
+    budgetMode === "detailed"
+      ? detailedCalculation.totalCultivationCost
+      : parseFloat(quickCostInput) || 0;
+
+  const isQuickNumberValid = !Number.isNaN(parseFloat(quickCostInput)) && parseFloat(quickCostInput) >= 0;
 
   return (
     <div className="w-full max-w-5xl mx-auto pb-16 space-y-8">
@@ -265,7 +382,7 @@ export default function CultivationCostsPage() {
             Cultivation Costs
           </h1>
           <p className="text-sm text-slate-600 mt-1 max-w-2xl">
-            Enter your planned cultivation expenses. This cost is used to determine your breakeven price and profit margin.
+            Choose between a Quick Budget (single total) or a Detailed Budget (itemized expenses). This cost is used to determine your breakeven price and profit margin.
           </p>
         </div>
 
@@ -381,104 +498,335 @@ export default function CultivationCostsPage() {
         </div>
       </div>
 
-      {/* QUICK CULTIVATION BUDGET FORM */}
-      <form onSubmit={handleFormSubmit} className="space-y-6">
-        <div className="bg-white rounded-2xl border-2 border-emerald-500/20 p-6 sm:p-8 shadow-xs space-y-6">
-          {/* Section Header */}
-          <div className="flex items-start gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0 shadow-2xs">
-              <Coins className="h-6 w-6" />
+      {/* BUDGET MODE SELECTION (Quick vs Detailed) */}
+      <div className="space-y-3">
+        <label className="block text-sm font-bold text-slate-800">
+          Select Budget Entry Method
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Quick Budget Mode Option */}
+          <div
+            role="radio"
+            aria-checked={budgetMode === "quick"}
+            tabIndex={0}
+            onClick={() => handleModeChange("quick")}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                handleModeChange("quick");
+              }
+            }}
+            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-3.5 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 ${
+              budgetMode === "quick"
+                ? "border-[#15803d] bg-emerald-50/60 ring-2 ring-emerald-500/20 shadow-xs"
+                : "border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50/60"
+            }`}
+          >
+            <div
+              className={`h-5 w-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
+                budgetMode === "quick"
+                  ? "border-[#15803d] bg-[#15803d]"
+                  : "border-slate-300 bg-white"
+              }`}
+            >
+              {budgetMode === "quick" && <div className="h-2 w-2 rounded-full bg-white" />}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                Quick Cultivation Budget
-              </h2>
-              <p className="text-sm text-slate-600 mt-0.5 leading-relaxed">
-                Provide your overall estimated cultivation expenditure to evaluate profitability and financial risk.
+              <div className="flex items-center gap-2">
+                <Coins className="h-4 w-4 text-[#15803d]" />
+                <span className="text-sm font-bold text-slate-900">Quick Budget</span>
+                {budgetMode === "quick" && (
+                  <span className="text-[10px] font-extrabold uppercase tracking-wide bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-full">
+                    Active
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Enter one lump-sum total cultivation expenditure for fast evaluation.
               </p>
             </div>
           </div>
 
-          {/* Cultivation Cost Input Field */}
-          <div className="space-y-2.5 pt-2">
-            <label
-              htmlFor="total_cultivation_cost_lkr"
-              className="block text-sm font-bold text-slate-800"
+          {/* Detailed Budget Mode Option */}
+          <div
+            role="radio"
+            aria-checked={budgetMode === "detailed"}
+            tabIndex={0}
+            onClick={() => handleModeChange("detailed")}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                handleModeChange("detailed");
+              }
+            }}
+            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-3.5 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 ${
+              budgetMode === "detailed"
+                ? "border-[#15803d] bg-emerald-50/60 ring-2 ring-emerald-500/20 shadow-xs"
+                : "border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50/60"
+            }`}
+          >
+            <div
+              className={`h-5 w-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
+                budgetMode === "detailed"
+                  ? "border-[#15803d] bg-[#15803d]"
+                  : "border-slate-300 bg-white"
+              }`}
             >
-              Total Expected Cultivation Cost (LKR) <span className="text-red-500">*</span>
-            </label>
-
-            <p className="text-xs text-slate-500 leading-normal">
-              Enter the total amount you expect to spend growing and selling your crop.
-            </p>
-
-            <div className="relative max-w-md">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-sm font-bold text-slate-500">
-                Rs.
-              </div>
-              <input
-                ref={costInputRef}
-                id="total_cultivation_cost_lkr"
-                name="total_cultivation_cost_lkr"
-                type="text"
-                inputMode="decimal"
-                value={costInput}
-                onChange={handleCostChange}
-                placeholder="150000"
-                aria-invalid={Boolean(costError)}
-                aria-describedby="cost-helper-text cost-error cost-warning"
-                className={`w-full pl-12 pr-4 py-3.5 rounded-xl border-2 font-semibold text-slate-900 text-base shadow-2xs focus:outline-hidden transition-all ${
-                  costError
-                    ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-2 focus:ring-red-200"
-                    : "border-slate-300 bg-white focus:border-[#15803d] focus:ring-2 focus:ring-emerald-100"
-                }`}
-              />
+              {budgetMode === "detailed" && <div className="h-2 w-2 rounded-full bg-white" />}
             </div>
-
-            {/* Error Message */}
-            {costError && (
-              <div
-                id="cost-error"
-                role="alert"
-                className="flex items-center gap-2 text-xs font-semibold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200 max-w-md animate-in fade-in duration-200"
-              >
-                <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
-                <span>{costError}</span>
-              </div>
-            )}
-
-            {/* Zero-Cost Warning Banner */}
-            {costWarning && !costError && (
-              <div
-                id="cost-warning"
-                role="alert"
-                className="flex items-start gap-2.5 text-xs font-medium text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200 max-w-md animate-in fade-in duration-200"
-              >
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-                <span>{costWarning}</span>
-              </div>
-            )}
-
-            {/* Live Currency Preview */}
-            {isNumberValid && parsedCost > 0 && !costError && (
-              <div className="text-xs font-semibold text-[#15803d] flex items-center gap-1.5 pt-1">
-                <Check className="h-3.5 w-3.5" />
-                <span>Amount: {formatLKR(parsedCost)}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Farmer Advisory Note */}
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 leading-relaxed">
-            <Info className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-slate-800">What does cultivation cost typically include?</p>
-              <p className="mt-0.5 text-slate-500">
-                Common farming expenses include land preparation, seeds/nursery plants, fertilizers, pest control, irrigation fuel/electricity, labor for weeding and harvesting, and transport to the economic centre.
+              <div className="flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-[#15803d]" />
+                <span className="text-sm font-bold text-slate-900">Detailed Budget</span>
+                {budgetMode === "detailed" && (
+                  <span className="text-[10px] font-extrabold uppercase tracking-wide bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-full">
+                    Active
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Itemize costs across 10 farming categories; the total is calculated automatically.
               </p>
             </div>
           </div>
         </div>
+        <p className="text-[11px] text-slate-400">
+          Switching modes preserves your entered values in both tabs. Only the active mode determines your effective total cultivation cost.
+        </p>
+      </div>
+
+      {/* CULTIVATION BUDGET FORM */}
+      <form onSubmit={handleFormSubmit} className="space-y-6">
+        {/* ================================================================= */}
+        {/* OPTION A: QUICK BUDGET SECTION */}
+        {/* ================================================================= */}
+        {budgetMode === "quick" && (
+          <div className="bg-white rounded-2xl border-2 border-emerald-500/20 p-6 sm:p-8 shadow-xs space-y-6 animate-in fade-in duration-200">
+            {/* Section Header */}
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0 shadow-2xs">
+                <Coins className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                  Quick Cultivation Budget
+                </h2>
+                <p className="text-sm text-slate-600 mt-0.5 leading-relaxed">
+                  Provide your overall estimated cultivation expenditure to evaluate profitability and financial risk.
+                </p>
+              </div>
+            </div>
+
+            {/* Cultivation Cost Input Field */}
+            <div className="space-y-2.5 pt-2">
+              <label
+                htmlFor="total_cultivation_cost_lkr"
+                className="block text-sm font-bold text-slate-800"
+              >
+                Total Expected Cultivation Cost (LKR) <span className="text-red-500">*</span>
+              </label>
+
+              <p className="text-xs text-slate-500 leading-normal">
+                Enter the total amount you expect to spend growing and selling your crop.
+              </p>
+
+              <div className="relative max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-sm font-bold text-slate-500">
+                  Rs.
+                </div>
+                <input
+                  ref={costInputRef}
+                  id="total_cultivation_cost_lkr"
+                  name="total_cultivation_cost_lkr"
+                  type="text"
+                  inputMode="decimal"
+                  value={quickCostInput}
+                  onChange={handleQuickCostChange}
+                  placeholder="150000"
+                  aria-invalid={Boolean(quickCostError)}
+                  aria-describedby="cost-helper-text cost-error cost-warning"
+                  className={`w-full pl-12 pr-4 py-3.5 rounded-xl border-2 font-semibold text-slate-900 text-base shadow-2xs focus:outline-hidden transition-all ${
+                    quickCostError
+                      ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                      : "border-slate-300 bg-white focus:border-[#15803d] focus:ring-2 focus:ring-emerald-100"
+                  }`}
+                />
+              </div>
+
+              {/* Error Message */}
+              {quickCostError && (
+                <div
+                  id="cost-error"
+                  role="alert"
+                  className="flex items-center gap-2 text-xs font-semibold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200 max-w-md animate-in fade-in duration-200"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                  <span>{quickCostError}</span>
+                </div>
+              )}
+
+              {/* Zero-Cost Warning Banner */}
+              {quickCostWarning && !quickCostError && (
+                <div
+                  id="cost-warning"
+                  role="alert"
+                  className="flex items-start gap-2.5 text-xs font-medium text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200 max-w-md animate-in fade-in duration-200"
+                >
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                  <span>{quickCostWarning}</span>
+                </div>
+              )}
+
+              {/* Live Currency Preview */}
+              {isQuickNumberValid && parseFloat(quickCostInput) > 0 && !quickCostError && (
+                <div className="text-xs font-semibold text-[#15803d] flex items-center gap-1.5 pt-1">
+                  <Check className="h-3.5 w-3.5" />
+                  <span>Amount: {formatLKR(parseFloat(quickCostInput))}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Farmer Advisory Note */}
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 leading-relaxed">
+              <Info className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-slate-800">What does cultivation cost typically include?</p>
+                <p className="mt-0.5 text-slate-500">
+                  Common farming expenses include land preparation, seeds/nursery plants, fertilizers, pest control, irrigation fuel/electricity, labor for weeding and harvesting, and transport to the economic centre.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* OPTION B: DETAILED BUDGET SECTION */}
+        {/* ================================================================= */}
+        {budgetMode === "detailed" && (
+          <div className="bg-white rounded-2xl border-2 border-emerald-500/20 p-6 sm:p-8 shadow-xs space-y-6 animate-in fade-in duration-200">
+            {/* Section Header */}
+            <div className="flex items-start justify-between flex-wrap gap-4">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0 shadow-2xs">
+                  <Receipt className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                    Detailed Cultivation Budget
+                  </h2>
+                  <p className="text-sm text-slate-600 mt-0.5 leading-relaxed">
+                    Enter your planned expenditure for each farming category below. Empty fields are treated as Rs. 0.
+                  </p>
+                </div>
+              </div>
+
+              {/* Running Total Badge */}
+              <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl px-5 py-3 text-right">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                  Calculated Total Cost
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-[#15803d]">
+                  {formatLKR(detailedCalculation.totalCultivationCost)}
+                </div>
+                <div className="text-[10px] text-emerald-700">
+                  From {detailedCalculation.nonZeroCount} active categories
+                </div>
+              </div>
+            </div>
+
+            {/* Detailed Expense Category Inputs Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              {DETAILED_EXPENSE_CATEGORIES.map((cat) => {
+                const val = detailedExpenses[cat.key];
+                const err = detailedErrors[cat.key];
+                const hasValue = val !== "" && !Number.isNaN(parseFloat(val)) && parseFloat(val) > 0;
+
+                return (
+                  <div
+                    key={cat.key}
+                    className={`p-4 rounded-xl border transition-all ${
+                      err
+                        ? "border-red-300 bg-red-50/20"
+                        : hasValue
+                        ? "border-emerald-200 bg-emerald-50/20"
+                        : "border-slate-200 bg-slate-50/40 hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <label
+                        htmlFor={`detailed_expense_${cat.key}`}
+                        className="text-xs font-bold text-slate-800"
+                      >
+                        {cat.label}
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-medium">LKR</span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 mb-2 leading-tight">
+                      {cat.helperText}
+                    </p>
+
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-xs font-bold text-slate-400">
+                        Rs.
+                      </div>
+                      <input
+                        ref={(el) => {
+                          detailedInputRefs.current[cat.key] = el;
+                        }}
+                        id={`detailed_expense_${cat.key}`}
+                        name={`detailed_expense_${cat.key}`}
+                        type="text"
+                        inputMode="decimal"
+                        value={val}
+                        onChange={(e) => handleDetailedFieldChange(cat.key, e.target.value)}
+                        placeholder={cat.placeholder}
+                        aria-invalid={Boolean(err)}
+                        className={`w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm font-semibold text-slate-900 shadow-2xs focus:outline-hidden transition-all ${
+                          err
+                            ? "border-red-400 bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                            : "border-slate-300 bg-white focus:border-[#15803d] focus:ring-2 focus:ring-emerald-100"
+                        }`}
+                      />
+                    </div>
+
+                    {/* Field Error Message */}
+                    {err && (
+                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-red-600 mt-1.5">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                        <span>{err}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Zero-Cost Warning Banner for Detailed Budget */}
+            {detailedWarning && Object.keys(detailedErrors).length === 0 && (
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 text-xs font-medium text-amber-800 bg-amber-50 p-3.5 rounded-xl border border-amber-200 animate-in fade-in duration-200"
+              >
+                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                <span>{detailedWarning}</span>
+              </div>
+            )}
+
+            {/* Calculation Provenance Banner */}
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 leading-relaxed">
+              <Calculator className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-slate-800">
+                  Transparent, Farmer-Driven Budget Calculation
+                </p>
+                <p className="mt-0.5 text-slate-500">
+                  The total above is calculated automatically as the exact sum of your entered categories. AgroDecision does not use invented cost benchmarks or AI-generated expense values.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Confirmation Status Badge if Saved */}
         {isStep4Saved && (
@@ -488,9 +836,11 @@ export default function CultivationCostsPage() {
                 <Check className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold">Cultivation Budget Saved</h4>
+                <h4 className="text-sm font-bold">
+                  Cultivation Budget Saved ({budgetMode === "detailed" ? "Detailed Budget" : "Quick Budget"})
+                </h4>
                 <p className="text-xs text-emerald-700">
-                  Total expected expenditure: {formatLKR(parseFloat(costInput) || 0)}. All 4 wizard steps are now complete!
+                  Effective cultivation cost: {formatLKR(effectiveTotalNumber)}. All 4 wizard steps are complete and ready for analysis!
                 </p>
               </div>
             </div>

@@ -811,22 +811,328 @@ export function clearStep3Storage(): void {
 }
 
 // ============================================================================
-// Step 4: Cultivation Costs (Quick Cultivation Budget)
+// Step 4: Cultivation Costs (Quick & Detailed Cultivation Budget)
 // ============================================================================
 
+export type BudgetMode = "quick" | "detailed";
+
+export interface DetailedExpensesData {
+  seeds: string;
+  fertilizer: string;
+  pesticides: string;
+  labour: string;
+  irrigation: string;
+  harvesting: string;
+  packaging: string;
+  transportation: string;
+  market_commission: string;
+  other_expenses: string;
+}
+
+export type DetailedExpenseKey = keyof DetailedExpensesData;
+
+export interface DetailedExpenseCategoryItem {
+  key: DetailedExpenseKey;
+  label: string;
+  helperText: string;
+  placeholder: string;
+}
+
+export const DETAILED_EXPENSE_CATEGORIES: DetailedExpenseCategoryItem[] = [
+  {
+    key: "seeds",
+    label: "Seeds / Planting Material",
+    helperText: "Certified seeds, seedlings, or nursery preparation",
+    placeholder: "15000",
+  },
+  {
+    key: "fertilizer",
+    label: "Fertilizer & Soil Nutrition",
+    helperText: "Basal, top-dressing fertilizers, compost, or manure",
+    placeholder: "25000",
+  },
+  {
+    key: "pesticides",
+    label: "Pesticides & Crop Protection",
+    helperText: "Insecticides, fungicides, weedicides, or crop protectors",
+    placeholder: "12000",
+  },
+  {
+    key: "labour",
+    label: "Labour & Field Operations",
+    helperText: "Land preparation, ploughing, planting, weeding, and tending",
+    placeholder: "45000",
+  },
+  {
+    key: "irrigation",
+    label: "Irrigation & Water Management",
+    helperText: "Pumping fuel, electricity, water bowsers, or canal fees",
+    placeholder: "10000",
+  },
+  {
+    key: "harvesting",
+    label: "Harvesting Labour & Machinery",
+    helperText: "Labour or machinery specifically for crop picking and harvesting",
+    placeholder: "20000",
+  },
+  {
+    key: "packaging",
+    label: "Packaging & Bagging",
+    helperText: "Gunny sacks, plastic crates, netting, or cardboard boxes",
+    placeholder: "8000",
+  },
+  {
+    key: "transportation",
+    label: "Transportation to Market",
+    helperText: "Lorry, tractor, or three-wheeler hire to the economic centre",
+    placeholder: "15000",
+  },
+  {
+    key: "market_commission",
+    label: "Market Commission & DEC Fees",
+    helperText: "Dedicated Economic Centre floor fees, unloaders, or trade fees",
+    placeholder: "5000",
+  },
+  {
+    key: "other_expenses",
+    label: "Other Miscellaneous Expenses",
+    helperText: "Minor tools, equipment maintenance, and farming contingencies",
+    placeholder: "5000",
+  },
+];
+
+export function createDefaultDetailedExpenses(): DetailedExpensesData {
+  return {
+    seeds: "",
+    fertilizer: "",
+    pesticides: "",
+    labour: "",
+    irrigation: "",
+    harvesting: "",
+    packaging: "",
+    transportation: "",
+    market_commission: "",
+    other_expenses: "",
+  };
+}
+
+/**
+ * Safely sums an array of decimal strings without floating-point rounding errors.
+ * Preserves decimal accuracy by scaling numbers to exact integer units.
+ */
+export function safeSumDecimalStrings(strings: string[]): { sumNumber: number; sumString: string } {
+  const validStrings = strings
+    .map((s) => s.trim())
+    .filter((s) => s !== "");
+
+  if (validStrings.length === 0) {
+    return { sumNumber: 0, sumString: "0" };
+  }
+
+  let maxDecimals = 0;
+  for (const s of validStrings) {
+    const dotIndex = s.indexOf(".");
+    if (dotIndex !== -1) {
+      const decLen = s.length - dotIndex - 1;
+      if (decLen > maxDecimals) {
+        maxDecimals = decLen;
+      }
+    }
+  }
+
+  let totalScaled = BigInt(0);
+  for (const s of validStrings) {
+    const num = Number(s);
+    if (!Number.isFinite(num) || Number.isNaN(num)) {
+      continue;
+    }
+    const [intPart, fracPart = ""] = s.split(".");
+    const paddedFrac = fracPart.padEnd(maxDecimals, "0").slice(0, maxDecimals);
+    const combined = `${intPart.replace(/^-/, "")}${paddedFrac}`;
+    const val = BigInt(combined === "" ? "0" : combined);
+    if (s.startsWith("-")) {
+      totalScaled -= val;
+    } else {
+      totalScaled += val;
+    }
+  }
+
+  if (maxDecimals === 0) {
+    const str = totalScaled.toString();
+    return { sumNumber: Number(str), sumString: str };
+  }
+
+  const isNeg = totalScaled < BigInt(0);
+  const absVal = isNeg ? -totalScaled : totalScaled;
+  const absStr = absVal.toString().padStart(maxDecimals + 1, "0");
+  const intStr = absStr.slice(0, -maxDecimals) || "0";
+  let fracStr = absStr.slice(-maxDecimals);
+
+  fracStr = fracStr.replace(/0+$/, "");
+  const resultStr = (isNeg ? "-" : "") + (fracStr ? `${intStr}.${fracStr}` : intStr);
+  return { sumNumber: Number(resultStr), sumString: resultStr };
+}
+
+/**
+ * Calculates the total cultivation cost across all detailed expense categories.
+ * Treats empty optional expense fields as zero for total calculation.
+ * Preserves decimal precision and prevents double counting.
+ */
+export function calculateDetailedCultivationTotal(
+  expenses: Partial<DetailedExpensesData>
+): {
+  totalCultivationCost: number;
+  totalString: string;
+  isZeroCost: boolean;
+  hasAnyEnteredValue: boolean;
+  nonZeroCount: number;
+} {
+  const values: string[] = [];
+  let nonZeroCount = 0;
+  let hasAnyEnteredValue = false;
+
+  for (const cat of DETAILED_EXPENSE_CATEGORIES) {
+    const raw = expenses[cat.key];
+    if (raw !== undefined && raw !== null && String(raw).trim() !== "") {
+      hasAnyEnteredValue = true;
+      const str = String(raw).trim();
+      values.push(str);
+      const num = Number(str);
+      if (Number.isFinite(num) && num > 0) {
+        nonZeroCount++;
+      }
+    }
+  }
+
+  const { sumNumber, sumString } = safeSumDecimalStrings(values);
+  const isZero = sumNumber === 0;
+
+  return {
+    totalCultivationCost: sumNumber,
+    totalString: sumString,
+    isZeroCost: isZero,
+    hasAnyEnteredValue,
+    nonZeroCount,
+  };
+}
+
+/**
+ * Validates a single detailed expense category field.
+ * Empty or whitespace is treated as valid (optional, treated as 0 in total).
+ * Non-empty must be numeric and non-negative.
+ */
+export function validateDetailedExpenseField(
+  categoryKey: DetailedExpenseKey,
+  value: string | number | undefined | null
+): {
+  isValid: boolean;
+  error?: string;
+  parsedValue: number;
+  isEmpty: boolean;
+} {
+  const catMeta = DETAILED_EXPENSE_CATEGORIES.find((c) => c.key === categoryKey);
+  const label = catMeta ? catMeta.label : categoryKey;
+
+  if (value === undefined || value === null) {
+    return { isValid: true, parsedValue: 0, isEmpty: true };
+  }
+
+  const str = String(value).trim();
+  if (str === "") {
+    return { isValid: true, parsedValue: 0, isEmpty: true };
+  }
+
+  const num = Number(str);
+  if (!Number.isFinite(num) || Number.isNaN(num)) {
+    return {
+      isValid: false,
+      error: `${label} must be a valid numeric amount in LKR.`,
+      parsedValue: 0,
+      isEmpty: false,
+    };
+  }
+
+  if (num < 0) {
+    return {
+      isValid: false,
+      error: `${label} cannot be negative. Please enter 0 or a positive amount.`,
+      parsedValue: num,
+      isEmpty: false,
+    };
+  }
+
+  return {
+    isValid: true,
+    parsedValue: num,
+    isEmpty: false,
+  };
+}
+
+export interface DetailedExpensesValidationResult {
+  isValid: boolean;
+  errors: Partial<Record<DetailedExpenseKey, string>>;
+  totalCultivationCost: number;
+  totalString: string;
+  isZeroCost: boolean;
+  warning?: string;
+}
+
+/**
+ * Validates all 10 detailed expense categories.
+ * Collects field-specific errors without silently accepting malformed values.
+ */
+export function validateDetailedExpenses(
+  expenses: Partial<DetailedExpensesData>
+): DetailedExpensesValidationResult {
+  const errors: Partial<Record<DetailedExpenseKey, string>> = {};
+
+  for (const cat of DETAILED_EXPENSE_CATEGORIES) {
+    const raw = expenses[cat.key];
+    const fieldVal = validateDetailedExpenseField(cat.key, raw);
+    if (!fieldVal.isValid && fieldVal.error) {
+      errors[cat.key] = fieldVal.error;
+    }
+  }
+
+  const calc = calculateDetailedCultivationTotal(expenses);
+  const isValid = Object.keys(errors).length === 0;
+
+  const warning =
+    isValid && calc.isZeroCost
+      ? "Cultivation cost is set to Rs. 0. Profit percentage and risk evaluation may be unavailable when cost is zero."
+      : undefined;
+
+  return {
+    isValid,
+    errors,
+    totalCultivationCost: calc.totalCultivationCost,
+    totalString: calc.totalString,
+    isZeroCost: calc.isZeroCost,
+    warning,
+  };
+}
+
 export interface Step4FormData {
-  total_cultivation_cost_lkr: string; // Numeric string preserving farmer's exact decimal input (e.g. "150000" or "25000.50")
+  budget_mode: BudgetMode;
+  quick_total_cultivation_cost_lkr: string; // Numeric string preserving farmer's exact decimal input (e.g. "150000")
+  detailed_expenses: DetailedExpensesData;
+  effective_total_cultivation_cost_lkr: string;
+  total_cultivation_cost_lkr: string; // Backward compatibility alias
 }
 
 export interface Step4ValidationResult {
   isValid: boolean;
+  budget_mode: BudgetMode;
   errors: {
     total_cultivation_cost_lkr?: string;
+    quick_total_cultivation_cost_lkr?: string;
+    detailed_expenses?: Partial<Record<DetailedExpenseKey, string>>;
   };
   warnings?: {
     total_cultivation_cost_lkr?: string;
   };
   parsedCost?: number;
+  effectiveTotalString: string;
   isZeroCost?: boolean;
 }
 
@@ -836,7 +1142,7 @@ export const STEP4_STORAGE_KEY = "agrodecision_wizard_step4";
  * Validates the total expected cultivation cost in Sri Lankan Rupees (LKR).
  * Requirements:
  * 1. Numeric input supporting positive decimal values.
- * 2. Required field.
+ * 2. Required field for Quick Budget mode.
  * 3. Rejects missing, negative, non-numeric, NaN, and Infinity values.
  * 4. Allows zero as a valid numeric input, but displays a clear warning that
  *    profit percentage and risk evaluation may be unavailable when cost is zero.
@@ -899,26 +1205,62 @@ export function validateCultivationCost(
 }
 
 /**
- * Validates Step 4 form input (Total Expected Cultivation Cost).
+ * Validates Step 4 form input based on the active budget mode.
+ * - In Quick Budget mode: validates total_cultivation_cost_lkr / quick_total_cultivation_cost_lkr.
+ * - In Detailed Budget mode: validates all 10 detailed expense categories and calculates total automatically.
  */
 export function validateStep4(data: Partial<Step4FormData>): Step4ValidationResult {
-  const costVal = validateCultivationCost(data.total_cultivation_cost_lkr);
-  const errors: { total_cultivation_cost_lkr?: string } = {};
-  const warnings: { total_cultivation_cost_lkr?: string } = {};
+  const mode: BudgetMode = data.budget_mode === "detailed" ? "detailed" : "quick";
 
-  if (!costVal.isValid) {
-    errors.total_cultivation_cost_lkr = costVal.error;
-  } else if (costVal.warning) {
-    warnings.total_cultivation_cost_lkr = costVal.warning;
+  if (mode === "detailed") {
+    const detailed = data.detailed_expenses || createDefaultDetailedExpenses();
+    const detailedVal = validateDetailedExpenses(detailed);
+
+    const errors: Step4ValidationResult["errors"] = {};
+    if (!detailedVal.isValid) {
+      errors.detailed_expenses = detailedVal.errors;
+      errors.total_cultivation_cost_lkr = "Please correct the invalid expense entries.";
+    }
+
+    const warnings: { total_cultivation_cost_lkr?: string } = {};
+    if (detailedVal.warning) {
+      warnings.total_cultivation_cost_lkr = detailedVal.warning;
+    }
+
+    return {
+      isValid: detailedVal.isValid,
+      budget_mode: "detailed",
+      errors,
+      warnings: Object.keys(warnings).length > 0 ? warnings : undefined,
+      parsedCost: detailedVal.totalCultivationCost,
+      effectiveTotalString: detailedVal.totalString,
+      isZeroCost: detailedVal.isZeroCost,
+    };
+  } else {
+    // Quick Budget mode (default)
+    const costInput = data.quick_total_cultivation_cost_lkr ?? data.total_cultivation_cost_lkr;
+    const costVal = validateCultivationCost(costInput);
+
+    const errors: Step4ValidationResult["errors"] = {};
+    const warnings: { total_cultivation_cost_lkr?: string } = {};
+
+    if (!costVal.isValid) {
+      errors.total_cultivation_cost_lkr = costVal.error;
+      errors.quick_total_cultivation_cost_lkr = costVal.error;
+    } else if (costVal.warning) {
+      warnings.total_cultivation_cost_lkr = costVal.warning;
+    }
+
+    return {
+      isValid: costVal.isValid,
+      budget_mode: "quick",
+      errors,
+      warnings: Object.keys(warnings).length > 0 ? warnings : undefined,
+      parsedCost: costVal.parsedValue,
+      effectiveTotalString: costVal.isValid && costInput ? String(costInput).trim() : "0",
+      isZeroCost: costVal.isZeroCost,
+    };
   }
-
-  return {
-    isValid: costVal.isValid,
-    errors,
-    warnings: Object.keys(warnings).length > 0 ? warnings : undefined,
-    parsedCost: costVal.parsedValue,
-    isZeroCost: costVal.isZeroCost,
-  };
 }
 
 /**
@@ -930,50 +1272,119 @@ export function isStep4Complete(data: Partial<Step4FormData>): boolean {
 
 /**
  * Safely reads Step 4 state from browser session storage.
+ * Maintains backward compatibility with older single-field records.
  */
 export function loadStep4FromStorage(): Step4FormData {
   if (typeof window === "undefined") {
-    return { total_cultivation_cost_lkr: "" };
+    return {
+      budget_mode: "quick",
+      quick_total_cultivation_cost_lkr: "",
+      detailed_expenses: createDefaultDetailedExpenses(),
+      effective_total_cultivation_cost_lkr: "",
+      total_cultivation_cost_lkr: "",
+    };
   }
 
   try {
     const stored = window.sessionStorage.getItem(STEP4_STORAGE_KEY);
     if (!stored) {
-      return { total_cultivation_cost_lkr: "" };
+      return {
+        budget_mode: "quick",
+        quick_total_cultivation_cost_lkr: "",
+        detailed_expenses: createDefaultDetailedExpenses(),
+        effective_total_cultivation_cost_lkr: "",
+        total_cultivation_cost_lkr: "",
+      };
     }
     const parsed = JSON.parse(stored);
-    const rawCost =
-      typeof parsed.total_cultivation_cost_lkr === "string"
+
+    const budgetMode: BudgetMode =
+      parsed.budget_mode === "detailed" ? "detailed" : "quick";
+
+    const quickCost =
+      typeof parsed.quick_total_cultivation_cost_lkr === "string"
+        ? parsed.quick_total_cultivation_cost_lkr
+        : typeof parsed.total_cultivation_cost_lkr === "string"
         ? parsed.total_cultivation_cost_lkr
         : typeof parsed.total_cultivation_cost_lkr === "number"
         ? String(parsed.total_cultivation_cost_lkr)
         : "";
 
+    const storedDetailed =
+      typeof parsed.detailed_expenses === "object" && parsed.detailed_expenses !== null
+        ? parsed.detailed_expenses
+        : {};
+
+    const detailedExpenses: DetailedExpensesData = {
+      seeds: typeof storedDetailed.seeds === "string" ? storedDetailed.seeds : "",
+      fertilizer: typeof storedDetailed.fertilizer === "string" ? storedDetailed.fertilizer : "",
+      pesticides: typeof storedDetailed.pesticides === "string" ? storedDetailed.pesticides : "",
+      labour: typeof storedDetailed.labour === "string" ? storedDetailed.labour : "",
+      irrigation: typeof storedDetailed.irrigation === "string" ? storedDetailed.irrigation : "",
+      harvesting: typeof storedDetailed.harvesting === "string" ? storedDetailed.harvesting : "",
+      packaging: typeof storedDetailed.packaging === "string" ? storedDetailed.packaging : "",
+      transportation: typeof storedDetailed.transportation === "string" ? storedDetailed.transportation : "",
+      market_commission: typeof storedDetailed.market_commission === "string" ? storedDetailed.market_commission : "",
+      other_expenses: typeof storedDetailed.other_expenses === "string" ? storedDetailed.other_expenses : "",
+    };
+
+    const detailedSum = calculateDetailedCultivationTotal(detailedExpenses).totalString;
+    const effectiveTotal = budgetMode === "detailed" ? detailedSum : quickCost;
+
     return {
-      total_cultivation_cost_lkr: rawCost,
+      budget_mode: budgetMode,
+      quick_total_cultivation_cost_lkr: quickCost,
+      detailed_expenses: detailedExpenses,
+      effective_total_cultivation_cost_lkr: effectiveTotal,
+      total_cultivation_cost_lkr: effectiveTotal,
     };
   } catch {
-    return { total_cultivation_cost_lkr: "" };
+    return {
+      budget_mode: "quick",
+      quick_total_cultivation_cost_lkr: "",
+      detailed_expenses: createDefaultDetailedExpenses(),
+      effective_total_cultivation_cost_lkr: "",
+      total_cultivation_cost_lkr: "",
+    };
   }
 }
 
 /**
  * Safely saves Step 4 state into browser session storage.
+ * Preserves both Quick and Detailed mode values independently without adding them together.
  */
-export function saveStep4ToStorage(data: Step4FormData): void {
+export function saveStep4ToStorage(data: Partial<Step4FormData>): void {
   if (typeof window === "undefined") return;
 
   try {
-    const rawCost =
-      typeof data.total_cultivation_cost_lkr === "string"
-        ? data.total_cultivation_cost_lkr.trim()
-        : typeof data.total_cultivation_cost_lkr === "number"
-        ? String(data.total_cultivation_cost_lkr)
-        : "";
+    const budgetMode: BudgetMode = data.budget_mode === "detailed" ? "detailed" : "quick";
+    const quickCost = String(data.quick_total_cultivation_cost_lkr ?? data.total_cultivation_cost_lkr ?? "").trim();
+    const detailed = data.detailed_expenses || createDefaultDetailedExpenses();
+
+    const detailedExpenses: DetailedExpensesData = {
+      seeds: String(detailed.seeds ?? "").trim(),
+      fertilizer: String(detailed.fertilizer ?? "").trim(),
+      pesticides: String(detailed.pesticides ?? "").trim(),
+      labour: String(detailed.labour ?? "").trim(),
+      irrigation: String(detailed.irrigation ?? "").trim(),
+      harvesting: String(detailed.harvesting ?? "").trim(),
+      packaging: String(detailed.packaging ?? "").trim(),
+      transportation: String(detailed.transportation ?? "").trim(),
+      market_commission: String(detailed.market_commission ?? "").trim(),
+      other_expenses: String(detailed.other_expenses ?? "").trim(),
+    };
+
+    const detailedSum = calculateDetailedCultivationTotal(detailedExpenses).totalString;
+    const effectiveTotal = budgetMode === "detailed" ? detailedSum : quickCost;
 
     const payload = {
-      total_cultivation_cost_lkr: rawCost,
+      budget_mode: budgetMode,
+      quick_total_cultivation_cost_lkr: quickCost,
+      detailed_expenses: detailedExpenses,
+      effective_total_cultivation_cost_lkr: effectiveTotal,
+      total_cultivation_cost_lkr: effectiveTotal,
     };
+
     window.sessionStorage.setItem(STEP4_STORAGE_KEY, JSON.stringify(payload));
   } catch {
     // Ignore storage quota errors silently
@@ -989,9 +1400,31 @@ export function saveValidatedStep4ToStorage(data: Partial<Step4FormData>): boole
   if (!validation.isValid) {
     return false;
   }
-  const rawCost = String(data.total_cultivation_cost_lkr).trim();
+  const budgetMode: BudgetMode = data.budget_mode === "detailed" ? "detailed" : "quick";
+  const quickCost = String(data.quick_total_cultivation_cost_lkr ?? data.total_cultivation_cost_lkr ?? "").trim();
+  const detailed = data.detailed_expenses || createDefaultDetailedExpenses();
+  const detailedExpenses: DetailedExpensesData = {
+    seeds: String(detailed.seeds ?? "").trim(),
+    fertilizer: String(detailed.fertilizer ?? "").trim(),
+    pesticides: String(detailed.pesticides ?? "").trim(),
+    labour: String(detailed.labour ?? "").trim(),
+    irrigation: String(detailed.irrigation ?? "").trim(),
+    harvesting: String(detailed.harvesting ?? "").trim(),
+    packaging: String(detailed.packaging ?? "").trim(),
+    transportation: String(detailed.transportation ?? "").trim(),
+    market_commission: String(detailed.market_commission ?? "").trim(),
+    other_expenses: String(detailed.other_expenses ?? "").trim(),
+  };
+
+  const detailedSum = calculateDetailedCultivationTotal(detailedExpenses).totalString;
+  const effectiveTotal = budgetMode === "detailed" ? detailedSum : quickCost;
+
   saveStep4ToStorage({
-    total_cultivation_cost_lkr: rawCost,
+    budget_mode: budgetMode,
+    quick_total_cultivation_cost_lkr: quickCost,
+    detailed_expenses: detailedExpenses,
+    effective_total_cultivation_cost_lkr: effectiveTotal,
+    total_cultivation_cost_lkr: effectiveTotal,
   });
   return true;
 }

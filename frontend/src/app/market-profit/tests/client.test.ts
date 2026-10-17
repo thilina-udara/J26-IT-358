@@ -70,6 +70,15 @@ import {
   STEP4_STORAGE_KEY,
   type Step4FormData,
   type Step4ValidationResult,
+  type BudgetMode,
+  type DetailedExpensesData,
+  type DetailedExpenseKey,
+  DETAILED_EXPENSE_CATEGORIES,
+  createDefaultDetailedExpenses,
+  safeSumDecimalStrings,
+  calculateDetailedCultivationTotal,
+  validateDetailedExpenseField,
+  validateDetailedExpenses,
 } from "../lib/wizard";
 
 import type {
@@ -1879,6 +1888,274 @@ test("Wizard Step 4: checkPreviousStepsForStep4 identifies earliest incomplete s
   assert.equal(resMissingPriceType.earliestIncompleteStep, 3);
   assert.equal(resMissingPriceType.redirectTarget, "/market-profit/new-analysis/selling-market");
 });
+
+// ============================================================================
+// Wizard Step 4: Detailed Cultivation Budget Tests
+// ============================================================================
+
+test("Wizard Step 4 Detailed Budget: safeSumDecimalStrings avoids floating-point drift", () => {
+  // Classic JS floating point hazard: 0.1 + 0.2 = 0.30000000000000004
+  const r1 = safeSumDecimalStrings(["0.1", "0.2"]);
+  assert.equal(r1.sumString, "0.3");
+  assert.equal(r1.sumNumber, 0.3);
+
+  // Currency cents summation
+  const r2 = safeSumDecimalStrings(["10000.25", "25000.50", "4500.25"]);
+  assert.equal(r2.sumString, "39501");
+  assert.equal(r2.sumNumber, 39501);
+
+  // Mixed decimal precision
+  const r3 = safeSumDecimalStrings(["12.5", "8.25", "0.125"]);
+  assert.equal(r3.sumString, "20.875");
+  assert.equal(r3.sumNumber, 20.875);
+
+  // Empty or whitespace strings treated as zero
+  const r4 = safeSumDecimalStrings(["", "   ", "5000", ""]);
+  assert.equal(r4.sumString, "5000");
+  assert.equal(r4.sumNumber, 5000);
+
+  // All empty strings
+  const r5 = safeSumDecimalStrings([]);
+  assert.equal(r5.sumString, "0");
+  assert.equal(r5.sumNumber, 0);
+});
+
+test("Wizard Step 4 Detailed Budget: Correct sum across all 10 expense categories", () => {
+  const fullDetailed: DetailedExpensesData = {
+    seeds: "15000",
+    fertilizer: "25000",
+    pesticides: "12000",
+    labour: "45000",
+    irrigation: "10000",
+    harvesting: "20000",
+    packaging: "8000",
+    transportation: "15000",
+    market_commission: "5000",
+    other_expenses: "5000",
+  };
+
+  const calc = calculateDetailedCultivationTotal(fullDetailed);
+  // Sum: 15+25+12+45+10+20+8+15+5+5 = 160,000
+  assert.equal(calc.totalCultivationCost, 160000);
+  assert.equal(calc.totalString, "160000");
+  assert.equal(calc.isZeroCost, false);
+  assert.equal(calc.nonZeroCount, 10);
+  assert.equal(calc.hasAnyEnteredValue, true);
+});
+
+test("Wizard Step 4 Detailed Budget: Decimal values and exact precision preservation", () => {
+  const decimalDetailed: Partial<DetailedExpensesData> = {
+    seeds: "12500.50",
+    fertilizer: "18250.75",
+    pesticides: "4500.25",
+  };
+
+  const calc = calculateDetailedCultivationTotal(decimalDetailed);
+  // 12500.50 + 18250.75 + 4500.25 = 35251.50
+  assert.equal(calc.totalCultivationCost, 35251.5);
+  assert.equal(calc.totalString, "35251.5");
+  assert.equal(calc.nonZeroCount, 3);
+});
+
+test("Wizard Step 4 Detailed Budget: Empty optional fields treated as zero for calculation", () => {
+  // Only 2 fields populated, others empty
+  const partialDetailed: Partial<DetailedExpensesData> = {
+    seeds: "10000",
+    labour: "20000",
+    fertilizer: "",
+    pesticides: "   ",
+  };
+
+  const calc = calculateDetailedCultivationTotal(partialDetailed);
+  assert.equal(calc.totalCultivationCost, 30000);
+  assert.equal(calc.totalString, "30000");
+  assert.equal(calc.nonZeroCount, 2);
+
+  const validation = validateDetailedExpenses(partialDetailed);
+  assert.equal(validation.isValid, true);
+  assert.equal(Object.keys(validation.errors).length, 0);
+  assert.equal(validation.totalCultivationCost, 30000);
+});
+
+test("Wizard Step 4 Detailed Budget: Zero cost across all categories flags advisory warning", () => {
+  // All empty / zero
+  const emptyDetailed = createDefaultDetailedExpenses();
+  const validation = validateDetailedExpenses(emptyDetailed);
+
+  assert.equal(validation.isValid, true);
+  assert.equal(validation.totalCultivationCost, 0);
+  assert.equal(validation.isZeroCost, true);
+  assert.ok(validation.warning);
+  assert.match(validation.warning, /profit percentage and risk evaluation may be unavailable when cost is zero/i);
+
+  // Explicit zeroes
+  const explicitZeroes: Partial<DetailedExpensesData> = {
+    seeds: "0",
+    fertilizer: "0.00",
+  };
+  const valExplicit = validateDetailedExpenses(explicitZeroes);
+  assert.equal(valExplicit.isValid, true);
+  assert.equal(valExplicit.totalCultivationCost, 0);
+  assert.equal(valExplicit.isZeroCost, true);
+  assert.ok(valExplicit.warning);
+});
+
+test("Wizard Step 4 Detailed Budget: Negative values in any category are rejected with field error", () => {
+  const invalidNegative: Partial<DetailedExpensesData> = {
+    seeds: "15000",
+    fertilizer: "-500",
+    transportation: "-0.50",
+  };
+
+  const validation = validateDetailedExpenses(invalidNegative);
+  assert.equal(validation.isValid, false);
+  assert.equal(validation.errors.seeds, undefined); // seeds is valid
+  assert.ok(validation.errors.fertilizer);
+  assert.match(validation.errors.fertilizer!, /cannot be negative/i);
+  assert.ok(validation.errors.transportation);
+  assert.match(validation.errors.transportation!, /cannot be negative/i);
+});
+
+test("Wizard Step 4 Detailed Budget: Non-numeric, NaN, and Infinity in any category are rejected", () => {
+  const invalidNonNumeric: Partial<DetailedExpensesData> = {
+    seeds: "Fifteen Thousand",
+    fertilizer: "NaN",
+    labour: "Infinity",
+  };
+
+  const validation = validateDetailedExpenses(invalidNonNumeric);
+  assert.equal(validation.isValid, false);
+  assert.ok(validation.errors.seeds);
+  assert.match(validation.errors.seeds!, /must be a valid numeric amount in LKR/i);
+  assert.ok(validation.errors.fertilizer);
+  assert.match(validation.errors.fertilizer!, /must be a valid numeric amount in LKR/i);
+  assert.ok(validation.errors.labour);
+  assert.match(validation.errors.labour!, /must be a valid numeric amount in LKR/i);
+});
+
+test("Wizard Step 4 Detailed Budget: Mode switching preserves entered values without double-counting", () => {
+  // Farmer enters 150,000 in Quick Budget
+  const quickInput = "150000";
+
+  // Farmer enters 40,000 in Detailed Budget
+  const detailedInput: DetailedExpensesData = {
+    ...createDefaultDetailedExpenses(),
+    seeds: "15000",
+    fertilizer: "25000",
+  };
+
+  // 1. In Quick Budget Mode: effective total must be 150,000 (NOT 190,000)
+  const quickState: Step4FormData = {
+    budget_mode: "quick",
+    quick_total_cultivation_cost_lkr: quickInput,
+    detailed_expenses: detailedInput,
+    effective_total_cultivation_cost_lkr: quickInput,
+    total_cultivation_cost_lkr: quickInput,
+  };
+
+  const quickVal = validateStep4(quickState);
+  assert.equal(quickVal.isValid, true);
+  assert.equal(quickVal.budget_mode, "quick");
+  assert.equal(quickVal.effectiveTotalString, "150000");
+  assert.equal(quickVal.parsedCost, 150000);
+
+  // 2. In Detailed Budget Mode: effective total must be 40,000 (NOT 190,000)
+  const detailedState: Step4FormData = {
+    budget_mode: "detailed",
+    quick_total_cultivation_cost_lkr: quickInput,
+    detailed_expenses: detailedInput,
+    effective_total_cultivation_cost_lkr: "40000",
+    total_cultivation_cost_lkr: "40000",
+  };
+
+  const detailedVal = validateStep4(detailedState);
+  assert.equal(detailedVal.isValid, true);
+  assert.equal(detailedVal.budget_mode, "detailed");
+  assert.equal(detailedVal.effectiveTotalString, "40000");
+  assert.equal(detailedVal.parsedCost, 40000);
+
+  // Confirm NO double-counting occurs: total is never sum of both modes
+  assert.notEqual(quickVal.parsedCost, 190000);
+  assert.notEqual(detailedVal.parsedCost, 190000);
+});
+
+test("Wizard Step 4 Detailed Budget: Session storage persistence and backward compatibility", () => {
+  const mockStorage: Record<string, string> = {};
+  const originalWindow = globalThis.window;
+
+  // Mock sessionStorage in Node environment
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => mockStorage[key] ?? null,
+      setItem: (key: string, val: string) => {
+        mockStorage[key] = val;
+      },
+      removeItem: (key: string) => {
+        delete mockStorage[key];
+      },
+    },
+  };
+
+  try {
+    // Test 1: Backward compatibility with older single-field records
+    mockStorage[STEP4_STORAGE_KEY] = JSON.stringify({
+      total_cultivation_cost_lkr: "175000",
+    });
+
+    const legacyLoaded = loadStep4FromStorage();
+    assert.equal(legacyLoaded.budget_mode, "quick");
+    assert.equal(legacyLoaded.quick_total_cultivation_cost_lkr, "175000");
+    assert.equal(legacyLoaded.effective_total_cultivation_cost_lkr, "175000");
+    assert.equal(legacyLoaded.total_cultivation_cost_lkr, "175000");
+    assert.equal(legacyLoaded.detailed_expenses.seeds, "");
+
+    // Test 2: Save and restore detailed budget record
+    const detailedData: Step4FormData = {
+      budget_mode: "detailed",
+      quick_total_cultivation_cost_lkr: "175000",
+      detailed_expenses: {
+        ...createDefaultDetailedExpenses(),
+        seeds: "20000",
+        fertilizer: "30000",
+        labour: "40000",
+      },
+      effective_total_cultivation_cost_lkr: "90000",
+      total_cultivation_cost_lkr: "90000",
+    };
+
+    saveStep4ToStorage(detailedData);
+    const restored = loadStep4FromStorage();
+    assert.equal(restored.budget_mode, "detailed");
+    assert.equal(restored.quick_total_cultivation_cost_lkr, "175000");
+    assert.equal(restored.detailed_expenses.seeds, "20000");
+    assert.equal(restored.detailed_expenses.fertilizer, "30000");
+    assert.equal(restored.detailed_expenses.labour, "40000");
+    assert.equal(restored.effective_total_cultivation_cost_lkr, "90000");
+    assert.equal(restored.total_cultivation_cost_lkr, "90000");
+
+    // Test 3: saveValidatedStep4ToStorage protects storage when detailed entries are invalid
+    const invalidDetailed: Step4FormData = {
+      ...detailedData,
+      detailed_expenses: {
+        ...detailedData.detailed_expenses,
+        seeds: "-9999",
+      },
+    };
+
+    const saveResult = saveValidatedStep4ToStorage(invalidDetailed);
+    assert.equal(saveResult, false);
+    // Old valid storage must remain untouched
+    const afterInvalid = loadStep4FromStorage();
+    assert.equal(afterInvalid.detailed_expenses.seeds, "20000");
+
+    // Test 4: Clear storage
+    clearStep4Storage();
+    assert.equal(loadStep4FromStorage().total_cultivation_cost_lkr, "");
+  } finally {
+    (globalThis as unknown as { window: unknown }).window = originalWindow;
+  }
+});
+
 
 
 

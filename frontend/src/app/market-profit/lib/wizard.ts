@@ -410,6 +410,36 @@ export function saveStep2ToStorage(data: Step2FormData): void {
 }
 
 /**
+ * Checks whether Step 2 has all required fields populated and valid.
+ */
+export function isStep2Complete(
+  data: Partial<Step2FormData>,
+  referenceDate?: Date
+): boolean {
+  return validateStep2(data, referenceDate).isValid;
+}
+
+/**
+ * Safely saves Step 2 state into browser session storage ONLY if data is fully valid.
+ * Protects existing valid session records from being overwritten with invalid values.
+ */
+export function saveValidatedStep2ToStorage(
+  data: Partial<Step2FormData>,
+  referenceDate?: Date
+): boolean {
+  const validation = validateStep2(data, referenceDate);
+  if (!validation.isValid) {
+    return false;
+  }
+  saveStep2ToStorage({
+    harvest_date: data.harvest_date || "",
+    land_extent_acres: data.land_extent_acres || "",
+    expected_yield_kg: data.expected_yield_kg || "",
+  });
+  return true;
+}
+
+/**
  * Clears Step 2 state from session storage.
  */
 export function clearStep2Storage(): void {
@@ -421,4 +451,5 @@ export function clearStep2Storage(): void {
     // Ignore silently
   }
 }
+
 

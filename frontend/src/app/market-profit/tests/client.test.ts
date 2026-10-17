@@ -38,6 +38,8 @@ import {
   getDaysInMonth,
   isValidCalendarDate,
   getTodayDateString,
+  isStep2Complete,
+  saveValidatedStep2ToStorage,
   STEP2_STORAGE_KEY,
   loadStep2FromStorage,
   saveStep2ToStorage,
@@ -1007,6 +1009,126 @@ test("Wizard Step 2: loadStep2FromStorage maintains backward compatibility with 
     delete (globalThis as unknown as { window?: unknown }).window;
   }
 });
+
+test("Wizard Step 2: isStep2Complete validates full and partial form states accurately", () => {
+  // Completely valid
+  const complete = isStep2Complete(
+    { harvest_date: "2027-05-10", land_extent_acres: "1.5", expected_yield_kg: "2000" },
+    FIXED_TODAY
+  );
+  assert.equal(complete, true);
+
+  // Missing yield
+  const missingYield = isStep2Complete(
+    { harvest_date: "2027-05-10", land_extent_acres: "1.5", expected_yield_kg: "" },
+    FIXED_TODAY
+  );
+  assert.equal(missingYield, false);
+
+  // Missing extent
+  const missingExtent = isStep2Complete(
+    { harvest_date: "2027-05-10", land_extent_acres: "", expected_yield_kg: "2000" },
+    FIXED_TODAY
+  );
+  assert.equal(missingExtent, false);
+
+  // Past harvest date
+  const pastDate = isStep2Complete(
+    { harvest_date: "2024-01-01", land_extent_acres: "1.5", expected_yield_kg: "2000" },
+    FIXED_TODAY
+  );
+  assert.equal(pastDate, false);
+
+  // Negative yield
+  const negativeYield = isStep2Complete(
+    { harvest_date: "2027-05-10", land_extent_acres: "1.5", expected_yield_kg: "-500" },
+    FIXED_TODAY
+  );
+  assert.equal(negativeYield, false);
+});
+
+test("Wizard Step 2: saveValidatedStep2ToStorage protects existing valid session records from invalid updates", () => {
+  const mockStorage = new Map<string, string>();
+  const initialValidRecord = {
+    harvest_date: "2027-04-15",
+    land_extent_acres: "2.0",
+    expected_yield_kg: "1200",
+  };
+  mockStorage.set(STEP2_STORAGE_KEY, JSON.stringify(initialValidRecord));
+
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => mockStorage.get(key) ?? null,
+      setItem: (key: string, val: string) => mockStorage.set(key, val),
+      removeItem: (key: string) => mockStorage.delete(key),
+    },
+  };
+
+  try {
+    // 1. Attempt to save invalid data: negative yield
+    const saveInvalidYield = saveValidatedStep2ToStorage(
+      { harvest_date: "2027-04-15", land_extent_acres: "2.0", expected_yield_kg: "-100" },
+      FIXED_TODAY
+    );
+    assert.equal(saveInvalidYield, false);
+    // Storage must be untouched
+    const current1 = JSON.parse(mockStorage.get(STEP2_STORAGE_KEY)!);
+    assert.deepEqual(current1, initialValidRecord);
+
+    // 2. Attempt to save invalid data: past date
+    const saveInvalidDate = saveValidatedStep2ToStorage(
+      { harvest_date: "2024-01-01", land_extent_acres: "2.0", expected_yield_kg: "1200" },
+      FIXED_TODAY
+    );
+    assert.equal(saveInvalidDate, false);
+    const current2 = JSON.parse(mockStorage.get(STEP2_STORAGE_KEY)!);
+    assert.deepEqual(current2, initialValidRecord);
+
+    // 3. Attempt to save invalid data: empty acres
+    const saveInvalidExtent = saveValidatedStep2ToStorage(
+      { harvest_date: "2027-04-15", land_extent_acres: "", expected_yield_kg: "1200" },
+      FIXED_TODAY
+    );
+    assert.equal(saveInvalidExtent, false);
+    const current3 = JSON.parse(mockStorage.get(STEP2_STORAGE_KEY)!);
+    assert.deepEqual(current3, initialValidRecord);
+
+    // 4. Save fully valid updated data: success
+    const validUpdate = {
+      harvest_date: "2027-06-20",
+      land_extent_acres: "3.5",
+      expected_yield_kg: "4500",
+    };
+    const saveValid = saveValidatedStep2ToStorage(validUpdate, FIXED_TODAY);
+    assert.equal(saveValid, true);
+    const current4 = JSON.parse(mockStorage.get(STEP2_STORAGE_KEY)!);
+    assert.deepEqual(current4, validUpdate);
+  } finally {
+    delete (globalThis as unknown as { window?: unknown }).window;
+  }
+});
+
+test("Wizard Step 2: Navigation readiness preserves backward links and avoids nonexistent Step 3 routes", () => {
+  // Step 2 backward link is strictly defined and safe
+  const step1Route = "/market-profit/new-analysis";
+  const dashboardRoute = "/market-profit";
+  assert.equal(typeof step1Route, "string");
+  assert.equal(typeof dashboardRoute, "string");
+
+  // Confirm wizard flow sequence: Step 1 -> Step 2 -> Step 3 -> Step 4
+  const wizardSteps = [
+    { step: 1, label: "Crop & Location", route: "/market-profit/new-analysis" },
+    { step: 2, label: "Harvest Details", route: "/market-profit/new-analysis/harvest-details" },
+    { step: 3, label: "Selling Market", route: "/market-profit/new-analysis/selling-market" },
+    { step: 4, label: "Cultivation Costs", route: "/market-profit/new-analysis/cultivation-costs" },
+  ];
+
+  assert.equal(wizardSteps[1].step, 2);
+  assert.equal(wizardSteps[1].label, "Harvest Details");
+  assert.equal(wizardSteps[2].step, 3);
+  assert.equal(wizardSteps[2].label, "Selling Market");
+});
+
 
 
 

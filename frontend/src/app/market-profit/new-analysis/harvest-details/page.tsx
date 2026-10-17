@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image, { StaticImageData } from "next/image";
@@ -16,16 +16,18 @@ import {
   MapPin,
   Clock,
   Info,
-  Check,
+  Store,
 } from "lucide-react";
 
 import { WizardProgress } from "../../components/WizardProgress";
+import { Step3ComingSoonModal } from "../../components/Step3ComingSoonModal";
 import {
   SUPPORTED_FRONTEND_CROPS,
   SRI_LANKA_DISTRICTS,
   FrontendCropMetadata,
   DistrictMetadata,
 } from "../../lib/constants";
+import { formatDateDisplay, formatKg } from "../../lib/formatters";
 import {
   validateStep1,
   loadStep1FromStorage,
@@ -34,8 +36,9 @@ import {
   validateLandExtent,
   validateExpectedYield,
   validateStep2,
+  isStep2Complete,
   loadStep2FromStorage,
-  saveStep2ToStorage,
+  saveValidatedStep2ToStorage,
   getTodayDateString,
 } from "../../lib/wizard";
 
@@ -59,6 +62,11 @@ const CROP_IMAGE_MAP: Record<string, StaticImageData> = {
 export default function HarvestDetailsPage() {
   const router = useRouter();
 
+  // Input element refs for accessibility and first-invalid-field focus
+  const harvestDateInputRef = useRef<HTMLInputElement>(null);
+  const landExtentInputRef = useRef<HTMLInputElement>(null);
+  const expectedYieldInputRef = useRef<HTMLInputElement>(null);
+
   // Step 1 summary state
   const [step1Data, setStep1Data] = useState<Step1FormData>({
     crop_id: "",
@@ -75,6 +83,8 @@ export default function HarvestDetailsPage() {
   const [yieldError, setYieldError] = useState<string | undefined>(undefined);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isStep2Saved, setIsStep2Saved] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isComingSoonModalOpen, setIsComingSoonModalOpen] = useState(false);
 
   // Minimum allowed date is today's local date
   const todayString = getTodayDateString();
@@ -108,6 +118,11 @@ export default function HarvestDetailsPage() {
     if (savedStep2.expected_yield_kg) {
       setExpectedYield(savedStep2.expected_yield_kg);
     }
+
+    // If previously completed in full, restore confirmed status
+    if (isStep2Complete(savedStep2)) {
+      setIsStep2Saved(true);
+    }
   }, [router]);
 
   // Handle date input change
@@ -116,8 +131,8 @@ export default function HarvestDetailsPage() {
     setHarvestDate(newDate);
     setIsStep2Saved(false);
 
-    // Persist immediately to session storage
-    saveStep2ToStorage({
+    // Safely sync to session storage ONLY if full Step 2 remains valid
+    saveValidatedStep2ToStorage({
       harvest_date: newDate,
       land_extent_acres: landExtent,
       expected_yield_kg: expectedYield,
@@ -136,8 +151,8 @@ export default function HarvestDetailsPage() {
     setLandExtent(val);
     setIsStep2Saved(false);
 
-    // Persist immediately to session storage
-    saveStep2ToStorage({
+    // Safely sync to session storage ONLY if full Step 2 remains valid
+    saveValidatedStep2ToStorage({
       harvest_date: harvestDate,
       land_extent_acres: val,
       expected_yield_kg: expectedYield,
@@ -156,8 +171,8 @@ export default function HarvestDetailsPage() {
     setExpectedYield(val);
     setIsStep2Saved(false);
 
-    // Persist immediately to session storage
-    saveStep2ToStorage({
+    // Safely sync to session storage ONLY if full Step 2 remains valid
+    saveValidatedStep2ToStorage({
       harvest_date: harvestDate,
       land_extent_acres: landExtent,
       expected_yield_kg: val,
@@ -170,31 +185,51 @@ export default function HarvestDetailsPage() {
     }
   };
 
+  // Handle form submission with composite validation and first-field focus
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
     setHasAttemptedSubmit(true);
 
-    const validation = validateStep2({
-      harvest_date: harvestDate,
-      land_extent_acres: landExtent,
-      expected_yield_kg: expectedYield,
-    });
+    try {
+      const validation = validateStep2({
+        harvest_date: harvestDate,
+        land_extent_acres: landExtent,
+        expected_yield_kg: expectedYield,
+      });
 
-    setDateError(validation.errors.harvest_date);
-    setExtentError(validation.errors.land_extent_acres);
-    setYieldError(validation.errors.expected_yield_kg);
+      setDateError(validation.errors.harvest_date);
+      setExtentError(validation.errors.land_extent_acres);
+      setYieldError(validation.errors.expected_yield_kg);
 
-    if (!validation.isValid) {
-      setIsStep2Saved(false);
-      return;
+      if (!validation.isValid) {
+        setIsStep2Saved(false);
+
+        // Focus first invalid field
+        if (validation.errors.harvest_date) {
+          harvestDateInputRef.current?.focus();
+        } else if (validation.errors.land_extent_acres) {
+          landExtentInputRef.current?.focus();
+        } else if (validation.errors.expected_yield_kg) {
+          expectedYieldInputRef.current?.focus();
+        }
+        return;
+      }
+
+      // Valid: safely persist to session storage without risk of invalid values
+      saveValidatedStep2ToStorage({
+        harvest_date: harvestDate,
+        land_extent_acres: landExtent,
+        expected_yield_kg: expectedYield,
+      });
+
+      setIsStep2Saved(true);
+      setIsComingSoonModalOpen(true);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    saveStep2ToStorage({
-      harvest_date: harvestDate,
-      land_extent_acres: landExtent,
-      expected_yield_kg: expectedYield,
-    });
-    setIsStep2Saved(true);
   };
 
   // Find metadata for summary card
@@ -308,7 +343,25 @@ export default function HarvestDetailsPage() {
       </section>
 
       {/* Main Step 2 Form */}
-      <form onSubmit={handleFormSubmit} className="space-y-8">
+      <form onSubmit={handleFormSubmit} className="space-y-8" noValidate>
+        {/* Top Form Validation Alert Banner */}
+        {hasAttemptedSubmit && (dateError || extentError || yieldError) && (
+          <div
+            role="alert"
+            className="rounded-2xl border border-red-200 bg-red-50/80 p-4 text-red-900 shadow-2xs space-y-1.5 animate-in fade-in"
+          >
+            <div className="flex items-center gap-2 text-sm font-bold text-red-800">
+              <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+              <span>Please correct the highlighted issues before proceeding:</span>
+            </div>
+            <ul className="list-disc list-inside text-xs text-red-700 space-y-0.5 pl-2">
+              {dateError && <li>{dateError}</li>}
+              {extentError && <li>{extentError}</li>}
+              {yieldError && <li>{yieldError}</li>}
+            </ul>
+          </div>
+        )}
+
         <section className="rounded-2xl bg-white p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-6">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#15803d]">
@@ -334,6 +387,7 @@ export default function HarvestDetailsPage() {
 
             <div className="relative">
               <input
+                ref={harvestDateInputRef}
                 type="date"
                 id="harvest_date"
                 name="harvest_date"
@@ -389,6 +443,7 @@ export default function HarvestDetailsPage() {
 
             <div className="relative">
               <input
+                ref={landExtentInputRef}
                 type="number"
                 id="land_extent"
                 name="land_extent"
@@ -449,6 +504,7 @@ export default function HarvestDetailsPage() {
 
             <div className="relative">
               <input
+                ref={expectedYieldInputRef}
                 type="number"
                 id="expected_yield"
                 name="expected_yield"
@@ -497,23 +553,135 @@ export default function HarvestDetailsPage() {
           </div>
         </section>
 
-        {/* Success Confirmation Notice if user validated and saved */}
+        {/* Farmer-Friendly Step 2 Completion Summary (TASK 2) */}
         {isStep2Saved && (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 text-emerald-950 shadow-xs">
-            <div className="flex items-start gap-3">
-              <div className="h-6 w-6 rounded-full bg-[#15803d] text-white flex items-center justify-center shrink-0 mt-0.5">
-                <Check className="h-4 w-4 stroke-[3]" />
+          <section className="rounded-2xl border-2 border-emerald-300 bg-linear-to-br from-emerald-50/90 via-emerald-50/50 to-white p-6 sm:p-7 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-200/80 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-[#15803d] text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <CheckCircle2 className="h-6 w-6 stroke-[2.2]" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    Step 2 Complete — Harvest Details Confirmed
+                  </h3>
+                  <p className="text-xs text-emerald-800 font-medium">
+                    Your production schedule and scale parameters have been verified and saved to session storage.
+                  </p>
+                </div>
               </div>
-              <div className="text-sm space-y-1">
-                <span className="font-bold">
-                  Harvest Details Saved: {harvestDate} • {landExtent} Acres • {expectedYield} kg
-                </span>
-                <p className="text-xs text-emerald-800 leading-relaxed">
-                  Your harvest timeline, cultivation extent, and expected yield are preserved. Step 3 (Selling Market) will be available in the upcoming sprint task.
-                </p>
+              <button
+                type="button"
+                onClick={() => setIsComingSoonModalOpen(true)}
+                className="inline-flex items-center gap-1.5 self-start sm:self-auto text-xs font-bold text-[#15803d] bg-white border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer"
+              >
+                <Store className="h-3.5 w-3.5" />
+                <span>Next Stage Preview</span>
+              </button>
+            </div>
+
+            {/* Summary Parameters Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* 1. Crop */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+                {cropImage && (
+                  <div className="relative h-11 w-11 rounded-lg overflow-hidden shrink-0 border border-emerald-200">
+                    <Image
+                      src={cropImage}
+                      alt={selectedCropMeta?.name_en || "Selected crop"}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Selected Crop
+                  </span>
+                  <span className="text-sm font-bold text-slate-900 truncate block">
+                    {selectedCropMeta?.name_en || "Crop"}{" "}
+                    <span className="text-xs font-normal text-slate-500">
+                      ({selectedCropMeta?.name_si})
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              {/* 2. District */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+                <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
+                  <MapPin className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Cultivation District
+                  </span>
+                  <span className="text-sm font-bold text-slate-900 truncate block">
+                    {selectedDistrictMeta?.name || "District"}
+                    {selectedDistrictMeta?.is_pilot && (
+                      <span className="ml-1.5 text-[10px] bg-emerald-100 text-[#166534] px-1.5 py-0.5 rounded font-semibold">
+                        Pilot Zone
+                      </span>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* 3. Expected Harvest Date */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+                <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
+                  <Calendar className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Expected Harvest Date
+                  </span>
+                  <span className="text-sm font-bold text-slate-900 truncate block">
+                    {formatDateDisplay(harvestDate)}
+                  </span>
+                </div>
+              </div>
+
+              {/* 4. Cultivation Land Extent */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+                <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
+                  <Compass className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Cultivation Land Extent
+                  </span>
+                  <span className="text-sm font-bold text-slate-900 truncate block">
+                    {landExtent} Acres
+                  </span>
+                </div>
+              </div>
+
+              {/* 5. Expected Harvest Yield */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs sm:col-span-2 lg:col-span-2">
+                <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
+                  <Scale className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Expected Harvest Yield
+                  </span>
+                  <span className="text-sm font-bold text-slate-900 truncate block">
+                    {formatKg(expectedYield)} ({expectedYield} kg)
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+
+            {/* Stage Indicator */}
+            <div className="rounded-xl border border-emerald-200 bg-white/80 p-3.5 text-xs text-slate-700 flex items-start gap-2.5">
+              <Info className="h-4 w-4 text-[#15803d] shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <span className="font-bold text-[#166534]">Next Stage: Step 3 — Selling Market Selection.</span>{" "}
+                In the upcoming sprint task, you will choose wholesale terminal markets (such as Embilipitiya Dedicated Economic Centre or Colombo Manning Market) to evaluate local demand and seasonal price forecasts.
+              </div>
+            </div>
+          </section>
         )}
 
         {/* Action Buttons Bar */}
@@ -528,13 +696,28 @@ export default function HarvestDetailsPage() {
 
           <button
             type="submit"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white px-8 py-3.5 text-sm font-bold shadow-sm shadow-emerald-800/20 transition-all cursor-pointer group"
+            disabled={isSubmitting}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white px-8 py-3.5 text-sm font-bold shadow-sm shadow-emerald-800/20 transition-all cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>Save & Proceed</span>
+            <span>Next: Selling Market</span>
             <ArrowRight className="h-4 w-4 text-emerald-100 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </form>
+
+      {/* Step 3 Coming Soon Modal */}
+      <Step3ComingSoonModal
+        isOpen={isComingSoonModalOpen}
+        onClose={() => setIsComingSoonModalOpen(false)}
+        cropName={selectedCropMeta?.name_en || "Selected Crop"}
+        cropNameSi={selectedCropMeta?.name_si || ""}
+        cropImage={cropImage}
+        districtName={selectedDistrictMeta?.name || "Selected District"}
+        isPilotDistrict={Boolean(selectedDistrictMeta?.is_pilot)}
+        harvestDate={harvestDate}
+        landExtentAcres={landExtent}
+        expectedYieldKg={expectedYield}
+      />
     </div>
   );
 }

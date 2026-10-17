@@ -11,10 +11,14 @@ import numpy as np
 sys.stdout.reconfigure(encoding='utf-8')
 
 # Paths
-MAHAWELI_CSV = r"D:\01_research\climate_research_system\11_mahaweli_irrigated_crops\processed\sepc_mahaweli_nonpaddy_crop_extent_2022_2025.csv"
-DMC_CSV = r"D:\01_research\climate_research_system\13_disaster_validation_data\processed\dmc_disaster_events_2018_2026.csv"
-OUT_LINK_CSV = r"D:\01_research\climate_research_system\13_disaster_validation_data\processed\mahaweli_crop_disaster_validation_link.csv"
-OUT_SUMMARY_CSV = r"D:\01_research\climate_research_system\13_disaster_validation_data\processed\mahaweli_crop_disaster_validation_summary.csv"
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "..", "..", ".."))
+RAW_BASE_DIR = os.getenv("RAW_DATA_DIR", os.path.abspath(os.path.join(REPO_ROOT, "..", "01_research", "climate_research_system")))
+
+MAHAWELI_CSV = os.path.join(RAW_BASE_DIR, "11_mahaweli_irrigated_crops", "processed", "sepc_mahaweli_nonpaddy_crop_extent_2022_2025.csv")
+DMC_CSV = os.path.join(RAW_BASE_DIR, "13_disaster_validation_data", "processed", "dmc_disaster_events_2018_2026.csv")
+OUT_LINK_CSV = os.path.join(RAW_BASE_DIR, "13_disaster_validation_data", "processed", "mahaweli_crop_disaster_validation_link.csv")
+OUT_SUMMARY_CSV = os.path.join(RAW_BASE_DIR, "13_disaster_validation_data", "processed", "mahaweli_crop_disaster_validation_summary.csv")
 
 # District mapping for DMC records
 DISTRICT_KEYWORDS = {

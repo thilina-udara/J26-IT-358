@@ -15,15 +15,20 @@ import os
 import pandas as pd
 import numpy as np
 
-# Source paths in research workspace
-RESEARCH_DIR = r"D:\01_research\climate_research_system"
-GIT_DATA_DIR = r"D:\Project\GitHubClone\J26-IT-358\backend\climate-yield\data"
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "..", "data"))
+OUT_GIT_PATH = os.path.join(DATA_DIR, "component04_final_seasonal_dataset.csv")
 
-CROP_RECORDS_PATH = os.path.join(RESEARCH_DIR, "06_district_boundaries", "processed", "district_crop_records.csv")
-WEATHER_SPI_PATH = os.path.join(RESEARCH_DIR, "02_drought_spi", "district_monthly_spi.csv")
-SOIL_MOISTURE_PATH = os.path.join(RESEARCH_DIR, "03_era5_soil_moisture", "district_monthly_soil_moisture_1981_2025.csv")
+REPO_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "..", "..", ".."))
+RAW_BASE_DIR = os.getenv("RAW_DATA_DIR", os.path.abspath(os.path.join(REPO_ROOT, "..", "01_research", "climate_research_system")))
 
-OUT_RESEARCH_PATH = os.path.join(RESEARCH_DIR, "component04_final_seasonal_dataset.csv")
+CROP_RECORDS_PATH = os.path.join(RAW_BASE_DIR, "06_district_boundaries", "processed", "district_crop_records.csv")
+WEATHER_SPI_PATH = os.path.join(RAW_BASE_DIR, "02_drought_spi", "district_monthly_spi.csv")
+SOIL_MOISTURE_PATH = os.path.join(RAW_BASE_DIR, "03_era5_soil_moisture", "district_monthly_soil_moisture_1981_2025.csv")
+
+OUT_RESEARCH_PATH = None
+if os.path.exists(RAW_BASE_DIR):
+    OUT_RESEARCH_PATH = os.path.join(RAW_BASE_DIR, "component04_final_seasonal_dataset.csv")
 OUT_GIT_PATH = os.path.join(GIT_DATA_DIR, "component04_final_seasonal_dataset.csv")
 
 print("=" * 80)
@@ -176,7 +181,8 @@ final_df.reset_index(drop=True, inplace=True)
 # 4. Save and Lock Final Master Datasets
 print(f"\n4. Saving locked final master datasets:")
 final_df.to_csv(OUT_RESEARCH_PATH, index=False)
-print(f"   [OK] Saved to: {OUT_RESEARCH_PATH}")
+if OUT_RESEARCH_PATH:
+        print(f"   [OK] Saved to: {OUT_RESEARCH_PATH}")
 
 os.makedirs(GIT_DATA_DIR, exist_ok=True)
 final_df.to_csv(OUT_GIT_PATH, index=False)

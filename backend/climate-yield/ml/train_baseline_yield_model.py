@@ -22,27 +22,16 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score, root_mean_squared_error, mean_absolute_error
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-CANDIDATE_DATA_PATHS = [
-    os.path.join(CURRENT_DIR, "..", "data", "component04_final_seasonal_dataset.csv"),
-    os.path.join(CURRENT_DIR, "component04_final_seasonal_dataset.csv"),
-    r"D:\01_research\climate_research_system\component04_final_seasonal_dataset.csv",
-    r"D:\Project\GitHubClone\J26-IT-358\backend\climate-yield\data\component04_final_seasonal_dataset.csv"
-]
-
-DATA_PATH = None
-for p in CANDIDATE_DATA_PATHS:
-    if os.path.exists(p):
-        DATA_PATH = os.path.abspath(p)
-        break
-
-if not DATA_PATH:
-    print("ERROR: component04_final_seasonal_dataset.csv not found.")
-    sys.exit(1)
-
+DATA_PATH = os.path.abspath(os.path.join(CURRENT_DIR, "..", "data", "component04_final_seasonal_dataset.csv"))
 OUTPUT_DIR = CURRENT_DIR
-# If running in research workspace, also target git repo backend ml dir if it exists
-GIT_ML_DIR = r"D:\Project\GitHubClone\J26-IT-358\backend\climate-yield\ml"
+
+if not os.path.exists(DATA_PATH):
+    local_data = os.path.join(CURRENT_DIR, "component04_final_seasonal_dataset.csv")
+    if os.path.exists(local_data):
+        DATA_PATH = local_data
+    else:
+        print(f"ERROR: Dataset component04_final_seasonal_dataset.csv not found at: {DATA_PATH}")
+        sys.exit(1)
 
 print("=" * 80)
 print("TRAINING PRODUCTION ADAPTIVE HYBRID AI YIELD MODEL")
@@ -211,8 +200,6 @@ metrics_payload = {
 }
 
 target_dirs = [OUTPUT_DIR]
-if os.path.exists(GIT_ML_DIR) and GIT_ML_DIR != OUTPUT_DIR:
-    target_dirs.append(GIT_ML_DIR)
 
 for d in target_dirs:
     os.makedirs(d, exist_ok=True)

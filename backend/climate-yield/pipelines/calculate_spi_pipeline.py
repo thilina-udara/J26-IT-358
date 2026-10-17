@@ -26,9 +26,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_FILE = os.path.join(
     CURRENT_DIR, "..", "data", "sri_lanka_weather_monthly.csv"
 )
-# Fallback to research workspace path if running standalone
-if not os.path.exists(INPUT_FILE):
-    INPUT_FILE = r"D:\01_research\climate_research_system\01_weather_data\sri_lanka_weather_with_anomalies.csv"
+
 
 # Output CSV destination
 OUTPUT_FILE = os.path.join(CURRENT_DIR, "district_monthly_spi.csv")

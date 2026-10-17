@@ -20,7 +20,9 @@ urllib3.disable_warnings()
 sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
 
 # Directory Paths
-BASE_DIR = r"D:\01_research\climate_research_system\13_disaster_validation_data"
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "..", "..", ".."))
+BASE_DIR = os.getenv("RAW_DATA_DIR", os.path.abspath(os.path.join(REPO_ROOT, "..", "01_research", "climate_research_system")))
 RAW_DIR = os.path.join(BASE_DIR, "raw_reports")
 PROCESSED_DIR = os.path.join(BASE_DIR, "processed")
 CATALOG_PATH = os.path.join(PROCESSED_DIR, "dmc_report_catalog_2018_2026.csv")

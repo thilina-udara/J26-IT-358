@@ -14,16 +14,16 @@ const STEPS = [
 
 export function WizardProgress({ currentStep }: WizardProgressProps) {
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs mb-8">
+    <nav aria-label="Analysis Progress" className="w-full bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs mb-8">
       <div className="relative">
         {/* Step List */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <ol className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {STEPS.map((s, idx) => {
             const isCompleted = s.step < currentStep;
             const isCurrent = s.step === currentStep;
 
             return (
-              <div key={s.step} className="flex items-start gap-3">
+              <li key={s.step} aria-current={isCurrent ? "step" : undefined} className="flex items-start gap-3">
                 {/* Step Circle Indicator */}
                 <div
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold text-sm transition-colors ${
@@ -69,11 +69,11 @@ export function WizardProgress({ currentStep }: WizardProgressProps) {
                     {s.description}
                   </div>
                 </div>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ol>
       </div>
-    </div>
+    </nav>
   );
 }

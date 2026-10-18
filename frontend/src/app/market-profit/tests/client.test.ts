@@ -25,10 +25,11 @@ import {
   parsePositiveNumber,
 } from "../lib/formatters";
 
-import { MarketProfitApiClient, ApiError } from "../lib/api";
+import { MarketProfitApiClient, ApiError, classifyApiError } from "../lib/api";
 import {
   validateStep1,
   STEP1_STORAGE_KEY,
+  loadStep1FromStorage,
   validateStep2,
   validateHarvestDate,
   validateLandExtent,
@@ -4080,3 +4081,129 @@ test("Profit & Risk Integration: Live backend verification on port 8001 for both
     throw err;
   }
 });
+
+// ============================================================================
+// Final Error Handling & UI Reliability Tests (Commit 29)
+// ============================================================================
+
+test("Error Handling: classifyApiError distinguishes timeouts, connection errors, validation errors, and server errors", () => {
+  // 1. Timeout (HTTP 408)
+  const timeoutErr = new ApiError(408, "Request timed out after 15 seconds.");
+  const timeoutClass = classifyApiError(timeoutErr, "Demand Forecasting");
+  assert.equal(timeoutClass.type, "timeout");
+  assert.equal(timeoutClass.badgeLabel, "Request Timed Out");
+  assert.equal(timeoutClass.statusCode, 408);
+  assert.match(timeoutClass.heading, /Demand Forecasting/);
+
+  // 2. Connection failure (status 0)
+  const connErr = new ApiError(0, "Cannot connect to service on port 8001.");
+  const connClass = classifyApiError(connErr, "Price Forecasting");
+  assert.equal(connClass.type, "connection");
+  assert.equal(connClass.badgeLabel, "Backend Connection Error");
+  assert.equal(connClass.statusCode, 0);
+  assert.match(connClass.actionGuidance, /FastAPI backend service/);
+
+  // 3. Validation error (HTTP 400 / 422)
+  const valErr = new ApiError(400, "expected_yield_kg must be greater than zero.");
+  const valClass = classifyApiError(valErr, "Profit Calculation");
+  assert.equal(valClass.type, "validation");
+  assert.equal(valClass.badgeLabel, "Input Validation Error");
+  assert.equal(valClass.statusCode, 400);
+
+  // 4. Malformed schema response (HTTP 502)
+  const malformedErr = new ApiError(502, "Malformed response received from demand forecast service.");
+  const malformedClass = classifyApiError(malformedErr, "Demand Analysis");
+  assert.equal(malformedClass.type, "malformed");
+  assert.equal(malformedClass.badgeLabel, "Service Response Error");
+  assert.equal(malformedClass.statusCode, 502);
+
+  // 5. Server calculation error (HTTP 500)
+  const serverErr = new ApiError(500, "Internal Server Error in profit calculation engine.");
+  const serverClass = classifyApiError(serverErr, "Profit Assessment");
+  assert.equal(serverClass.type, "server");
+  assert.equal(serverClass.badgeLabel, "Calculation & Server Error");
+  assert.equal(serverClass.statusCode, 500);
+
+  // 6. Generic JavaScript network failure (TypeError)
+  const netErr = new TypeError("Failed to fetch");
+  const netClass = classifyApiError(netErr, "Market Service");
+  assert.equal(netClass.type, "connection");
+  assert.equal(netClass.badgeLabel, "Service Connection Error");
+  assert.equal(netClass.statusCode, 0);
+});
+
+test("Error Handling: MarketProfitApiClient respects custom timeoutMs and aborts hanging requests", async () => {
+  // Mock a transport that hangs until aborted by the signal
+  const hangingTransport: typeof fetch = async (_url, init) => {
+    return new Promise((_resolve, reject) => {
+      if (init?.signal) {
+        if (init.signal.aborted) {
+          const abortErr = new Error("The operation was aborted");
+          abortErr.name = "AbortError";
+          reject(abortErr);
+          return;
+        }
+        init.signal.addEventListener("abort", () => {
+          const abortErr = new Error("The operation was aborted");
+          abortErr.name = "AbortError";
+          reject(abortErr);
+        });
+      }
+    });
+  };
+
+  const client = new MarketProfitApiClient({
+    transport: hangingTransport,
+    timeoutMs: 60, // 60ms timeout for test speed
+  });
+
+  await assert.rejects(
+    async () => {
+      await client.calculateProfit({
+        expected_yield_kg: 1000,
+        selling_price_lkr_per_kg: 200,
+        total_cultivation_cost: 50000,
+      });
+    },
+    (err: unknown) => {
+      assert.ok(err instanceof ApiError);
+      assert.equal(err.status, 408);
+      assert.match(err.message, /timed out after/i);
+      return true;
+    }
+  );
+});
+
+test("Error Handling: Corrupted session storage recovery returns safe default structures without crashing", () => {
+  // Mock window and sessionStorage
+  const originalWindow = globalThis.window;
+  const mockStorage: Record<string, string> = {
+    [STEP1_STORAGE_KEY]: "{ invalid json !!",
+  };
+
+  try {
+    (globalThis as any).window = {
+      sessionStorage: {
+        getItem: (key: string) => mockStorage[key] || null,
+        setItem: (key: string, val: string) => { mockStorage[key] = val; },
+        removeItem: (key: string) => { delete mockStorage[key]; },
+      },
+    };
+
+    // Attempting to load corrupted Step 1 JSON
+    const step1 = loadStep1FromStorage();
+    assert.deepEqual(step1, { crop_id: "", cultivation_district_id: "" });
+
+    // Corrupted Step 2 JSON
+    mockStorage[STEP2_STORAGE_KEY] = '{"harvest_date": 12345, "invalid": true}';
+    const step2 = loadStep2FromStorage();
+    assert.equal(step2.harvest_date, "");
+
+    // Corrupted Analysis Snapshot
+    const snapshot = loadAnalysisSnapshot();
+    assert.equal(snapshot, null);
+  } finally {
+    (globalThis as any).window = originalWindow;
+  }
+});
+

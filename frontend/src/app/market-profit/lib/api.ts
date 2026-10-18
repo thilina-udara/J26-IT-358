@@ -68,14 +68,116 @@ function parseFastApiError(detail: unknown): { message: string; fieldErrors: Rec
   };
 }
 
+export type ApiErrorType =
+  | "connection"
+  | "timeout"
+  | "validation"
+  | "server"
+  | "malformed"
+  | "unknown";
+
+export interface ClassifiedApiError {
+  type: ApiErrorType;
+  badgeLabel: string;
+  heading: string;
+  message: string;
+  actionGuidance: string;
+  statusCode: number;
+}
+
+/**
+ * Classifies an error into a farmer-friendly diagnosis distinguishing between
+ * connection failures, timeouts, input validation errors, malformed responses, and server errors.
+ */
+export function classifyApiError(err: unknown, serviceName: string): ClassifiedApiError {
+  if (err instanceof ApiError) {
+    if (err.status === 408) {
+      return {
+        type: "timeout",
+        badgeLabel: "Request Timed Out",
+        heading: `Request Timed Out (${serviceName})`,
+        message: err.message,
+        actionGuidance:
+          "The backend service took longer than expected to respond. Please check server responsiveness or retry.",
+        statusCode: 408,
+      };
+    }
+    if (err.status === 0) {
+      return {
+        type: "connection",
+        badgeLabel: "Backend Connection Error",
+        heading: `Cannot Connect to ${serviceName}`,
+        message: err.message,
+        actionGuidance:
+          "Please verify that the FastAPI backend service is running on port 8001 (or configured via NEXT_PUBLIC_MARKET_PROFIT_API_URL).",
+        statusCode: 0,
+      };
+    }
+    if (err.status === 400 || err.status === 422) {
+      return {
+        type: "validation",
+        badgeLabel: "Input Validation Error",
+        heading: `Invalid Request Parameters (${serviceName})`,
+        message: err.message,
+        actionGuidance:
+          "The request failed server-side validation. Please verify that your date, crop, district, and market inputs are valid.",
+        statusCode: err.status,
+      };
+    }
+    if (err.status === 502) {
+      return {
+        type: "malformed",
+        badgeLabel: "Service Response Error",
+        heading: `Malformed Response from ${serviceName}`,
+        message: err.message,
+        actionGuidance:
+          "The backend service returned a response that did not adhere to the expected schema contract.",
+        statusCode: 502,
+      };
+    }
+    if (err.status >= 500) {
+      return {
+        type: "server",
+        badgeLabel: "Calculation & Server Error",
+        heading: `Server Processing Error (${serviceName})`,
+        message: err.message,
+        actionGuidance:
+          `An unexpected internal error occurred on the backend service while evaluating ${serviceName} (HTTP ${err.status}).`,
+        statusCode: err.status,
+      };
+    }
+    return {
+      type: "unknown",
+      badgeLabel: `Error (HTTP ${err.status})`,
+      heading: `Service Error (${serviceName})`,
+      message: err.message,
+      actionGuidance: `An unexpected HTTP ${err.status} error was returned by the service.`,
+      statusCode: err.status,
+    };
+  }
+
+  const msg = err instanceof Error ? err.message : String(err);
+  return {
+    type: "connection",
+    badgeLabel: "Service Connection Error",
+    heading: `Unable to Connect to ${serviceName}`,
+    message: msg,
+    actionGuidance:
+      "Please verify backend server status on port 8001 and local network connectivity.",
+    statusCode: 0,
+  };
+}
+
 export interface ApiClientConfig {
   baseUrl?: string;
   transport?: typeof fetch;
+  timeoutMs?: number;
 }
 
 export class MarketProfitApiClient {
   private baseUrl: string;
   private transport: typeof fetch;
+  private timeoutMs: number;
 
   constructor(config: ApiClientConfig = {}) {
     const rawUrl =
@@ -84,6 +186,7 @@ export class MarketProfitApiClient {
       DEFAULT_API_BASE_URL;
     this.baseUrl = rawUrl.replace(/\/+$/, "");
     this.transport = config.transport || (typeof fetch !== "undefined" ? fetch.bind(globalThis) : (fetch as any));
+    this.timeoutMs = config.timeoutMs ?? 15000;
   }
 
   private async postJson<TRequest, TResponse>(
@@ -94,6 +197,28 @@ export class MarketProfitApiClient {
     const url = `${this.baseUrl}${endpoint}`;
     let res: Response;
 
+    const controller = new AbortController();
+    let isTimeout = false;
+    const timeoutId = setTimeout(() => {
+      isTimeout = true;
+      controller.abort();
+    }, this.timeoutMs);
+
+    const onCallerAbort = () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+
+    if (signal) {
+      if (signal.aborted) {
+        clearTimeout(timeoutId);
+        const abortErr = new Error("Request was aborted");
+        abortErr.name = "AbortError";
+        throw abortErr;
+      }
+      signal.addEventListener("abort", onCallerAbort, { once: true });
+    }
+
     try {
       res = await this.transport(url, {
         method: "POST",
@@ -102,17 +227,31 @@ export class MarketProfitApiClient {
           Accept: "application/json",
         },
         body: JSON.stringify(payload),
-        signal,
+        signal: controller.signal,
       });
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === "AbortError") {
-        throw err;
+      clearTimeout(timeoutId);
+      if (isTimeout) {
+        throw new ApiError(
+          408,
+          `Request to ${endpoint} timed out after ${Math.round(this.timeoutMs / 1000)} seconds. Please verify server responsiveness.`
+        );
+      }
+      if (signal?.aborted) {
+        const abortErr = new Error("Request was aborted");
+        abortErr.name = "AbortError";
+        throw abortErr;
       }
       const errMsg = err instanceof Error ? err.message : String(err);
       throw new ApiError(
         0,
         `Cannot connect to Market-Profit service at ${this.baseUrl}. Please verify the backend is running on port 8001. (${errMsg})`
       );
+    } finally {
+      clearTimeout(timeoutId);
+      if (signal) {
+        signal.removeEventListener("abort", onCallerAbort);
+      }
     }
 
     let responseData: unknown;

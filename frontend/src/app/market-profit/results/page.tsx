@@ -39,7 +39,7 @@ import {
   DEFAULT_API_BASE_URL,
 } from "../lib/constants";
 import { formatDateDisplay, formatKg, formatLKR, formatPercent } from "../lib/formatters";
-import { MarketProfitApiClient, ApiError } from "../lib/api";
+import { MarketProfitApiClient, ApiError, classifyApiError, type ClassifiedApiError } from "../lib/api";
 import type {
   DemandForecastRequest,
   DemandForecastResponse,
@@ -118,11 +118,13 @@ export default function AnalysisResultsPage() {
     status: "idle" | "loading" | "available" | "unavailable" | "error";
     response: DemandForecastResponse | null;
     errorMessage: string | null;
+    classifiedError: ClassifiedApiError | null;
     requestPayload: DemandForecastRequest | null;
   }>({
     status: "idle",
     response: null,
     errorMessage: null,
+    classifiedError: null,
     requestPayload: null,
   });
 
@@ -142,6 +144,7 @@ export default function AnalysisResultsPage() {
       ...prev,
       status: "loading",
       errorMessage: null,
+      classifiedError: null,
       requestPayload: payload,
     }));
 
@@ -154,6 +157,7 @@ export default function AnalysisResultsPage() {
           status: "available",
           response: result,
           errorMessage: null,
+          classifiedError: null,
           requestPayload: payload,
         });
       } else if (isPredictionUnavailable(result)) {
@@ -161,6 +165,7 @@ export default function AnalysisResultsPage() {
           status: "unavailable",
           response: result,
           errorMessage: null,
+          classifiedError: null,
           requestPayload: payload,
         });
       } else {
@@ -168,6 +173,7 @@ export default function AnalysisResultsPage() {
           status: "unavailable",
           response: result,
           errorMessage: null,
+          classifiedError: null,
           requestPayload: payload,
         });
       }
@@ -175,16 +181,12 @@ export default function AnalysisResultsPage() {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-          ? err.message
-          : String(err);
+      const classified = classifyApiError(err, "Market Demand Analysis");
       setDemandState({
         status: "error",
         response: null,
-        errorMessage: msg,
+        errorMessage: classified.message,
+        classifiedError: classified,
         requestPayload: payload,
       });
     } finally {
@@ -226,11 +228,13 @@ export default function AnalysisResultsPage() {
     status: "idle" | "loading" | "available" | "unavailable" | "error";
     response: PriceForecastResponse | null;
     errorMessage: string | null;
+    classifiedError: ClassifiedApiError | null;
     requestPayload: PriceForecastRequest | null;
   }>({
     status: "idle",
     response: null,
     errorMessage: null,
+    classifiedError: null,
     requestPayload: null,
   });
 
@@ -250,6 +254,7 @@ export default function AnalysisResultsPage() {
       ...prev,
       status: "loading",
       errorMessage: null,
+      classifiedError: null,
       requestPayload: payload,
     }));
 
@@ -262,6 +267,7 @@ export default function AnalysisResultsPage() {
           status: "available",
           response: result,
           errorMessage: null,
+          classifiedError: null,
           requestPayload: payload,
         });
       } else if (isPricePredictionUnavailable(result)) {
@@ -269,6 +275,7 @@ export default function AnalysisResultsPage() {
           status: "unavailable",
           response: result,
           errorMessage: null,
+          classifiedError: null,
           requestPayload: payload,
         });
       } else {
@@ -276,6 +283,7 @@ export default function AnalysisResultsPage() {
           status: "unavailable",
           response: result,
           errorMessage: null,
+          classifiedError: null,
           requestPayload: payload,
         });
       }
@@ -283,16 +291,12 @@ export default function AnalysisResultsPage() {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-          ? err.message
-          : String(err);
+      const classified = classifyApiError(err, "Price Trend Forecasting");
       setPriceState({
         status: "error",
         response: null,
-        errorMessage: msg,
+        errorMessage: classified.message,
+        classifiedError: classified,
         requestPayload: payload,
       });
     } finally {
@@ -335,12 +339,14 @@ export default function AnalysisResultsPage() {
     calculation: ProfitCalculationResult | null;
     risk: ProfitRiskAssessmentResult | null;
     errorMessage: string | null;
+    classifiedError: ClassifiedApiError | null;
     predictedPriceUsed: number | null;
   }>({
     status: "idle",
     calculation: null,
     risk: null,
     errorMessage: null,
+    classifiedError: null,
     predictedPriceUsed: null,
   });
 
@@ -360,6 +366,7 @@ export default function AnalysisResultsPage() {
       ...prev,
       status: "loading",
       errorMessage: null,
+      classifiedError: null,
     }));
 
     try {
@@ -372,23 +379,20 @@ export default function AnalysisResultsPage() {
         calculation: result.profit_calculation,
         risk: result,
         errorMessage: null,
+        classifiedError: null,
         predictedPriceUsed: predictedPrice,
       });
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-          ? err.message
-          : String(err);
+      const classified = classifyApiError(err, "Profit & Risk Assessment");
       setProfitState({
         status: "error",
         calculation: null,
         risk: null,
-        errorMessage: msg,
+        errorMessage: classified.message,
+        classifiedError: classified,
         predictedPriceUsed: null,
       });
     } finally {
@@ -412,6 +416,7 @@ export default function AnalysisResultsPage() {
         calculation: null,
         risk: null,
         errorMessage: null,
+        classifiedError: null,
         predictedPriceUsed: null,
       });
       profitLastFetchedSignatureRef.current = null;
@@ -425,6 +430,7 @@ export default function AnalysisResultsPage() {
         calculation: null,
         risk: null,
         errorMessage: null,
+        classifiedError: null,
         predictedPriceUsed: null,
       });
       profitLastFetchedSignatureRef.current = null;
@@ -784,7 +790,7 @@ export default function AnalysisResultsPage() {
             <div>
               <span className="font-bold block">Advisory Note on Zero Cultivation Cost:</span>
               <span>
-                Cultivation cost is recorded as Rs. 0. Profit margins, return on investment (ROI), and margin of safety evaluations will be unavailable or limited when financial analysis calculations activate.
+                Cultivation cost is recorded as Rs. 0. Return on investment (ROI) is mathematically undefined and feasibility risk assessment is classified as insufficient information.
               </span>
             </div>
           </div>
@@ -886,7 +892,7 @@ export default function AnalysisResultsPage() {
               {demandState.status === "error" && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-800 bg-rose-100 px-3 py-1.5 rounded-full border border-rose-300">
                   <AlertTriangle className="h-3.5 w-3.5 text-rose-700" />
-                  <span>Service Connection Error</span>
+                  <span>{demandState.classifiedError?.badgeLabel || "Service Connection Error"}</span>
                 </span>
               )}
               {demandState.status === "idle" && (
@@ -1075,13 +1081,14 @@ export default function AnalysisResultsPage() {
                 <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <div className="text-sm font-bold text-rose-950">
-                    Unable to Connect to Demand Forecasting Service
+                    {demandState.classifiedError?.heading || "Unable to Connect to Demand Forecasting Service"}
                   </div>
                   <p className="text-xs text-rose-800 leading-relaxed">
                     {demandState.errorMessage}
                   </p>
                   <p className="text-[11px] text-rose-700 pt-1">
-                    Please verify that the FastAPI backend service is running on port 8001 (or configured via <code>NEXT_PUBLIC_MARKET_PROFIT_API_URL</code>).
+                    {demandState.classifiedError?.actionGuidance ||
+                      "Please verify that the FastAPI backend service is running on port 8001 (or configured via NEXT_PUBLIC_MARKET_PROFIT_API_URL)."}
                   </p>
                 </div>
               </div>
@@ -1158,7 +1165,7 @@ export default function AnalysisResultsPage() {
               {priceState.status === "error" && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-800 bg-rose-100 px-3 py-1.5 rounded-full border border-rose-300">
                   <AlertTriangle className="h-3.5 w-3.5 text-rose-700" />
-                  <span>Service Connection Error</span>
+                  <span>{priceState.classifiedError?.badgeLabel || "Service Connection Error"}</span>
                 </span>
               )}
               {priceState.status === "idle" && (
@@ -1328,13 +1335,14 @@ export default function AnalysisResultsPage() {
                 <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <div className="text-sm font-bold text-rose-950">
-                    Unable to Connect to Price Forecasting Service
+                    {priceState.classifiedError?.heading || "Unable to Connect to Price Forecasting Service"}
                   </div>
                   <p className="text-xs text-rose-800 leading-relaxed">
                     {priceState.errorMessage}
                   </p>
                   <p className="text-[11px] text-rose-700 pt-1">
-                    Please verify that the FastAPI backend service is running on port 8001 (or configured via <code>NEXT_PUBLIC_MARKET_PROFIT_API_URL</code>).
+                    {priceState.classifiedError?.actionGuidance ||
+                      "Please verify that the FastAPI backend service is running on port 8001 (or configured via NEXT_PUBLIC_MARKET_PROFIT_API_URL)."}
                   </p>
                 </div>
               </div>
@@ -1431,8 +1439,8 @@ export default function AnalysisResultsPage() {
               )}
               {profitState.status === "error" && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-800 bg-rose-100 px-3 py-1.5 rounded-full border border-rose-300">
-                  <AlertTriangle className="h-3.5 w-3.5 text-rose-700" />
-                  <span>Calculation Error</span>
+                  <AlertCircle className="h-3.5 w-3.5 text-rose-700" />
+                  <span>{profitState.classifiedError?.badgeLabel || "Calculation Error"}</span>
                 </span>
               )}
               {profitState.status === "idle" && (
@@ -1692,13 +1700,14 @@ export default function AnalysisResultsPage() {
                 <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <div className="text-sm font-bold text-rose-950">
-                    Unable to Complete Profit &amp; Risk Assessment
+                    {profitState.classifiedError?.heading || "Unable to Complete Profit & Risk Assessment"}
                   </div>
                   <p className="text-xs text-rose-800 leading-relaxed">
                     {profitState.errorMessage}
                   </p>
                   <p className="text-[11px] text-rose-700 pt-1">
-                    Please verify that the FastAPI backend service is running on port 8001 (or configured via <code>NEXT_PUBLIC_MARKET_PROFIT_API_URL</code>).
+                    {profitState.classifiedError?.actionGuidance ||
+                      "Please verify that the FastAPI backend service is running on port 8001 (or configured via NEXT_PUBLIC_MARKET_PROFIT_API_URL)."}
                   </p>
                 </div>
               </div>

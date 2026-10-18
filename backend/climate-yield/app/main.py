@@ -4,6 +4,7 @@ Climate & Crop Yield Decision Support Microservice
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routes.yield_prediction import router as yield_prediction_router
 
 app = FastAPI(
     title="Climate-Yield Decision Support Service",
@@ -19,6 +20,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Register Prediction & Early Warning Router
+app.include_router(yield_prediction_router)
+
+
 @app.get("/")
 def root():
     return {
@@ -28,9 +33,11 @@ def root():
         "docs_url": "/docs"
     }
 
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "service": "climate-yield-service"}
+
 
 @app.get("/api/v1/info")
 def get_component_info():

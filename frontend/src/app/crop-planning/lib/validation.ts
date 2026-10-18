@@ -5,7 +5,7 @@ export function validateCredentials(input: Credentials, registration: boolean) {
   if (!/^[a-z0-9._@+\-]{3,100}$/i.test(input.login_identifier.trim())) errors.login_identifier = "Use 3–100 letters, numbers, or . _ @ + -";
   if (!input.login_identifier.trim()) errors.login_identifier = "Enter your username.";
   const length = Array.from(input.password).length;
-  if (length < (registration ? 15 : 1) || length > 128) errors.password = registration ? "Use a password of 15–128 characters." : "Enter your password (up to 128 characters).";
+  if (length < (registration ? 8 : 1) || length > 128) errors.password = registration ? "Use a password of 8–128 characters." : "Enter your password (up to 128 characters).";
   if (!length) errors.password = "Enter your password.";
   return errors;
 }

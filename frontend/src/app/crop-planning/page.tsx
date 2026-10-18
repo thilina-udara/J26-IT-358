@@ -134,7 +134,7 @@ export default function HomePage() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="cp-hero-btn-secondary">
-              <Link href="/crop-planning/login">Farmer login</Link>
+              <Link href="/crop-planning/login">Log in</Link>
             </Button>
           </div>
 

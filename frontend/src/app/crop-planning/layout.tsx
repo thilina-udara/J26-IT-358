@@ -1,4 +1,5 @@
 import { SessionProvider } from "./components/session";
+import { AdminSessionProvider } from "./lib/admin-session";
 import { CropShell } from "./components/shell";
 import type { Metadata } from "next";
 import "./crop-planning.css";
@@ -8,4 +9,12 @@ export const metadata: Metadata = {
   description: "AI-based cultivation concentration risk analysis, alternative crop recommendation, and personalized cultivation planning system.",
 };
 
-export default function CropPlanningLayout({ children }: { children: React.ReactNode }) { return <SessionProvider><CropShell>{children}</CropShell></SessionProvider>; }
+export default function CropPlanningLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider>
+      <AdminSessionProvider>
+        <CropShell>{children}</CropShell>
+      </AdminSessionProvider>
+    </SessionProvider>
+  );
+}

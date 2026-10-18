@@ -43,11 +43,13 @@ export function CropShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { session, signOut, notice } = useSession();
   const [open, setOpen] = useState(false);
+  const [farmerMenuOpen, setFarmerMenuOpen] = useState(false);
   const publicPage = isPublicRoute(pathname);
   const authPage = pathname === `${ROOT}/login` || pathname === `${ROOT}/register`;
 
   useEffect(() => {
     setOpen(false);
+    setFarmerMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -98,6 +100,12 @@ export function CropShell({ children }: { children: React.ReactNode }) {
     </>
   );
 
+  const adminPage = pathname.startsWith(`${ROOT}/admin`);
+
+  if (adminPage) {
+    return <>{children}</>;
+  }
+
   if (publicPage) {
     if (authPage) return <>{children}</>;
     return (
@@ -120,7 +128,7 @@ export function CropShell({ children }: { children: React.ReactNode }) {
               <Link href={`${ROOT}#research`}>Research Model</Link>
             </nav>
             <div className="cp-public-auth">
-              <Link href={`${ROOT}/login`}>Log in</Link>
+              <Link href={`${ROOT}/login`} style={{ fontWeight: 600 }}>Log in</Link>
               <Button asChild>
                 <Link href={session ? `${ROOT}/dashboard` : `${ROOT}/register`}>
                   {session ? "My dashboard" : "Get started"}
@@ -244,47 +252,142 @@ export function CropShell({ children }: { children: React.ReactNode }) {
         {/* Farmer Profile Card matching Image 2 */}
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 14px",
-            background: "#f8fafc",
-            border: "1px solid #e2e8f0",
-            borderRadius: "14px",
+            position: "relative",
             marginBottom: "8px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "12px 14px",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "14px",
+              cursor: "pointer",
+            }}
+            onClick={() => setFarmerMenuOpen((v) => !v)}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  background: "#15803d",
+                  color: "#ffffff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 800,
+                  fontSize: "14px",
+                }}
+              >
+                {farmerInitial}
+              </span>
+              <div>
+                <strong style={{ fontSize: "13px", color: "#0f172a", display: "block" }}>
+                  {farmerName}
+                </strong>
+                <small style={{ fontSize: "11px", color: "#64748b" }}>Farmer</small>
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label={farmerMenuOpen ? "Close farmer menu" : "Show logout and account options"}
+              aria-expanded={farmerMenuOpen}
               style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "50%",
-                background: "#15803d",
-                color: "#ffffff",
+                color: farmerMenuOpen ? "#15803d" : "#94a3b8",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: "4px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontWeight: 800,
-                fontSize: "14px",
+                borderRadius: "6px",
+                transition: "all 0.15s ease",
+                transform: farmerMenuOpen ? "rotate(90deg)" : "none",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setFarmerMenuOpen((v) => !v);
               }}
             >
-              {farmerInitial}
-            </span>
-            <div>
-              <strong style={{ fontSize: "13px", color: "#0f172a", display: "block" }}>
-                {farmerName}
-              </strong>
-              <small style={{ fontSize: "11px", color: "#64748b" }}>Farmer</small>
-            </div>
+              <ArrowRight size={17} />
+            </button>
           </div>
-          <Link href={`${ROOT}/plans#profile`} style={{ color: "#94a3b8" }}>
-            <ArrowRight size={16} />
-          </Link>
+
+          {/* Farmer Menu Dropdown popup */}
+          {farmerMenuOpen && session && (
+            <div
+              style={{
+                marginTop: "6px",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                padding: "6px",
+                boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "2px",
+                animation: "fadeIn 0.15s ease-out",
+              }}
+            >
+              <Link
+                href={`${ROOT}/plans#profile`}
+                onClick={() => setFarmerMenuOpen(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  color: "#334155",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <User size={15} style={{ color: "#64748b" }} />
+                <span>My Profile & Plans</span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => void logout()}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  background: "transparent",
+                  border: "none",
+                  color: "#dc2626",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "background 0.15s",
+                  width: "100%",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <LogOut size={15} style={{ color: "#dc2626" }} />
+                <span>Log out</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Logout Button */}
-        {session && (
+        {/* Persistent Logout Button */}
+        {session && !farmerMenuOpen && (
           <button
             type="button"
             onClick={() => void logout()}

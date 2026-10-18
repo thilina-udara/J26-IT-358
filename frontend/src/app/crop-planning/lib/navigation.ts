@@ -1,5 +1,5 @@
 export const ROOT = "/crop-planning";
-export const PUBLIC_ROUTES = [ROOT, `${ROOT}/login`, `${ROOT}/register`] as const;
+export const PUBLIC_ROUTES = [ROOT, `${ROOT}/login`, `${ROOT}/register`, `${ROOT}/admin/login`] as const;
 export const WORKSPACE_NAV = [
   { href: `${ROOT}/dashboard`, label: "Dashboard", icon: "dashboard" },
   { href: `${ROOT}/plans`, label: "My Farm Plans", icon: "plans" },

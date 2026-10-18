@@ -203,7 +203,7 @@ export default function AuthForm({ registration = false }: { registration?: bool
                 label="Password"
                 name="password"
                 error={fieldError("password")}
-                hint={registration ? "15–128 characters. A memorable passphrase works well." : undefined}
+                hint={registration ? "8–128 characters. A memorable passphrase works well." : undefined}
               >
                 <div className="cp-password-input">
                   <Input
@@ -236,13 +236,13 @@ export default function AuthForm({ registration = false }: { registration?: bool
                   <div className="cp-password-requirement">
                     <Check
                       size={14}
-                      className={length >= 15 && length <= 128 ? "cp-check-met" : ""}
+                      className={length >= 8 && length <= 128 ? "cp-check-met" : ""}
                       aria-hidden="true"
                     />
                     <span>
-                      {length >= 15 && length <= 128
+                      {length >= 8 && length <= 128
                         ? "Password length requirement met"
-                        : "At least 15 characters; spaces are welcome"}
+                        : "At least 8 characters; spaces are welcome"}
                     </span>
                   </div>
 

@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-MIGRATIONS = ((1, '001_farmer_accounts.sql'), (2, '002_farmer_declared_season.sql'))
+MIGRATIONS = ((1, '001_farmer_accounts.sql'), (2, '002_farmer_declared_season.sql'), (3, '003_admin_accounts.sql'))
 
 
 def migrate(database_path, *, versions=None):

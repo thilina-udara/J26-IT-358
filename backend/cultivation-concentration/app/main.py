@@ -440,6 +440,9 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
     from app.research_demo_routes import router as research_demo_router
     application.include_router(research_demo_router())
 
+    from app.admin_routes import router as admin_router
+    application.include_router(admin_router(database_path, security, historical_predictor, production_evidence))
+
     # CORS is outside the auth response middleware, so normal error responses also
     # receive allowlist headers. This bearer API does not use credential cookies.
     from fastapi.middleware.cors import CORSMiddleware

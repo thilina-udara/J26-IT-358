@@ -397,7 +397,7 @@ test("account form validates live and show-password control keeps credentials un
   const rendered = await renderSession(<AuthForm registration />);
   try {
     act(() => rendered.tree.root.findByProps({ id: "password" }).props.onChange({ target: { value: "short" } }));
-    assert.ok(JSON.stringify(rendered.tree.toJSON()).includes("15–128"));
+    assert.ok(JSON.stringify(rendered.tree.toJSON()).includes("8–128"));
     act(() => rendered.tree.root.findByProps({ "aria-label": "Show password" }).props.onClick());
     assert.equal(rendered.tree.root.findByProps({ id: "password" }).props.type, "text");
     assert.equal(rendered.tree.root.findByProps({ id: "password" }).props.value, "short");
@@ -411,7 +411,7 @@ test("friendly date validation preserves exact UTC cutoff and same-day harvest s
   assert.equal(formatDate("2030-01-01"), "1 Jan 2030");
   assert.ok(validatePlan({ ...plan, crop: "fictional-unsupported-crop" } as unknown as Plan, true).crop);
   assert.ok(validatePlan({ ...plan, district: "fictional-unsupported-district" } as unknown as Plan, true).district);
-  assert.deepEqual(validateCredentials({ login_identifier: "fictional-owner", password: "🌱".repeat(15) }, true), {});
+  assert.deepEqual(validateCredentials({ login_identifier: "fictional-owner", password: "🌱".repeat(8) }, true), {});
   assert.ok(validateCredentials({ login_identifier: "fictional-owner", password: "🌱".repeat(129) }, true).password);
 });
 test("timeline renders only returned approved activities and their recorded dates", () => {

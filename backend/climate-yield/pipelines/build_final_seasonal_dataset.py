@@ -29,7 +29,6 @@ SOIL_MOISTURE_PATH = os.path.join(RAW_BASE_DIR, "03_era5_soil_moisture", "distri
 OUT_RESEARCH_PATH = None
 if os.path.exists(RAW_BASE_DIR):
     OUT_RESEARCH_PATH = os.path.join(RAW_BASE_DIR, "component04_final_seasonal_dataset.csv")
-OUT_GIT_PATH = os.path.join(GIT_DATA_DIR, "component04_final_seasonal_dataset.csv")
 
 print("=" * 80)
 print("BUILDING MASTER SEASONAL CLIMATE-CROP DATASET")
@@ -180,11 +179,11 @@ final_df.reset_index(drop=True, inplace=True)
 
 # 4. Save and Lock Final Master Datasets
 print(f"\n4. Saving locked final master datasets:")
-final_df.to_csv(OUT_RESEARCH_PATH, index=False)
 if OUT_RESEARCH_PATH:
-        print(f"   [OK] Saved to: {OUT_RESEARCH_PATH}")
+    final_df.to_csv(OUT_RESEARCH_PATH, index=False)
+    print(f"   [OK] Saved to: {OUT_RESEARCH_PATH}")
 
-os.makedirs(GIT_DATA_DIR, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 final_df.to_csv(OUT_GIT_PATH, index=False)
 print(f"   [OK] Saved to: {OUT_GIT_PATH}")
 

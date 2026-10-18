@@ -1,0 +1,12 @@
+index,commodity,category,open_truck_pct,close_truck_pct,other_pct,refrigerated_pct
+1,Papaya,Fruit,25.0,62.0,13.0,0.0
+2,Mango,Fruit,29.0,71.0,0.0,0.0
+3,Tomato,Vegetable,28.0,72.0,0.0,0.0
+4,Brinjal,Vegetable,46.0,42.0,12.0,0.0
+5,Okra,Vegetable,21.0,50.0,29.0,0.0
+6,Guava,Fruit,61.0,24.0,15.0,0.0
+7,Snap Bean,Vegetable,52.0,32.0,13.0,3.0
+8,Capsicum,Vegetable,50.0,30.0,17.0,3.0
+9,Long Bean,Vegetable,48.0,32.0,20.0,0.0
+10,Potato,Vegetable,51.0,42.0,7.0,0.0
+11,Bitter Gourd,Vegetable,42.0,34.0,24.0,0.0

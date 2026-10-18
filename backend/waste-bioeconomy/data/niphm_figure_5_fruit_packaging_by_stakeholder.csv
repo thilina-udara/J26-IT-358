@@ -1,0 +1,6 @@
+stakeholder,commodity_type,polysack_pct,plastic_crate_pct,wooden_or_carton_pct,other_pct
+Farmer,Fruits,16.0,51.0,33.0,0.0
+Collector,Fruits,21.0,53.0,26.0,0.0
+Wholesaler,Fruits,21.0,53.0,26.0,0.0
+Transporter,Fruits,23.0,46.0,27.0,4.0
+Retailer,Fruits,13.0,48.0,33.0,6.0

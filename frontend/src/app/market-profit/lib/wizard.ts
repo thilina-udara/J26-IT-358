@@ -13,6 +13,9 @@ import type {
   DemandForecastResponse,
   PredictionStatus,
   DemandLevel,
+  PriceForecastRequest,
+  PriceForecastResponse,
+  ForecastPriceType,
 } from "./types";
 
 export interface Step1FormData {
@@ -1998,8 +2001,129 @@ export function isPredictionUnavailable(
   return res.prediction_status === "unavailable" || res.prediction_status === "pending";
 }
 
+// ============================================================================
+// Price Trend Forecast API Integration Helpers (POST /api/v1/market-prices/forecast)
+// ============================================================================
 
+export interface PriceForecastValidationResult {
+  isValid: boolean;
+  error?: string;
+}
 
+/**
+ * Builds the exact PriceForecastRequest payload for POST /api/v1/market-prices/forecast.
+ * Extracts only backend-supported fields (crop_id, cultivation_district_id, target_market_id, forecast_target_date, price_type)
+ * and strictly omits extraneous farm metadata, land extent, yield, or cultivation cost inputs.
+ */
+export function buildPriceForecastRequest(
+  snapshot: ValidatedAnalysisSnapshot
+): PriceForecastRequest {
+  return {
+    crop_id: String(snapshot.crop_id).trim(),
+    cultivation_district_id: String(snapshot.cultivation_district_id).trim(),
+    target_market_id: String(snapshot.target_market_id).trim(),
+    forecast_target_date: String(snapshot.forecast_target_date || snapshot.harvest_date).trim(),
+    price_type: snapshot.price_type,
+  };
+}
 
+/**
+ * Validates the schema and values of a PriceForecastResponse returned by the backend.
+ * Rejects malformed objects, unsupported statuses, invalid price types, or negative prices.
+ */
+export function validatePriceForecastResponse(
+  res: unknown
+): PriceForecastValidationResult {
+  if (!res || typeof res !== "object" || Array.isArray(res)) {
+    return { isValid: false, error: "Response is not a valid JSON object." };
+  }
 
+  const r = res as Record<string, unknown>;
+
+  // 1. Prediction status
+  const validStatuses: PredictionStatus[] = ["pending", "completed", "unavailable", "failed"];
+  if (
+    typeof r.prediction_status !== "string" ||
+    !validStatuses.includes(r.prediction_status as PredictionStatus)
+  ) {
+    return {
+      isValid: false,
+      error: `Invalid prediction_status: '${String(r.prediction_status)}'. Expected one of ${validStatuses.join(", ")}.`,
+    };
+  }
+
+  // 2. Price type (must be 'wholesale' or 'retail' if present)
+  if (r.price_type !== undefined && r.price_type !== null) {
+    if (r.price_type !== "wholesale" && r.price_type !== "retail") {
+      return {
+        isValid: false,
+        error: `Invalid price_type: '${String(r.price_type)}'. Expected 'wholesale' or 'retail'.`,
+      };
+    }
+  }
+
+  // 3. Currency and unit (if provided, currency must be 'LKR' and unit 'kg')
+  if (r.currency !== undefined && r.currency !== null && r.currency !== "LKR") {
+    return {
+      isValid: false,
+      error: `Invalid currency: '${String(r.currency)}'. Expected 'LKR'.`,
+    };
+  }
+  if (r.unit !== undefined && r.unit !== null && r.unit !== "kg") {
+    return {
+      isValid: false,
+      error: `Invalid unit: '${String(r.unit)}'. Expected 'kg'.`,
+    };
+  }
+
+  // 4. Forecasted price (must be null/undefined or valid non-negative number/numeric string)
+  if (r.forecasted_price_lkr_per_kg !== null && r.forecasted_price_lkr_per_kg !== undefined) {
+    const num = Number(r.forecasted_price_lkr_per_kg);
+    if (isNaN(num) || !isFinite(num) || num < 0) {
+      return {
+        isValid: false,
+        error: `Invalid forecasted_price_lkr_per_kg: '${String(r.forecasted_price_lkr_per_kg)}'. Must be non-negative numeric.`,
+      };
+    }
+  }
+
+  // 5. Crop, district, and market strings sanity check if provided
+  if (r.crop_id !== undefined && typeof r.crop_id !== "string") {
+    return { isValid: false, error: "crop_id must be a string." };
+  }
+  if (r.cultivation_district_id !== undefined && typeof r.cultivation_district_id !== "string") {
+    return { isValid: false, error: "cultivation_district_id must be a string." };
+  }
+  if (r.target_market_id !== undefined && typeof r.target_market_id !== "string") {
+    return { isValid: false, error: "target_market_id must be a string." };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Returns true if the forecast response contains a genuinely completed ML price prediction.
+ */
+export function isPricePredictionAvailable(
+  res: PriceForecastResponse | null | undefined
+): boolean {
+  if (!res) return false;
+  return (
+    res.prediction_status === "completed" &&
+    res.forecasted_price_lkr_per_kg !== null &&
+    res.forecasted_price_lkr_per_kg !== undefined &&
+    !isNaN(Number(res.forecasted_price_lkr_per_kg)) &&
+    Number(res.forecasted_price_lkr_per_kg) > 0
+  );
+}
+
+/**
+ * Returns true if the price prediction model is offline, training, or unavailable.
+ */
+export function isPricePredictionUnavailable(
+  res: PriceForecastResponse | null | undefined
+): boolean {
+  if (!res) return false;
+  return res.prediction_status === "unavailable" || res.prediction_status === "pending";
+}
 

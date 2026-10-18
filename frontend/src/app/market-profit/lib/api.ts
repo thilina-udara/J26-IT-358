@@ -4,7 +4,10 @@
  */
 
 import { DEFAULT_API_BASE_URL } from "./constants";
-import { validateDemandForecastResponse } from "./wizard";
+import {
+  validateDemandForecastResponse,
+  validatePriceForecastResponse,
+} from "./wizard";
 import type {
   CombinedAnalysisResult,
   DemandForecastRequest,
@@ -155,12 +158,27 @@ export class MarketProfitApiClient {
   /**
    * Request wholesale or retail price forecast (stateless ML inference endpoint).
    * Gracefully returns prediction_status = "unavailable" and null values when model is offline.
+   * Rejects malformed or invalid response payloads.
    */
-  public async getPriceForecast(request: PriceForecastRequest): Promise<PriceForecastResponse> {
-    return this.postJson<PriceForecastRequest, PriceForecastResponse>(
+  public async getPriceForecast(
+    request: PriceForecastRequest,
+    signal?: AbortSignal
+  ): Promise<PriceForecastResponse> {
+    const response = await this.postJson<PriceForecastRequest, PriceForecastResponse>(
       "/api/v1/market-prices/forecast",
-      request
+      request,
+      signal
     );
+
+    const validation = validatePriceForecastResponse(response);
+    if (!validation.isValid) {
+      throw new ApiError(
+        502,
+        `Malformed response received from price forecast service: ${validation.error}`
+      );
+    }
+
+    return response;
   }
 
   /**

@@ -16,6 +16,11 @@ import type {
   PriceForecastRequest,
   PriceForecastResponse,
   ForecastPriceType,
+  ProfitCalculationInput,
+  ProfitCalculationResult,
+  ProfitRiskAssessmentInput,
+  ProfitRiskAssessmentResult,
+  ProfitRiskCategory,
 } from "./types";
 
 export interface Step1FormData {
@@ -2126,4 +2131,141 @@ export function isPricePredictionUnavailable(
   if (!res) return false;
   return res.prediction_status === "unavailable" || res.prediction_status === "pending";
 }
+
+// ============================================================================
+// Deterministic Profit Calculation & Risk Assessment Helpers
+// (POST /api/v1/profit-analyses/calculate and POST /api/v1/profit-analyses/assess-risk)
+// ============================================================================
+
+export interface ProfitCalculationValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
+export interface ProfitRiskAssessmentValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
+/**
+ * Builds the exact ProfitCalculationInput payload for POST /api/v1/profit-analyses/calculate.
+ * Uses genuine AI predicted selling price along with farmer's expected yield and cultivation cost.
+ * Strictly enforces positive yield and price, and non-negative cost.
+ */
+export function buildProfitCalculationRequest(
+  snapshot: ValidatedAnalysisSnapshot,
+  forecastedPriceLkrPerKg: number
+): ProfitCalculationInput {
+  return {
+    expected_yield_kg: snapshot.expected_yield_kg,
+    selling_price_lkr_per_kg: forecastedPriceLkrPerKg,
+    total_cultivation_cost: snapshot.total_cultivation_cost,
+  };
+}
+
+/**
+ * Builds the exact ProfitRiskAssessmentInput payload for POST /api/v1/profit-analyses/assess-risk.
+ * Uses genuine AI predicted selling price along with farmer's expected yield and cultivation cost.
+ */
+export function buildProfitRiskAssessmentRequest(
+  snapshot: ValidatedAnalysisSnapshot,
+  forecastedPriceLkrPerKg: number
+): ProfitRiskAssessmentInput {
+  return {
+    expected_yield_kg: snapshot.expected_yield_kg,
+    selling_price_lkr_per_kg: forecastedPriceLkrPerKg,
+    total_cultivation_cost: snapshot.total_cultivation_cost,
+  };
+}
+
+/**
+ * Validates the schema and values of a ProfitCalculationResult returned by the backend.
+ * Rejects malformed objects, non-numeric values, or invalid fields.
+ */
+export function validateProfitCalculationResponse(
+  res: unknown
+): ProfitCalculationValidationResult {
+  if (!res || typeof res !== "object" || Array.isArray(res)) {
+    return { isValid: false, error: "Response is not a valid JSON object." };
+  }
+
+  const r = res as Record<string, unknown>;
+
+  const requiredNumericFields = [
+    "expected_yield_kg",
+    "selling_price_lkr_per_kg",
+    "total_cultivation_cost",
+    "gross_revenue",
+    "net_profit",
+    "breakeven_price_lkr_per_kg",
+    "margin_of_safety_percentage",
+  ];
+
+  for (const field of requiredNumericFields) {
+    if (r[field] === undefined || r[field] === null) {
+      return { isValid: false, error: `Missing required field: '${field}'.` };
+    }
+    const val = Number(r[field]);
+    if (isNaN(val) || !isFinite(val)) {
+      return { isValid: false, error: `Field '${field}' must be a valid numeric value.` };
+    }
+  }
+
+  // roi_percentage may be null (when total_cultivation_cost is 0) or numeric
+  if (r.roi_percentage !== null && r.roi_percentage !== undefined) {
+    const roiNum = Number(r.roi_percentage);
+    if (isNaN(roiNum) || !isFinite(roiNum)) {
+      return { isValid: false, error: "roi_percentage must be null or a valid numeric value." };
+    }
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validates the schema and values of a ProfitRiskAssessmentResult returned by the backend.
+ * Rejects malformed objects, unsupported risk categories, or missing calculation components.
+ */
+export function validateProfitRiskAssessmentResponse(
+  res: unknown
+): ProfitRiskAssessmentValidationResult {
+  if (!res || typeof res !== "object" || Array.isArray(res)) {
+    return { isValid: false, error: "Response is not a valid JSON object." };
+  }
+
+  const r = res as Record<string, unknown>;
+
+  const validRiskCategories: ProfitRiskCategory[] = [
+    "Low",
+    "Medium",
+    "High",
+    "insufficient_information",
+  ];
+
+  if (
+    typeof r.risk_level !== "string" ||
+    !validRiskCategories.includes(r.risk_level as ProfitRiskCategory)
+  ) {
+    return {
+      isValid: false,
+      error: `Invalid risk_level: '${String(r.risk_level)}'. Expected one of ${validRiskCategories.join(", ")}.`,
+    };
+  }
+
+  if (!r.factors || typeof r.factors !== "object") {
+    return { isValid: false, error: "Missing or invalid 'factors' object in risk assessment response." };
+  }
+
+  if (!r.profit_calculation || typeof r.profit_calculation !== "object") {
+    return { isValid: false, error: "Missing or invalid 'profit_calculation' object in risk assessment response." };
+  }
+
+  const calcValidation = validateProfitCalculationResponse(r.profit_calculation);
+  if (!calcValidation.isValid) {
+    return { isValid: false, error: `Underlying profit calculation invalid: ${calcValidation.error}` };
+  }
+
+  return { isValid: true };
+}
+
 

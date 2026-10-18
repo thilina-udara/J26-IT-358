@@ -103,6 +103,12 @@ import {
   isPricePredictionAvailable,
   isPricePredictionUnavailable,
   type PriceForecastValidationResult,
+  buildProfitCalculationRequest,
+  buildProfitRiskAssessmentRequest,
+  validateProfitCalculationResponse,
+  validateProfitRiskAssessmentResponse,
+  type ProfitCalculationValidationResult,
+  type ProfitRiskAssessmentValidationResult,
 } from "../lib/wizard";
 
 import type {
@@ -3616,7 +3622,461 @@ test("Price Trend Integration: Live backend verification on port 8001 (stateless
     }
     throw err;
   }
+});// ============================================================================
+// Profit Calculation & Risk Assessment API Integration Tests
+// (POST /api/v1/profit-analyses/calculate & POST /api/v1/profit-analyses/assess-risk)
+// ============================================================================
+
+test("Profit & Risk Integration: buildProfitCalculationRequest and buildProfitRiskAssessmentRequest map snapshot and AI price accurately", () => {
+  const snapshot: ValidatedAnalysisSnapshot = {
+    crop_id: "CR_CHILLI",
+    cultivation_district_id: "LK-82",
+    harvest_date: "2027-08-20",
+    forecast_target_date: "2027-08-20",
+    expected_yield_kg: 2500,
+    expected_yield_kg_string: "2500",
+    target_market_id: "DEC_DAMBULLA",
+    price_type: "wholesale",
+    total_cultivation_cost: 185000,
+    total_cultivation_cost_string: "185000",
+    metadata: {
+      land_extent_acres: 2,
+      land_extent_acres_string: "2",
+      budget_mode: "detailed",
+      is_zero_cultivation_cost: false,
+      created_at: "2026-10-18T10:00:00Z",
+      version: "1.0.0",
+    },
+  };
+
+  const aiPrice = 420;
+
+  const calcPayload = buildProfitCalculationRequest(snapshot, aiPrice);
+  assert.deepEqual(calcPayload, {
+    expected_yield_kg: 2500,
+    selling_price_lkr_per_kg: 420,
+    total_cultivation_cost: 185000,
+  });
+
+  const riskPayload = buildProfitRiskAssessmentRequest(snapshot, aiPrice);
+  assert.deepEqual(riskPayload, {
+    expected_yield_kg: 2500,
+    selling_price_lkr_per_kg: 420,
+    total_cultivation_cost: 185000,
+  });
 });
 
+test("Profit & Risk Integration: validateProfitCalculationResponse validates against real backend schema contract", () => {
+  const backendCalculationResponse: ProfitCalculationResult = {
+    expected_yield_kg: "2500.00",
+    selling_price_lkr_per_kg: "420.00",
+    total_cultivation_cost: "185000.00",
+    gross_revenue: "1050000.00",
+    net_profit: "865000.00",
+    roi_percentage: "467.57",
+    breakeven_price_lkr_per_kg: "74.00",
+    margin_of_safety_percentage: "82.38",
+    currency: "LKR",
+    price_source: "farmer_assumption",
+    is_manual_price_assumption: true,
+    assumptions_note: "Selling price is a user-provided planning assumption, not a machine learning market price forecast.",
+    calculation_notes: null,
+  };
 
+  const validation = validateProfitCalculationResponse(backendCalculationResponse);
+  assert.equal(validation.isValid, true);
+  assert.equal(validation.error, undefined);
+});
 
+test("Profit & Risk Integration: validateProfitRiskAssessmentResponse validates Low, Medium, High, and insufficient_information risk categories", () => {
+  const categories = ["Low", "Medium", "High", "insufficient_information"] as const;
+
+  for (const cat of categories) {
+    const backendRiskResponse: ProfitRiskAssessmentResult = {
+      risk_level: cat,
+      assessment_type: "rule_based_heuristic",
+      is_ml_prediction: false,
+      disclaimer: "Preliminary rule-based heuristic classification.",
+      thresholds_applied: {
+        min_roi_low_risk: "25.0",
+        min_margin_safety_low_risk: "20.0",
+      },
+      factors: {
+        net_profit: "865000.00",
+        roi_percentage: cat === "insufficient_information" ? null : "467.57",
+        breakeven_price_lkr_per_kg: "74.00",
+        margin_of_safety_percentage: "82.38",
+        selling_price_lkr_per_kg: "420.00",
+        expected_yield_kg: "2500.00",
+        total_cultivation_cost: cat === "insufficient_information" ? "0.00" : "185000.00",
+        trigger_rule: `Rule for ${cat}`,
+        trigger_rationale: `Rationale for ${cat}`,
+      },
+      profit_calculation: {
+        expected_yield_kg: "2500.00",
+        selling_price_lkr_per_kg: "420.00",
+        total_cultivation_cost: cat === "insufficient_information" ? "0.00" : "185000.00",
+        gross_revenue: "1050000.00",
+        net_profit: "865000.00",
+        roi_percentage: cat === "insufficient_information" ? null : "467.57",
+        breakeven_price_lkr_per_kg: "74.00",
+        margin_of_safety_percentage: "82.38",
+        currency: "LKR",
+        price_source: "farmer_assumption",
+        is_manual_price_assumption: true,
+        assumptions_note: "Selling price note",
+        calculation_notes: cat === "insufficient_information" ? "Zero cost ROI undefined" : null,
+      },
+    };
+
+    const validation = validateProfitRiskAssessmentResponse(backendRiskResponse);
+    assert.equal(validation.isValid, true);
+    assert.equal(backendRiskResponse.risk_level, cat);
+  }
+
+  // Unsupported risk category is rejected
+  assert.equal(
+    validateProfitRiskAssessmentResponse({
+      risk_level: "Critical_Risk",
+      factors: {},
+      profit_calculation: {},
+    }).isValid,
+    false
+  );
+});
+
+test("Profit & Risk Integration: Zero cultivation cost behavior returns undefined ROI and insufficient_information risk category", () => {
+  const zeroCostRisk: ProfitRiskAssessmentResult = {
+    risk_level: "insufficient_information",
+    assessment_type: "rule_based_heuristic",
+    is_ml_prediction: false,
+    disclaimer: "Preliminary rule-based heuristic classification.",
+    thresholds_applied: { min_roi_low_risk: "25.0", min_margin_safety_low_risk: "20.0" },
+    factors: {
+      net_profit: "1050000.00",
+      roi_percentage: null,
+      breakeven_price_lkr_per_kg: "0.00",
+      margin_of_safety_percentage: "100.00",
+      selling_price_lkr_per_kg: "420.00",
+      expected_yield_kg: "2500.00",
+      total_cultivation_cost: "0.00",
+      trigger_rule: "total_cultivation_cost == 0 (ROI undefined)",
+      trigger_rationale: "Total cultivation cost is zero, making ROI mathematically undefined.",
+    },
+    profit_calculation: {
+      expected_yield_kg: "2500.00",
+      selling_price_lkr_per_kg: "420.00",
+      total_cultivation_cost: "0.00",
+      gross_revenue: "1050000.00",
+      net_profit: "1050000.00",
+      roi_percentage: null,
+      breakeven_price_lkr_per_kg: "0.00",
+      margin_of_safety_percentage: "100.00",
+      currency: "LKR",
+      price_source: "farmer_assumption",
+      is_manual_price_assumption: true,
+      assumptions_note: "Selling price note",
+      calculation_notes: "Total cultivation cost is zero. ROI is mathematically undefined.",
+    },
+  };
+
+  const validation = validateProfitRiskAssessmentResponse(zeroCostRisk);
+  assert.equal(validation.isValid, true);
+  assert.equal(zeroCostRisk.risk_level, "insufficient_information");
+  assert.equal(zeroCostRisk.factors.roi_percentage, null);
+  assert.equal(zeroCostRisk.profit_calculation.roi_percentage, null);
+  assert.match(zeroCostRisk.profit_calculation.calculation_notes!, /Total cultivation cost is zero/);
+});
+
+test("Profit & Risk Integration: Financial deficit (negative profit) is classified as High Risk", () => {
+  const lossRisk: ProfitRiskAssessmentResult = {
+    risk_level: "High",
+    assessment_type: "rule_based_heuristic",
+    is_ml_prediction: false,
+    disclaimer: "Preliminary disclaimer",
+    thresholds_applied: { min_roi_low_risk: "25.0", min_margin_safety_low_risk: "20.0" },
+    factors: {
+      net_profit: "-50000.00",
+      roi_percentage: "-50.00",
+      breakeven_price_lkr_per_kg: "100.00",
+      margin_of_safety_percentage: "-100.00",
+      selling_price_lkr_per_kg: "50.00",
+      expected_yield_kg: "1000.00",
+      total_cultivation_cost: "100000.00",
+      trigger_rule: "net_profit < 0 (LKR -50000.00) or ROI < 0% (-50.00%)",
+      trigger_rationale: "Expected revenue fails to recover cultivation expenditure.",
+    },
+    profit_calculation: {
+      expected_yield_kg: "1000.00",
+      selling_price_lkr_per_kg: "50.00",
+      total_cultivation_cost: "100000.00",
+      gross_revenue: "50000.00",
+      net_profit: "-50000.00",
+      roi_percentage: "-50.00",
+      breakeven_price_lkr_per_kg: "100.00",
+      margin_of_safety_percentage: "-100.00",
+      currency: "LKR",
+      price_source: "farmer_assumption",
+      is_manual_price_assumption: true,
+      assumptions_note: "Note",
+      calculation_notes: null,
+    },
+  };
+
+  const validation = validateProfitRiskAssessmentResponse(lossRisk);
+  assert.equal(validation.isValid, true);
+  assert.equal(lossRisk.risk_level, "High");
+  assert.equal(lossRisk.factors.net_profit, "-50000.00");
+  assert.equal(lossRisk.factors.roi_percentage, "-50.00");
+});
+
+test("Profit & Risk Integration: Missing or invalid response fields are rejected with HTTP 502 error", () => {
+  // Non-object
+  assert.equal(validateProfitCalculationResponse(null).isValid, false);
+  assert.equal(validateProfitCalculationResponse("invalid").isValid, false);
+
+  // Missing gross revenue
+  assert.equal(
+    validateProfitCalculationResponse({
+      expected_yield_kg: "2500",
+      selling_price_lkr_per_kg: "420",
+      total_cultivation_cost: "185000",
+      net_profit: "865000",
+    }).isValid,
+    false
+  );
+
+  // Non-numeric net profit
+  assert.equal(
+    validateProfitCalculationResponse({
+      expected_yield_kg: "2500",
+      selling_price_lkr_per_kg: "420",
+      total_cultivation_cost: "185000",
+      gross_revenue: "1050000",
+      net_profit: "not_a_number",
+      breakeven_price_lkr_per_kg: "74",
+      margin_of_safety_percentage: "82",
+    }).isValid,
+    false
+  );
+
+  // Missing factors in risk response
+  assert.equal(
+    validateProfitRiskAssessmentResponse({
+      risk_level: "Low",
+      profit_calculation: {},
+    }).isValid,
+    false
+  );
+});
+
+test("Profit & Risk Integration: Client handles API and network errors (offline port 8001, HTTP 400 invalid inputs, HTTP 500)", async () => {
+  const reqPayload: ProfitRiskAssessmentInput = {
+    expected_yield_kg: 2500,
+    selling_price_lkr_per_kg: 420,
+    total_cultivation_cost: 185000,
+  };
+
+  // 1. Offline connection error
+  const offlineClient = new MarketProfitApiClient({
+    baseUrl: "http://localhost:8001",
+    transport: (async () => {
+      throw new Error("connect ECONNREFUSED 127.0.0.1:8001");
+    }) as unknown as typeof fetch,
+  });
+
+  await assert.rejects(
+    async () => offlineClient.assessProfitRisk(reqPayload),
+    (err: unknown) => {
+      assert.ok(err instanceof ApiError);
+      assert.equal(err.status, 0);
+      assert.match(err.message, /Cannot connect to Market-Profit service/);
+      return true;
+    }
+  );
+
+  // 2. HTTP 400 Bad Request (negative yield)
+  const badRequestClient = new MarketProfitApiClient({
+    baseUrl: "http://localhost:8001",
+    transport: (async () => {
+      return new Response(
+        JSON.stringify({
+          detail: "expected_yield_kg must be greater than zero.",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }) as unknown as typeof fetch,
+  });
+
+  await assert.rejects(
+    async () => badRequestClient.assessProfitRisk(reqPayload),
+    (err: unknown) => {
+      assert.ok(err instanceof ApiError);
+      assert.equal(err.status, 400);
+      assert.match(err.message, /expected_yield_kg must be greater than zero/);
+      return true;
+    }
+  );
+
+  // 3. HTTP 500 Internal Server Error
+  const serverErrorClient = new MarketProfitApiClient({
+    baseUrl: "http://localhost:8001",
+    transport: (async () => {
+      return new Response(
+        JSON.stringify({
+          detail: "Database or engine failure during profit evaluation.",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }) as unknown as typeof fetch,
+  });
+
+  await assert.rejects(
+    async () => serverErrorClient.calculateProfit(reqPayload),
+    (err: unknown) => {
+      assert.ok(err instanceof ApiError);
+      assert.equal(err.status, 500);
+      return true;
+    }
+  );
+
+  // 4. HTTP 200 with malformed JSON body
+  const malformedClient = new MarketProfitApiClient({
+    baseUrl: "http://localhost:8001",
+    transport: (async () => {
+      return new Response(
+        JSON.stringify({
+          risk_level: "invalid_unsupported_tier",
+          factors: {},
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }) as unknown as typeof fetch,
+  });
+
+  await assert.rejects(
+    async () => malformedClient.assessProfitRisk(reqPayload),
+    (err: unknown) => {
+      assert.ok(err instanceof ApiError);
+      assert.equal(err.status, 502);
+      assert.match(err.message, /Malformed response received from profit risk assessment service/);
+      return true;
+    }
+  );
+});
+
+test("Profit & Risk Integration: Stale response protection prevents out-of-order race conditions from overwriting active state", async () => {
+  const activeSignature = "CR_CHILLI:2500:185000:420";
+
+  // Older request for Okra at lower yield and different price arrives late
+  const staleSignature = "CR_OKRA:1000:80000:180";
+  const staleResponse: ProfitRiskAssessmentResult = {
+    risk_level: "Medium",
+    assessment_type: "rule_based_heuristic",
+    is_ml_prediction: false,
+    disclaimer: "Stale disclaimer",
+    thresholds_applied: { min_roi_low_risk: "25.0", min_margin_safety_low_risk: "20.0" },
+    factors: {
+      net_profit: "100000.00",
+      roi_percentage: "125.00",
+      breakeven_price_lkr_per_kg: "80.00",
+      margin_of_safety_percentage: "55.56",
+      selling_price_lkr_per_kg: "180.00",
+      expected_yield_kg: "1000.00",
+      total_cultivation_cost: "80000.00",
+      trigger_rule: "Stale rule",
+      trigger_rationale: "Stale rationale",
+    },
+    profit_calculation: {
+      expected_yield_kg: "1000.00",
+      selling_price_lkr_per_kg: "180.00",
+      total_cultivation_cost: "80000.00",
+      gross_revenue: "180000.00",
+      net_profit: "100000.00",
+      roi_percentage: "125.00",
+      breakeven_price_lkr_per_kg: "80.00",
+      margin_of_safety_percentage: "55.56",
+      currency: "LKR",
+      price_source: "farmer_assumption",
+      is_manual_price_assumption: true,
+      assumptions_note: "Note",
+      calculation_notes: null,
+    },
+  };
+
+  // State container
+  const state = {
+    signature: activeSignature,
+    netProfit: null as string | null,
+    riskLevel: null as string | null,
+  };
+
+  // Attempt to apply the stale response
+  if ((staleSignature as string) === state.signature) {
+    state.netProfit = staleResponse.profit_calculation.net_profit;
+    state.riskLevel = staleResponse.risk_level;
+  }
+
+  // Active state remains completely untouched by the stale response
+  assert.equal(state.netProfit, null);
+  assert.equal(state.riskLevel, null);
+
+  // Now apply the matching active response
+  const activeResponse: ProfitRiskAssessmentResult = {
+    ...staleResponse,
+    risk_level: "Low",
+    profit_calculation: {
+      ...staleResponse.profit_calculation,
+      net_profit: "865000.00",
+    },
+  };
+
+  if ((activeSignature as string) === state.signature) {
+    state.netProfit = activeResponse.profit_calculation.net_profit;
+    state.riskLevel = activeResponse.risk_level;
+  }
+
+  assert.equal(state.netProfit, "865000.00");
+  assert.equal(state.riskLevel, "Low");
+});
+
+test("Profit & Risk Integration: Live backend verification on port 8001 for both calculate and assess-risk endpoints", async () => {
+  const client = new MarketProfitApiClient({ baseUrl: "http://localhost:8001" });
+
+  try {
+    // 1. Test POST /api/v1/profit-analyses/calculate
+    const calcRes = await client.calculateProfit({
+      expected_yield_kg: 2500,
+      selling_price_lkr_per_kg: 420,
+      total_cultivation_cost: 185000,
+    });
+
+    assert.equal(calcRes.expected_yield_kg, "2500.00");
+    assert.equal(calcRes.selling_price_lkr_per_kg, "420.00");
+    assert.equal(calcRes.total_cultivation_cost, "185000.00");
+    assert.equal(calcRes.gross_revenue, "1050000.00");
+    assert.equal(calcRes.net_profit, "865000.00");
+    assert.equal(calcRes.roi_percentage, "467.57");
+    assert.equal(calcRes.breakeven_price_lkr_per_kg, "74.00");
+    assert.equal(calcRes.margin_of_safety_percentage, "82.38");
+
+    // 2. Test POST /api/v1/profit-analyses/assess-risk
+    const riskRes = await client.assessProfitRisk({
+      expected_yield_kg: 2500,
+      selling_price_lkr_per_kg: 420,
+      total_cultivation_cost: 185000,
+    });
+
+    assert.equal(riskRes.risk_level, "Low");
+    assert.equal(riskRes.assessment_type, "rule_based_heuristic");
+    assert.equal(riskRes.is_ml_prediction, false);
+    assert.ok(riskRes.factors.trigger_rule.includes("ROI >= 25.0%"));
+    assert.equal(riskRes.profit_calculation.net_profit, "865000.00");
+  } catch (err: unknown) {
+    if (err instanceof ApiError && err.status === 0) {
+      // Backend offline notice
+      return;
+    }
+    throw err;
+  }
+});

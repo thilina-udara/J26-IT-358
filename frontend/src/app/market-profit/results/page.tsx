@@ -38,13 +38,15 @@ import {
   MarketMetadata,
   DEFAULT_API_BASE_URL,
 } from "../lib/constants";
-import { formatDateDisplay, formatKg, formatLKR } from "../lib/formatters";
+import { formatDateDisplay, formatKg, formatLKR, formatPercent } from "../lib/formatters";
 import { MarketProfitApiClient, ApiError } from "../lib/api";
 import type {
   DemandForecastRequest,
   DemandForecastResponse,
   PriceForecastRequest,
   PriceForecastResponse,
+  ProfitCalculationResult,
+  ProfitRiskAssessmentResult,
 } from "../lib/types";
 import {
   ValidatedAnalysisSnapshot,
@@ -59,6 +61,7 @@ import {
   buildPriceForecastRequest,
   isPricePredictionAvailable,
   isPricePredictionUnavailable,
+  buildProfitRiskAssessmentRequest,
 } from "../lib/wizard";
 
 // Statically import verified crop photographs
@@ -324,6 +327,138 @@ export default function AnalysisResultsPage() {
     const controller = new AbortController();
     priceAbortControllerRef.current = controller;
     executePriceForecast(snapshot, controller.signal);
+  };
+
+  // Live Profit & Risk Assessment state (POST /api/v1/profit-analyses/assess-risk)
+  const [profitState, setProfitState] = useState<{
+    status: "idle" | "loading" | "available" | "unavailable" | "error";
+    calculation: ProfitCalculationResult | null;
+    risk: ProfitRiskAssessmentResult | null;
+    errorMessage: string | null;
+    predictedPriceUsed: number | null;
+  }>({
+    status: "idle",
+    calculation: null,
+    risk: null,
+    errorMessage: null,
+    predictedPriceUsed: null,
+  });
+
+  const profitInFlightRef = React.useRef(false);
+  const profitLastFetchedSignatureRef = React.useRef<string | null>(null);
+  const profitAbortControllerRef = React.useRef<AbortController | null>(null);
+
+  const executeProfitRiskAssessment = async (
+    targetSnapshot: ValidatedAnalysisSnapshot,
+    predictedPrice: number,
+    activeSignal?: AbortSignal
+  ) => {
+    if (profitInFlightRef.current) return;
+    profitInFlightRef.current = true;
+
+    setProfitState((prev) => ({
+      ...prev,
+      status: "loading",
+      errorMessage: null,
+    }));
+
+    try {
+      const payload = buildProfitRiskAssessmentRequest(targetSnapshot, predictedPrice);
+      const client = new MarketProfitApiClient();
+      const result = await client.assessProfitRisk(payload, activeSignal);
+
+      setProfitState({
+        status: "available",
+        calculation: result.profit_calculation,
+        risk: result,
+        errorMessage: null,
+        predictedPriceUsed: predictedPrice,
+      });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+          ? err.message
+          : String(err);
+      setProfitState({
+        status: "error",
+        calculation: null,
+        risk: null,
+        errorMessage: msg,
+        predictedPriceUsed: null,
+      });
+    } finally {
+      profitInFlightRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!snapshot) return;
+
+    // Prerequisite check: requires valid completed price forecast
+    if (priceState.status === "loading") {
+      setProfitState((prev) => (prev.status !== "idle" ? { ...prev, status: "idle" } : prev));
+      return;
+    }
+
+    if (priceState.status === "unavailable" || priceState.status === "idle") {
+      profitAbortControllerRef.current?.abort();
+      setProfitState({
+        status: "unavailable",
+        calculation: null,
+        risk: null,
+        errorMessage: null,
+        predictedPriceUsed: null,
+      });
+      profitLastFetchedSignatureRef.current = null;
+      return;
+    }
+
+    if (priceState.status === "error") {
+      profitAbortControllerRef.current?.abort();
+      setProfitState({
+        status: "unavailable",
+        calculation: null,
+        risk: null,
+        errorMessage: null,
+        predictedPriceUsed: null,
+      });
+      profitLastFetchedSignatureRef.current = null;
+      return;
+    }
+
+    if (priceState.status === "available" && priceState.response && isPricePredictionAvailable(priceState.response)) {
+      const priceVal = Number(priceState.response.forecasted_price_lkr_per_kg);
+      const currentSignature = `${snapshot.crop_id}:${snapshot.expected_yield_kg}:${snapshot.total_cultivation_cost}:${priceVal}`;
+
+      if (profitLastFetchedSignatureRef.current === currentSignature) {
+        return;
+      }
+
+      profitAbortControllerRef.current?.abort();
+      const controller = new AbortController();
+      profitAbortControllerRef.current = controller;
+      profitLastFetchedSignatureRef.current = currentSignature;
+
+      executeProfitRiskAssessment(snapshot, priceVal, controller.signal);
+
+      return () => {
+        controller.abort();
+      };
+    }
+  }, [snapshot, priceState.status, priceState.response]);
+
+  const handleRetryProfit = () => {
+    if (!snapshot || !priceState.response || !isPricePredictionAvailable(priceState.response)) return;
+    const priceVal = Number(priceState.response.forecasted_price_lkr_per_kg);
+    profitAbortControllerRef.current?.abort();
+    const controller = new AbortController();
+    profitAbortControllerRef.current = controller;
+    executeProfitRiskAssessment(snapshot, priceVal, controller.signal);
   };
 
   // Handler to start a new analysis
@@ -1219,23 +1354,24 @@ export default function AnalysisResultsPage() {
       </div>
 
       {/* ===================================================================== */}
-      {/* SECTION 5: UPCOMING FINANCIAL FEASIBILITY PIPELINE                    */}
+      {/* SECTION 5: PROFIT & RISK ASSESSMENT (LIVE FASTAPI INTEGRATION)       */}
       {/* ===================================================================== */}
       <div className="space-y-4">
         <div>
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <span className="text-xs font-bold text-[#15803d] uppercase tracking-wider">
             Analytical Pipeline 3 of 3
           </span>
-          <h2 className="text-lg font-bold text-slate-900 tracking-tight mt-0.5">
+          <h2 className="text-xl font-extrabold text-slate-900 tracking-tight mt-0.5">
             Profit &amp; Risk Assessment
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Upcoming financial feasibility pipeline (revenue, net profit, ROI, breakeven, and risk category)
+            Live integration with FastAPI deterministic profit &amp; rule-based risk engines (<code>POST /api/v1/profit-analyses/assess-risk</code>)
           </p>
         </div>
 
         {/* Profit & Risk Assessment Card */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs space-y-5">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs space-y-6">
+          {/* Card Header & Status Badge */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
@@ -1243,7 +1379,7 @@ export default function AnalysisResultsPage() {
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                  Financial Feasibility &amp; Risk Classification
+                  Financial Return &amp; Feasibility Risk
                 </h3>
                 <span className="text-xs text-slate-500">
                   Target Destination: {marketMeta?.name || snapshot.target_market_id} &bull; Total Cultivation Budget: {formatLKR(snapshot.total_cultivation_cost)}
@@ -1251,37 +1387,333 @@ export default function AnalysisResultsPage() {
               </div>
             </div>
 
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-100/80 px-3 py-1.5 rounded-full border border-amber-200">
-              <Clock className="h-3.5 w-3.5 text-amber-700" />
-              <span>Awaiting Price Calculation</span>
+            {/* Live State / Risk Classification Badge */}
+            <div>
+              {profitState.status === "loading" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-800 bg-sky-100/90 px-3 py-1.5 rounded-full border border-sky-200">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-600" />
+                  <span>Evaluating Returns...</span>
+                </span>
+              )}
+              {profitState.status === "available" && profitState.risk && (
+                <>
+                  {profitState.risk.risk_level === "Low" && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-full border border-emerald-300">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
+                      <span>Low Risk Classification</span>
+                    </span>
+                  )}
+                  {profitState.risk.risk_level === "Medium" && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-300">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-700" />
+                      <span>Medium Risk Classification</span>
+                    </span>
+                  )}
+                  {profitState.risk.risk_level === "High" && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-800 bg-rose-100 px-3 py-1.5 rounded-full border border-rose-300">
+                      <AlertCircle className="h-3.5 w-3.5 text-rose-700" />
+                      <span>High Risk Classification</span>
+                    </span>
+                  )}
+                  {profitState.risk.risk_level === "insufficient_information" && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-300">
+                      <Clock className="h-3.5 w-3.5 text-slate-500" />
+                      <span>Insufficient Cost Data (ROI Undefined)</span>
+                    </span>
+                  )}
+                </>
+              )}
+              {profitState.status === "unavailable" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-100/90 px-3 py-1.5 rounded-full border border-amber-300">
+                  <Clock className="h-3.5 w-3.5 text-amber-700" />
+                  <span>Awaiting Price Forecast</span>
+                </span>
+              )}
+              {profitState.status === "error" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-800 bg-rose-100 px-3 py-1.5 rounded-full border border-rose-300">
+                  <AlertTriangle className="h-3.5 w-3.5 text-rose-700" />
+                  <span>Calculation Error</span>
+                </span>
+              )}
+              {profitState.status === "idle" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+                  <Clock className="h-3.5 w-3.5 text-slate-500" />
+                  <span>Awaiting Price Forecast...</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* 4 Financial Assessment Parameters */}
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+              Assessment Inputs
             </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Expected Yield</span>
+                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
+                  {formatKg(snapshot.expected_yield_kg)}
+                </span>
+                <span className="text-[11px] text-slate-500 block truncate">
+                  Planned harvest volume
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Forecasted Price Basis</span>
+                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
+                  {profitState.predictedPriceUsed !== null
+                    ? `${formatLKR(profitState.predictedPriceUsed)} / kg`
+                    : "Awaiting ML Price"}
+                </span>
+                <span className="text-[11px] text-slate-500 block truncate capitalize">
+                  {snapshot.price_type} valuation tier
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Cultivation Budget</span>
+                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
+                  {formatLKR(snapshot.total_cultivation_cost)}
+                </span>
+                <span className="text-[11px] text-slate-500 block truncate capitalize">
+                  {snapshot.metadata.budget_mode === "detailed" ? "Detailed Budget" : "Quick Budget"}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Selling Market</span>
+                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
+                  {marketMeta?.short_name || marketMeta?.name || snapshot.target_market_id}
+                </span>
+                <span className="text-[11px] text-slate-500 block truncate">
+                  {marketMeta?.region || "Economic Centre"}
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* Strict Requirement Notice */}
-          <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 space-y-1.5">
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
-              <AlertCircle className="h-4 w-4 text-amber-700 shrink-0" />
-              <span>Analysis results are not available yet.</span>
+          {/* Dynamic State Views */}
+          {/* State 1: Loading */}
+          {profitState.status === "loading" && (
+            <div className="p-5 rounded-2xl bg-sky-50/70 border border-sky-200/80 flex items-start gap-4 animate-in fade-in duration-150">
+              <Loader2 className="h-5 w-5 text-sky-600 animate-spin shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="text-sm font-bold text-sky-950">
+                  Evaluating Financial Feasibility &amp; Risk Assessment...
+                </div>
+                <p className="text-xs text-sky-800 leading-relaxed">
+                  Connecting to <code>POST /api/v1/profit-analyses/assess-risk</code> for {cropMeta?.name_en || "your crop"}. Evaluating net profit, return on investment (ROI), breakeven selling price, and margin of safety against preliminary thresholds.
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-amber-900 leading-relaxed">
-              Once ML predicted selling prices are generated and the profit calculation pipeline activates, gross revenue ({formatKg(snapshot.expected_yield_kg)} &times; Forecasted Price), net profit, and rule-based risk level will calculate deterministically against your recorded cultivation cost of {formatLKR(snapshot.total_cultivation_cost)}.
-            </p>
-          </div>
+          )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Projected Gross Revenue:</span>
-              <span className="text-xs font-bold text-slate-400 mt-1">Awaiting Price Calculation</span>
+          {/* State 2: Prediction Available (Real Backend Calculated Results) */}
+          {profitState.status === "available" && profitState.calculation && profitState.risk && (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              {/* 6 Deterministic Financial Metrics Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {/* 1. Gross Revenue */}
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Projected Gross Revenue
+                  </span>
+                  <div className="text-2xl font-extrabold text-slate-900">
+                    {formatLKR(Number(profitState.calculation.gross_revenue))}
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    {formatKg(snapshot.expected_yield_kg)} &times; {formatLKR(Number(profitState.calculation.selling_price_lkr_per_kg))}/kg
+                  </p>
+                </div>
+
+                {/* 2. Total Cultivation Cost */}
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Total Cultivation Cost
+                  </span>
+                  <div className="text-2xl font-extrabold text-slate-900">
+                    {formatLKR(Number(profitState.calculation.total_cultivation_cost))}
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-tight capitalize">
+                    {snapshot.metadata.budget_mode} budget expenditure
+                  </p>
+                </div>
+
+                {/* 3. Estimated Net Profit */}
+                <div
+                  className={`p-4 rounded-2xl border space-y-1.5 ${
+                    Number(profitState.calculation.net_profit) >= 0
+                      ? "border-emerald-200 bg-emerald-50/60 text-emerald-950"
+                      : "border-rose-200 bg-rose-50/70 text-rose-950"
+                  }`}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider block opacity-75">
+                    Estimated Net Profit / Return
+                  </span>
+                  <div className="text-2xl font-extrabold">
+                    {formatLKR(Number(profitState.calculation.net_profit))}
+                  </div>
+                  <p className="text-[11px] opacity-75 leading-tight">
+                    Projected Revenue &minus; Total Cultivation Cost
+                  </p>
+                </div>
+
+                {/* 4. ROI Percentage */}
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Return on Investment (ROI)
+                  </span>
+                  <div className="text-2xl font-extrabold text-slate-900">
+                    {profitState.calculation.roi_percentage !== null &&
+                    profitState.calculation.roi_percentage !== undefined
+                      ? `${Number(profitState.calculation.roi_percentage) >= 0 ? "+" : ""}${formatPercent(
+                          Number(profitState.calculation.roi_percentage)
+                        )}`
+                      : "Undefined"}
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    {profitState.calculation.roi_percentage !== null
+                      ? "(Net Profit ÷ Total Cost) × 100"
+                      : "Total cost is Rs. 0 (mathematically undefined)"}
+                  </p>
+                </div>
+
+                {/* 5. Break-Even Price */}
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Break-Even Selling Price
+                  </span>
+                  <div className="text-2xl font-extrabold text-slate-900">
+                    {formatLKR(Number(profitState.calculation.breakeven_price_lkr_per_kg))}
+                    <span className="text-xs font-semibold text-slate-400 ml-1">/ kg</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    Minimum price required to recover all costs
+                  </p>
+                </div>
+
+                {/* 6. Profit Margin */}
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Profit Margin (%)
+                  </span>
+                  <div className="text-2xl font-extrabold text-slate-900">
+                    {formatPercent(Number(profitState.calculation.margin_of_safety_percentage))}
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    Net profit as a percentage of gross revenue
+                  </p>
+                </div>
+              </div>
+
+              {/* Rule-Based Risk Evaluation Rationale Box */}
+              <div
+                className={`p-4 sm:p-5 rounded-2xl border space-y-2.5 ${
+                  profitState.risk.risk_level === "Low"
+                    ? "bg-emerald-50/70 border-emerald-300 text-emerald-950"
+                    : profitState.risk.risk_level === "Medium"
+                    ? "bg-amber-50/70 border-amber-300 text-amber-950"
+                    : profitState.risk.risk_level === "High"
+                    ? "bg-rose-50/70 border-rose-300 text-rose-950"
+                    : "bg-slate-50 border-slate-300 text-slate-900"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 shrink-0" />
+                  <span className="text-sm font-bold">
+                    Risk Classification Rationale ({profitState.risk.risk_level} Risk)
+                  </span>
+                </div>
+                <div className="text-xs space-y-1">
+                  <p className="leading-relaxed">
+                    <strong>Evaluation Outcome:</strong> {profitState.risk.factors.trigger_rationale}
+                  </p>
+                  <p className="text-[11px] opacity-80 pt-1 border-t border-black/10">
+                    <strong>Rule Evaluated:</strong> <code>{profitState.risk.factors.trigger_rule}</code>
+                  </p>
+                </div>
+              </div>
+
+              {/* Methodological Transparency Notice */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 space-y-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                  <Sparkles className="h-4 w-4 text-[#15803d]" />
+                  <span>Methodological Transparency &amp; Planning Advisory</span>
+                </div>
+                <p className="leading-relaxed">
+                  {profitState.risk.disclaimer}
+                </p>
+                <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+                  All figures are projections based on AI commodity price forecasts and your planning inputs. They do not constitute guaranteed financial earnings or insurance underwriting.
+                </p>
+              </div>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Estimated Net Profit:</span>
-              <span className="text-xs font-bold text-slate-400 mt-1">Awaiting Price Calculation</span>
+          )}
+
+          {/* State 3: Prediction Unavailable */}
+          {profitState.status === "unavailable" && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+                  <Clock className="h-4 w-4 text-amber-700" />
+                  <span>Profit &amp; Risk Assessment is Awaiting Price Trend Forecast</span>
+                </div>
+                <p className="text-xs text-amber-900 leading-relaxed">
+                  Financial feasibility calculations, gross revenue, net profit, and risk classifications require a validated machine-learning predicted selling price from Pipeline 2.
+                </p>
+                <p className="text-[11px] text-amber-800 leading-relaxed pt-1 border-t border-amber-200/60">
+                  Because the price forecasting model is currently offline or undergoing training, financial returns and risk levels cannot be computed without making speculative assumptions.
+                  <strong className="text-amber-950 ml-1">
+                    In accordance with our research integrity guidelines, no fallback prices, sample profits, or fabricated risk labels are displayed.
+                  </strong>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Projected Gross Revenue:</span>
+                  <span className="text-xs font-bold text-slate-400 mt-1">Awaiting Price Forecast</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Estimated Net Profit:</span>
+                  <span className="text-xs font-bold text-slate-400 mt-1">Awaiting Price Forecast</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Feasibility Risk Category:</span>
+                  <span className="text-xs font-bold text-slate-400 mt-1">Awaiting Price Forecast</span>
+                </div>
+              </div>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Feasibility Risk Category:</span>
-              <span className="text-xs font-bold text-slate-400 mt-1">Awaiting Price Calculation</span>
+          )}
+
+          {/* State 4: Request Failed (Error) */}
+          {profitState.status === "error" && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 sm:p-5 space-y-3 animate-in fade-in duration-200">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="text-sm font-bold text-rose-950">
+                    Unable to Complete Profit &amp; Risk Assessment
+                  </div>
+                  <p className="text-xs text-rose-800 leading-relaxed">
+                    {profitState.errorMessage}
+                  </p>
+                  <p className="text-[11px] text-rose-700 pt-1">
+                    Please verify that the FastAPI backend service is running on port 8001 (or configured via <code>NEXT_PUBLIC_MARKET_PROFIT_API_URL</code>).
+                  </p>
+                </div>
+              </div>
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleRetryProfit}
+                  className="inline-flex items-center gap-2 rounded-xl bg-rose-700 hover:bg-rose-800 active:scale-95 text-white px-4 py-2 text-xs font-bold shadow-xs transition-all cursor-pointer"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Retry Profit &amp; Risk Assessment</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

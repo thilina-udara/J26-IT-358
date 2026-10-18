@@ -7,6 +7,8 @@ import { DEFAULT_API_BASE_URL } from "./constants";
 import {
   validateDemandForecastResponse,
   validatePriceForecastResponse,
+  validateProfitCalculationResponse,
+  validateProfitRiskAssessmentResponse,
 } from "./wizard";
 import type {
   CombinedAnalysisResult,
@@ -184,23 +186,53 @@ export class MarketProfitApiClient {
   /**
    * Calculate deterministic gross revenue, net profit, ROI, breakeven price, and margin of safety.
    * Completely stateless, 0 database writes.
+   * Rejects malformed or invalid response payloads.
    */
-  public async calculateProfit(request: ProfitCalculationInput): Promise<ProfitCalculationResult> {
-    return this.postJson<ProfitCalculationInput, ProfitCalculationResult>(
+  public async calculateProfit(
+    request: ProfitCalculationInput,
+    signal?: AbortSignal
+  ): Promise<ProfitCalculationResult> {
+    const response = await this.postJson<ProfitCalculationInput, ProfitCalculationResult>(
       "/api/v1/profit-analyses/calculate",
-      request
+      request,
+      signal
     );
+
+    const validation = validateProfitCalculationResponse(response);
+    if (!validation.isValid) {
+      throw new ApiError(
+        502,
+        `Malformed response received from profit calculation service: ${validation.error}`
+      );
+    }
+
+    return response;
   }
 
   /**
    * Evaluate rule-based agricultural profit risk (Low, Medium, High, or insufficient_information).
    * Transparently explains trigger rules and preliminary heuristics.
+   * Rejects malformed or invalid response payloads.
    */
-  public async assessProfitRisk(request: ProfitRiskAssessmentInput): Promise<ProfitRiskAssessmentResult> {
-    return this.postJson<ProfitRiskAssessmentInput, ProfitRiskAssessmentResult>(
+  public async assessProfitRisk(
+    request: ProfitRiskAssessmentInput,
+    signal?: AbortSignal
+  ): Promise<ProfitRiskAssessmentResult> {
+    const response = await this.postJson<ProfitRiskAssessmentInput, ProfitRiskAssessmentResult>(
       "/api/v1/profit-analyses/assess-risk",
-      request
+      request,
+      signal
     );
+
+    const validation = validateProfitRiskAssessmentResponse(response);
+    if (!validation.isValid) {
+      throw new ApiError(
+        502,
+        `Malformed response received from profit risk assessment service: ${validation.error}`
+      );
+    }
+
+    return response;
   }
 
   /**

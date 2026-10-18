@@ -26,6 +26,7 @@ import {
   Clock,
   Edit3,
   RotateCcw,
+  Loader2,
 } from "lucide-react";
 
 import {
@@ -35,8 +36,11 @@ import {
   FrontendCropMetadata,
   DistrictMetadata,
   MarketMetadata,
+  DEFAULT_API_BASE_URL,
 } from "../lib/constants";
 import { formatDateDisplay, formatKg, formatLKR } from "../lib/formatters";
+import { MarketProfitApiClient, ApiError } from "../lib/api";
+import type { DemandForecastRequest, DemandForecastResponse } from "../lib/types";
 import {
   ValidatedAnalysisSnapshot,
   loadAnalysisSnapshot,
@@ -44,6 +48,9 @@ import {
   saveAnalysisSnapshot,
   clearAnalysisSnapshot,
   DETAILED_EXPENSE_CATEGORIES,
+  buildDemandForecastRequest,
+  isPredictionAvailable,
+  isPredictionUnavailable,
 } from "../lib/wizard";
 
 // Statically import verified crop photographs
@@ -94,6 +101,114 @@ export default function AnalysisResultsPage() {
       );
     }
   }, []);
+
+  // Live Market Demand Analysis state
+  const [demandState, setDemandState] = useState<{
+    status: "idle" | "loading" | "available" | "unavailable" | "error";
+    response: DemandForecastResponse | null;
+    errorMessage: string | null;
+    requestPayload: DemandForecastRequest | null;
+  }>({
+    status: "idle",
+    response: null,
+    errorMessage: null,
+    requestPayload: null,
+  });
+
+  const inFlightRef = React.useRef(false);
+  const lastFetchedSignatureRef = React.useRef<string | null>(null);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  const executeDemandForecast = async (
+    targetSnapshot: ValidatedAnalysisSnapshot,
+    activeSignal?: AbortSignal
+  ) => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+
+    const payload = buildDemandForecastRequest(targetSnapshot);
+    setDemandState((prev) => ({
+      ...prev,
+      status: "loading",
+      errorMessage: null,
+      requestPayload: payload,
+    }));
+
+    try {
+      const client = new MarketProfitApiClient();
+      const result = await client.getDemandForecast(payload, activeSignal);
+
+      if (isPredictionAvailable(result)) {
+        setDemandState({
+          status: "available",
+          response: result,
+          errorMessage: null,
+          requestPayload: payload,
+        });
+      } else if (isPredictionUnavailable(result)) {
+        setDemandState({
+          status: "unavailable",
+          response: result,
+          errorMessage: null,
+          requestPayload: payload,
+        });
+      } else {
+        setDemandState({
+          status: "unavailable",
+          response: result,
+          errorMessage: null,
+          requestPayload: payload,
+        });
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+          ? err.message
+          : String(err);
+      setDemandState({
+        status: "error",
+        response: null,
+        errorMessage: msg,
+        requestPayload: payload,
+      });
+    } finally {
+      inFlightRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!snapshot) return;
+
+    const currentSignature = `${snapshot.crop_id}:${snapshot.cultivation_district_id}:${snapshot.target_market_id}:${snapshot.forecast_target_date || snapshot.harvest_date}`;
+
+    if (lastFetchedSignatureRef.current === currentSignature) {
+      return;
+    }
+
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    lastFetchedSignatureRef.current = currentSignature;
+
+    executeDemandForecast(snapshot, controller.signal);
+
+    return () => {
+      controller.abort();
+    };
+  }, [snapshot]);
+
+  const handleRetryDemand = () => {
+    if (!snapshot) return;
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    executeDemandForecast(snapshot, controller.signal);
+  };
 
   // Handler to start a new analysis
   const handleStartNewAnalysis = () => {
@@ -464,66 +579,291 @@ export default function AnalysisResultsPage() {
       </div>
 
       {/* ===================================================================== */}
-      {/* SECTION 3: THREE PENDING ANALYSIS MODULES                             */}
+      {/* SECTION 3: MARKET DEMAND ANALYSIS (LIVE FASTAPI INTEGRATION)         */}
       {/* ===================================================================== */}
       <div className="space-y-4">
         <div>
           <span className="text-xs font-bold text-[#15803d] uppercase tracking-wider">
-            Analysis Modules Status
+            Analytical Pipeline 1 of 3
           </span>
           <h2 className="text-xl font-extrabold text-slate-900 tracking-tight mt-0.5">
-            Component 1 Analytical Pipelines
+            Market Demand Analysis
           </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Live integration with FastAPI ML prediction pipeline (<code>POST /api/v1/market-demands/forecast</code>)
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* 1. Market Demand Analysis Card */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100/80 px-2.5 py-1 rounded-full border border-amber-200">
-                  <Clock className="h-3 w-3" />
-                  <span>Pending ML</span>
-                </span>
+        {/* Featured Market Demand Analysis Card */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs space-y-6">
+          {/* Card Header & Status Badge */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-[#15803d]">
+                <TrendingUp className="h-6 w-6" />
               </div>
-
               <div>
                 <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                  Market Demand Analysis
+                  Harvest Arrival Demand Projection
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Demand forecasting for target harvest date
-                </p>
-              </div>
-
-              {/* Strict Requirement Notice */}
-              <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3.5 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                  <AlertCircle className="h-3.5 w-3.5 text-amber-700" />
-                  <span>Analysis results are not available yet.</span>
-                </div>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
-                  Our machine learning model will classify buyer demand pressure (High, Medium, Low) and estimate demand volumes for {cropMeta?.name_en || "your crop"} on {formatDateDisplay(snapshot.harvest_date)}.
-                </p>
+                <span className="text-xs text-slate-500">
+                  Target Destination: {marketMeta?.name || snapshot.target_market_id}
+                </span>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-400 space-y-1">
-              <div className="flex justify-between">
-                <span>Projected Demand Volume:</span>
-                <span className="font-semibold text-slate-500">Pending ML</span>
+            {/* Live State Badge */}
+            <div>
+              {demandState.status === "loading" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-800 bg-sky-100/90 px-3 py-1.5 rounded-full border border-sky-200">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-600" />
+                  <span>Querying Model...</span>
+                </span>
+              )}
+              {demandState.status === "available" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-full border border-emerald-300">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
+                  <span>Prediction Available</span>
+                </span>
+              )}
+              {demandState.status === "unavailable" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-100/90 px-3 py-1.5 rounded-full border border-amber-300">
+                  <Clock className="h-3.5 w-3.5 text-amber-700" />
+                  <span>Model Offline / Training</span>
+                </span>
+              )}
+              {demandState.status === "error" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-800 bg-rose-100 px-3 py-1.5 rounded-full border border-rose-300">
+                  <AlertTriangle className="h-3.5 w-3.5 text-rose-700" />
+                  <span>Service Connection Error</span>
+                </span>
+              )}
+              {demandState.status === "idle" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+                  <Clock className="h-3.5 w-3.5 text-slate-500" />
+                  <span>Initializing...</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* 4 Confirmed Farm Input Parameters Required for Demand Analysis (Task 2) */}
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+              Forecasting Parameters
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Selected Crop</span>
+                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
+                  {cropMeta?.name_en || snapshot.crop_id}
+                </span>
+                <span className="text-[11px] text-slate-500 block truncate">
+                  {cropMeta?.name_si}
+                </span>
               </div>
-              <div className="flex justify-between">
-                <span>Demand Category:</span>
-                <span className="font-semibold text-slate-500">Pending ML</span>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Cultivation District</span>
+                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
+                  {districtMeta?.name || snapshot.cultivation_district_id}
+                </span>
+                <span className="text-[11px] text-slate-500 block truncate">
+                  {districtMeta?.zone}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Expected Harvest Date</span>
+                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
+                  {formatDateDisplay(snapshot.harvest_date)}
+                </span>
+                <span className="text-[11px] text-slate-500 block font-mono text-[10px]">
+                  {snapshot.harvest_date}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Target Selling Market</span>
+                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
+                  {marketMeta?.short_name || marketMeta?.name || snapshot.target_market_id}
+                </span>
+                <span className="text-[11px] text-slate-500 block truncate">
+                  {marketMeta?.region || "Economic Centre"}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* 2. Price Trend Forecast Card */}
+          {/* Dynamic State Views */}
+          {/* State 1: Loading */}
+          {demandState.status === "loading" && (
+            <div className="p-5 rounded-2xl bg-sky-50/70 border border-sky-200/80 flex items-start gap-4 animate-in fade-in duration-150">
+              <Loader2 className="h-5 w-5 text-sky-600 animate-spin shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="text-sm font-bold text-sky-950">
+                  Querying Market Demand Analysis API...
+                </div>
+                <p className="text-xs text-sky-800 leading-relaxed">
+                  Connecting to <code>POST /api/v1/market-demands/forecast</code> for {cropMeta?.name_en || "your crop"} at {marketMeta?.name || "your target market"}. Evaluating arrival dates and regional demand pressure.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* State 2: Prediction Available */}
+          {demandState.status === "available" && demandState.response && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Demand Level Card */}
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Categorical Demand Level
+                  </span>
+                  <div>
+                    {demandState.response.projected_demand_level === "High" && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        High Demand
+                      </span>
+                    )}
+                    {demandState.response.projected_demand_level === "Medium" && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-300">
+                        Medium Demand
+                      </span>
+                    )}
+                    {demandState.response.projected_demand_level === "Low" && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+                        Low Demand
+                      </span>
+                    )}
+                    {!demandState.response.projected_demand_level && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-200 text-slate-700">
+                        Not Classified
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                    {demandState.response.projected_demand_level === "High" &&
+                      "Strong buyer purchasing interest expected at market hub on harvest date."}
+                    {demandState.response.projected_demand_level === "Medium" &&
+                      "Balanced market demand and steady buyer activity anticipated."}
+                    {demandState.response.projected_demand_level === "Low" &&
+                      "Lower buyer demand pressure or potential market surplus projected."}
+                    {!demandState.response.projected_demand_level &&
+                      "Model did not return a categorical demand tier."}
+                  </p>
+                </div>
+
+                {/* Projected Demand Volume Card */}
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Projected Demand Volume (kg)
+                  </span>
+                  <div className="text-xl font-extrabold text-slate-900">
+                    {demandState.response.projected_demand_volume_kg !== null &&
+                    demandState.response.projected_demand_volume_kg !== undefined
+                      ? formatKg(demandState.response.projected_demand_volume_kg)
+                      : "Not specified by model"}
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Estimated total commodity volume absorbed by buyer arrivals at the destination market centre.
+                  </p>
+                </div>
+              </div>
+
+              {/* Model Provenance & Status Note */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 text-xs text-emerald-900">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0" />
+                  <span>
+                    Model Version:{" "}
+                    <strong>{demandState.response.model_version || "Default ML Pipeline"}</strong>
+                  </span>
+                </div>
+                <span className="text-emerald-700 text-[11px]">
+                  {demandState.response.status_message}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* State 3: Prediction Unavailable */}
+          {demandState.status === "unavailable" && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+                  <Clock className="h-4 w-4 text-amber-700" />
+                  <span>Machine Learning Demand Prediction Model is Currently Offline</span>
+                </div>
+                <p className="text-xs text-amber-900 leading-relaxed">
+                  {demandState.response?.status_message ||
+                    "Machine learning demand prediction model is currently offline or undergoing training."}
+                </p>
+                <p className="text-[11px] text-amber-800 leading-relaxed pt-1 border-t border-amber-200/60">
+                  Our machine learning pipeline will categorize buyer demand pressure (High, Medium, Low) and estimate demand volumes for {cropMeta?.name_en || "your crop"} at {marketMeta?.name || "the market"} once trained weights are deployed.
+                  <strong className="text-amber-950 ml-1">
+                    In accordance with our research integrity guidelines, no mock, synthetic, or estimated demand figures are displayed.
+                  </strong>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Projected Demand Volume:</span>
+                  <span className="text-xs font-bold text-slate-400">Unavailable (Model Offline)</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Demand Category:</span>
+                  <span className="text-xs font-bold text-slate-400">Unavailable (Model Offline)</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* State 4: Request Failed (Error) */}
+          {demandState.status === "error" && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 sm:p-5 space-y-3 animate-in fade-in duration-200">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="text-sm font-bold text-rose-950">
+                    Unable to Connect to Demand Forecasting Service
+                  </div>
+                  <p className="text-xs text-rose-800 leading-relaxed">
+                    {demandState.errorMessage}
+                  </p>
+                  <p className="text-[11px] text-rose-700 pt-1">
+                    Please verify that the FastAPI backend service is running on port 8001 (or configured via <code>NEXT_PUBLIC_MARKET_PROFIT_API_URL</code>).
+                  </p>
+                </div>
+              </div>
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleRetryDemand}
+                  className="inline-flex items-center gap-2 rounded-xl bg-rose-700 hover:bg-rose-800 active:scale-95 text-white px-4 py-2 text-xs font-bold shadow-xs transition-all cursor-pointer"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Retry Demand Analysis</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ===================================================================== */}
+      {/* SECTION 4: UPCOMING ANALYSIS PIPELINES (NEXT MILESTONES)               */}
+      {/* ===================================================================== */}
+      <div className="space-y-4">
+        <div>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            Pipelines 2 &amp; 3
+          </span>
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight mt-0.5">
+            Upcoming Price &amp; Profit Pipelines
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Price Trend Forecast Card */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -569,7 +909,7 @@ export default function AnalysisResultsPage() {
             </div>
           </div>
 
-          {/* 3. Profit & Risk Assessment Card */}
+          {/* Profit & Risk Assessment Card */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">

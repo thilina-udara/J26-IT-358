@@ -4,6 +4,7 @@
  */
 
 import { DEFAULT_API_BASE_URL } from "./constants";
+import { validateDemandForecastResponse } from "./wizard";
 import type {
   CombinedAnalysisResult,
   DemandForecastRequest,
@@ -80,7 +81,11 @@ export class MarketProfitApiClient {
     this.transport = config.transport || (typeof fetch !== "undefined" ? fetch.bind(globalThis) : (fetch as any));
   }
 
-  private async postJson<TRequest, TResponse>(endpoint: string, payload: TRequest): Promise<TResponse> {
+  private async postJson<TRequest, TResponse>(
+    endpoint: string,
+    payload: TRequest,
+    signal?: AbortSignal
+  ): Promise<TResponse> {
     const url = `${this.baseUrl}${endpoint}`;
     let res: Response;
 
@@ -92,8 +97,12 @@ export class MarketProfitApiClient {
           Accept: "application/json",
         },
         body: JSON.stringify(payload),
+        signal,
       });
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        throw err;
+      }
       const errMsg = err instanceof Error ? err.message : String(err);
       throw new ApiError(
         0,
@@ -120,12 +129,27 @@ export class MarketProfitApiClient {
   /**
    * Request commodity demand forecast (stateless ML inference endpoint).
    * Gracefully returns prediction_status = "unavailable" and null values when model is offline.
+   * Rejects malformed or invalid response payloads.
    */
-  public async getDemandForecast(request: DemandForecastRequest): Promise<DemandForecastResponse> {
-    return this.postJson<DemandForecastRequest, DemandForecastResponse>(
+  public async getDemandForecast(
+    request: DemandForecastRequest,
+    signal?: AbortSignal
+  ): Promise<DemandForecastResponse> {
+    const response = await this.postJson<DemandForecastRequest, DemandForecastResponse>(
       "/api/v1/market-demands/forecast",
-      request
+      request,
+      signal
     );
+
+    const validation = validateDemandForecastResponse(response);
+    if (!validation.isValid) {
+      throw new ApiError(
+        502,
+        `Malformed response received from demand forecast service: ${validation.error}`
+      );
+    }
+
+    return response;
   }
 
   /**

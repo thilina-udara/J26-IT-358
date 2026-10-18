@@ -8,6 +8,12 @@ import {
   SRI_LANKA_DISTRICTS,
   STANDARD_MARKETS,
 } from "./constants";
+import type {
+  DemandForecastRequest,
+  DemandForecastResponse,
+  PredictionStatus,
+  DemandLevel,
+} from "./types";
 
 export interface Step1FormData {
   crop_id: string;
@@ -1882,6 +1888,114 @@ export function clearAnalysisSnapshot(): void {
   } catch {
     // Ignore silently
   }
+}
+
+// ============================================================================
+// Market Demand Analysis API Integration Helpers
+// ============================================================================
+
+export interface DemandForecastValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
+/**
+ * Builds the exact DemandForecastRequest payload for POST /api/v1/market-demands/forecast.
+ * Extracts only backend-supported fields (crop_id, cultivation_district_id, target_market_id, forecast_target_date)
+ * and strictly omits extraneous farm metadata or cost inputs.
+ */
+export function buildDemandForecastRequest(
+  snapshot: ValidatedAnalysisSnapshot
+): DemandForecastRequest {
+  return {
+    crop_id: String(snapshot.crop_id).trim(),
+    cultivation_district_id: String(snapshot.cultivation_district_id).trim(),
+    target_market_id: String(snapshot.target_market_id).trim(),
+    forecast_target_date: String(snapshot.forecast_target_date || snapshot.harvest_date).trim(),
+  };
+}
+
+/**
+ * Validates the schema and values of a DemandForecastResponse returned by the backend.
+ * Rejects malformed objects, unsupported statuses, or fabricated demand tiers.
+ */
+export function validateDemandForecastResponse(
+  res: unknown
+): DemandForecastValidationResult {
+  if (!res || typeof res !== "object" || Array.isArray(res)) {
+    return { isValid: false, error: "Response is not a valid JSON object." };
+  }
+
+  const r = res as Record<string, unknown>;
+
+  // 1. Prediction status
+  const validStatuses: PredictionStatus[] = ["pending", "completed", "unavailable", "failed"];
+  if (
+    typeof r.prediction_status !== "string" ||
+    !validStatuses.includes(r.prediction_status as PredictionStatus)
+  ) {
+    return {
+      isValid: false,
+      error: `Invalid prediction_status: '${String(r.prediction_status)}'. Expected one of ${validStatuses.join(", ")}.`,
+    };
+  }
+
+  // 2. Projected demand level (must be null/undefined or one of 'High', 'Medium', 'Low')
+  if (r.projected_demand_level !== null && r.projected_demand_level !== undefined) {
+    if (!["High", "Medium", "Low"].includes(String(r.projected_demand_level))) {
+      return {
+        isValid: false,
+        error: `Unsupported projected_demand_level: '${String(r.projected_demand_level)}'. Expected 'High', 'Medium', or 'Low'.`,
+      };
+    }
+  }
+
+  // 3. Projected demand volume (must be null/undefined or valid non-negative number/numeric string)
+  if (r.projected_demand_volume_kg !== null && r.projected_demand_volume_kg !== undefined) {
+    const num = Number(r.projected_demand_volume_kg);
+    if (isNaN(num) || !isFinite(num) || num < 0) {
+      return {
+        isValid: false,
+        error: `Invalid projected_demand_volume_kg: '${String(r.projected_demand_volume_kg)}'. Must be non-negative numeric.`,
+      };
+    }
+  }
+
+  // 4. Crop, district, market, and date fields sanity check if provided
+  if (r.crop_id !== undefined && typeof r.crop_id !== "string") {
+    return { isValid: false, error: "crop_id must be a string." };
+  }
+  if (r.cultivation_district_id !== undefined && typeof r.cultivation_district_id !== "string") {
+    return { isValid: false, error: "cultivation_district_id must be a string." };
+  }
+  if (r.target_market_id !== undefined && typeof r.target_market_id !== "string") {
+    return { isValid: false, error: "target_market_id must be a string." };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Returns true if the forecast response contains a genuinely completed ML prediction.
+ */
+export function isPredictionAvailable(
+  res: DemandForecastResponse | null | undefined
+): boolean {
+  if (!res) return false;
+  return (
+    res.prediction_status === "completed" &&
+    (res.projected_demand_level !== null || res.projected_demand_volume_kg !== null)
+  );
+}
+
+/**
+ * Returns true if the prediction model is offline, training, or unavailable.
+ */
+export function isPredictionUnavailable(
+  res: DemandForecastResponse | null | undefined
+): boolean {
+  if (!res) return false;
+  return res.prediction_status === "unavailable" || res.prediction_status === "pending";
 }
 
 

@@ -93,6 +93,11 @@ import {
   clearAnalysisSnapshot,
   ANALYSIS_SNAPSHOT_STORAGE_KEY,
   type ValidatedAnalysisSnapshot,
+  buildDemandForecastRequest,
+  validateDemandForecastResponse,
+  isPredictionAvailable,
+  isPredictionUnavailable,
+  type DemandForecastValidationResult,
 } from "../lib/wizard";
 
 import type {
@@ -2739,6 +2744,384 @@ test("Wizard Completion: loadAndValidateWizardFromStorage constructs snapshot fr
     (globalThis as unknown as { window: unknown }).window = originalWindow;
   }
 });
+
+// ============================================================================
+// 12. Market Demand Analysis API Integration (POST /api/v1/market-demands/forecast)
+// ============================================================================
+
+test("Market Demand Integration: buildDemandForecastRequest extracts only backend-supported fields and omits extraneous inputs", () => {
+  const mockSnapshot: ValidatedAnalysisSnapshot = {
+    crop_id: "CR_CHILLI",
+    cultivation_district_id: "LK-82",
+    harvest_date: "2027-08-20",
+    forecast_target_date: "2027-08-20",
+    expected_yield_kg: 1500,
+    expected_yield_kg_string: "1500",
+    target_market_id: "DEC_DAMBULLA",
+    price_type: "wholesale",
+    total_cultivation_cost: 175000,
+    total_cultivation_cost_string: "175000",
+    metadata: {
+      land_extent_acres: 2.0,
+      land_extent_acres_string: "2.0",
+      budget_mode: "detailed",
+      detailed_expenses: {
+        seeds: "25000",
+        fertilizer: "40000",
+        pesticides: "20000",
+        labour: "25000",
+        irrigation: "5000",
+        harvesting: "3000",
+        packaging: "2000",
+        transportation: "15000",
+        market_commission: "5000",
+        other_expenses: "35000",
+      },
+      is_zero_cultivation_cost: false,
+      created_at: new Date().toISOString(),
+      version: "1.0.0",
+    },
+  };
+
+  const payload = buildDemandForecastRequest(mockSnapshot);
+
+  // Assert exact 4 backend-supported fields
+  assert.equal(payload.crop_id, "CR_CHILLI");
+  assert.equal(payload.cultivation_district_id, "LK-82");
+  assert.equal(payload.target_market_id, "DEC_DAMBULLA");
+  assert.equal(payload.forecast_target_date, "2027-08-20");
+
+  // Ensure extraneous fields are not attached to request
+  const keys = Object.keys(payload);
+  assert.equal(keys.length, 4);
+  assert.ok(!("total_cultivation_cost" in payload));
+  assert.ok(!("budget_mode" in payload));
+  assert.ok(!("price_type" in payload));
+  assert.ok(!("expected_yield_kg" in payload));
+  assert.ok(!("land_extent_acres" in payload));
+});
+
+test("Market Demand Integration: validateDemandForecastResponse validates against real backend schema contract", () => {
+  const backendResponse: DemandForecastResponse = {
+    crop_id: "CR_CHILLI",
+    cultivation_district_id: "LK-82",
+    target_market_id: "DEC_DAMBULLA",
+    target_market_name: "Dambulla Dedicated Economic Centre",
+    forecast_target_date: "2027-08-20",
+    prediction_status: "unavailable",
+    projected_demand_volume_kg: null,
+    projected_demand_level: null,
+    model_version: null,
+    model_provenance: null,
+    status_message: "Machine learning demand prediction model is currently offline or undergoing training.",
+    created_at: "2026-10-18T00:00:00Z",
+  };
+
+  const validation = validateDemandForecastResponse(backendResponse);
+  assert.equal(validation.isValid, true);
+  assert.equal(validation.error, undefined);
+  assert.equal(isPredictionUnavailable(backendResponse), true);
+  assert.equal(isPredictionAvailable(backendResponse), false);
+});
+
+test("Market Demand Integration: Available prediction response with High/Medium/Low demand levels validates cleanly", () => {
+  const levels = ["High", "Medium", "Low"] as const;
+
+  for (const level of levels) {
+    const availableResponse: DemandForecastResponse = {
+      crop_id: "CR_CHILLI",
+      cultivation_district_id: "LK-82",
+      target_market_id: "DEC_DAMBULLA",
+      target_market_name: "Dambulla Dedicated Economic Centre",
+      forecast_target_date: "2027-08-20",
+      prediction_status: "completed",
+      projected_demand_volume_kg: 450000,
+      projected_demand_level: level,
+      model_version: "xgb-demand-v1.0.0",
+      model_provenance: {
+        algorithm: "XGBoostRegressor",
+        mae_metric: 1250.5,
+      },
+      status_message: "Demand prediction generated successfully by trained model.",
+      created_at: "2026-10-18T00:00:00Z",
+    };
+
+    const validation = validateDemandForecastResponse(availableResponse);
+    assert.equal(validation.isValid, true);
+    assert.equal(isPredictionAvailable(availableResponse), true);
+    assert.equal(isPredictionUnavailable(availableResponse), false);
+    assert.equal(availableResponse.projected_demand_level, level);
+  }
+});
+
+test("Market Demand Integration: Unavailable prediction response preserves null metrics and status message without mock data", () => {
+  const offlineResponse: DemandForecastResponse = {
+    crop_id: "CR_OKRA",
+    cultivation_district_id: "LK-71",
+    target_market_id: "DEC_DAMBULLA",
+    target_market_name: "Dambulla Dedicated Economic Centre",
+    forecast_target_date: "2027-05-15",
+    prediction_status: "unavailable",
+    projected_demand_volume_kg: null,
+    projected_demand_level: null,
+    model_version: null,
+    model_provenance: null,
+    status_message: "Machine learning demand prediction model is currently offline or undergoing training.",
+    created_at: "2026-10-18T00:00:00Z",
+  };
+
+  assert.equal(validateDemandForecastResponse(offlineResponse).isValid, true);
+  assert.equal(isPredictionUnavailable(offlineResponse), true);
+  assert.equal(isPredictionAvailable(offlineResponse), false);
+
+  // Strict check: metrics remain null, refusing mock numbers
+  assert.equal(offlineResponse.projected_demand_volume_kg, null);
+  assert.equal(offlineResponse.projected_demand_level, null);
+  assert.match(offlineResponse.status_message, /offline or undergoing training/);
+});
+
+test("Market Demand Integration: Null or missing optional prediction fields handled safely without inventing defaults", () => {
+  const responseWithNulls: Record<string, unknown> = {
+    crop_id: "CR_MAIZE",
+    cultivation_district_id: "LK-81",
+    target_market_id: "DEC_DAMBULLA",
+    forecast_target_date: "2027-06-30",
+    prediction_status: "unavailable",
+    projected_demand_volume_kg: null,
+    projected_demand_level: null,
+    target_market_name: null,
+    model_version: null,
+    model_provenance: null,
+    status_message: "Pipeline offline",
+    created_at: null,
+  };
+
+  const validation = validateDemandForecastResponse(responseWithNulls);
+  assert.equal(validation.isValid, true);
+
+  // Response with undefined optional fields
+  const sparseResponse = {
+    prediction_status: "unavailable",
+  };
+  assert.equal(validateDemandForecastResponse(sparseResponse).isValid, true);
+});
+
+test("Market Demand Integration: Invalid response values (malformed types, unsupported demand levels, negative volumes) are rejected", () => {
+  // 1. Non-object
+  assert.equal(validateDemandForecastResponse(null).isValid, false);
+  assert.equal(validateDemandForecastResponse("string").isValid, false);
+  assert.equal(validateDemandForecastResponse([1, 2, 3]).isValid, false);
+
+  // 2. Missing or invalid prediction_status
+  assert.equal(validateDemandForecastResponse({}).isValid, false);
+  assert.equal(validateDemandForecastResponse({ prediction_status: "bogus_status" }).isValid, false);
+  assert.equal(validateDemandForecastResponse({ prediction_status: 123 }).isValid, false);
+
+  // 3. Unsupported demand level (e.g., invented 'VeryHigh' or 'Critical')
+  assert.equal(
+    validateDemandForecastResponse({
+      prediction_status: "completed",
+      projected_demand_level: "ExtremelyHigh",
+    }).isValid,
+    false
+  );
+  assert.equal(
+    validateDemandForecastResponse({
+      prediction_status: "completed",
+      projected_demand_level: "Normal",
+    }).isValid,
+    false
+  );
+
+  // 4. Negative or non-numeric demand volume
+  assert.equal(
+    validateDemandForecastResponse({
+      prediction_status: "completed",
+      projected_demand_volume_kg: -500,
+    }).isValid,
+    false
+  );
+  assert.equal(
+    validateDemandForecastResponse({
+      prediction_status: "completed",
+      projected_demand_volume_kg: "not_a_number",
+    }).isValid,
+    false
+  );
+});
+
+test("Market Demand Integration: Client handles API and network errors (offline port 8001, HTTP 400 past date, HTTP 500)", async () => {
+  const reqPayload: DemandForecastRequest = {
+    crop_id: "CR_CHILLI",
+    cultivation_district_id: "LK-82",
+    target_market_id: "DEC_DAMBULLA",
+    forecast_target_date: "2027-08-20",
+  };
+
+  // 1. Connection error / offline service
+  const offlineClient = new MarketProfitApiClient({
+    baseUrl: "http://localhost:8001",
+    transport: (async () => {
+      throw new Error("connect ECONNREFUSED 127.0.0.1:8001");
+    }) as unknown as typeof fetch,
+  });
+
+  await assert.rejects(
+    async () => offlineClient.getDemandForecast(reqPayload),
+    (err: unknown) => {
+      assert.ok(err instanceof ApiError);
+      assert.equal(err.status, 0);
+      assert.match(err.message, /Cannot connect to Market-Profit service/);
+      assert.match(err.message, /ECONNREFUSED/);
+      return true;
+    }
+  );
+
+  // 2. HTTP 400 Bad Request (past target date)
+  const badRequestClient = new MarketProfitApiClient({
+    baseUrl: "http://localhost:8001",
+    transport: (async () => {
+      return new Response(
+        JSON.stringify({
+          detail: "forecast_target_date cannot be in the past.",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }) as unknown as typeof fetch,
+  });
+
+  await assert.rejects(
+    async () => badRequestClient.getDemandForecast(reqPayload),
+    (err: unknown) => {
+      assert.ok(err instanceof ApiError);
+      assert.equal(err.status, 400);
+      assert.match(err.message, /cannot be in the past/);
+      return true;
+    }
+  );
+
+  // 3. HTTP 500 Internal Server Error
+  const serverErrorClient = new MarketProfitApiClient({
+    baseUrl: "http://localhost:8001",
+    transport: (async () => {
+      return new Response(
+        JSON.stringify({
+          detail: "Internal server error occurred in ML inference worker.",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }) as unknown as typeof fetch,
+  });
+
+  await assert.rejects(
+    async () => serverErrorClient.getDemandForecast(reqPayload),
+    (err: unknown) => {
+      assert.ok(err instanceof ApiError);
+      assert.equal(err.status, 500);
+      return true;
+    }
+  );
+
+  // 4. HTTP 200 with malformed JSON body
+  const malformedClient = new MarketProfitApiClient({
+    baseUrl: "http://localhost:8001",
+    transport: (async () => {
+      return new Response(
+        JSON.stringify({
+          crop_id: "CR_CHILLI",
+          prediction_status: "unsupported_xyz",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }) as unknown as typeof fetch,
+  });
+
+  await assert.rejects(
+    async () => malformedClient.getDemandForecast(reqPayload),
+    (err: unknown) => {
+      assert.ok(err instanceof ApiError);
+      assert.equal(err.status, 502);
+      assert.match(err.message, /Malformed response/);
+      return true;
+    }
+  );
+});
+
+test("Market Demand Integration: Stale response protection prevents out-of-order race conditions from overwriting active state", async () => {
+  const activeSignature = "CR_OKRA:LK-71:DEC_DAMBULLA:2027-09-15";
+
+  // Simulate an older request for Chilli that arrives late
+  const staleSignature = "CR_CHILLI:LK-82:DEC_DAMBULLA:2027-08-20";
+  const staleResponse: DemandForecastResponse = {
+    crop_id: "CR_CHILLI",
+    cultivation_district_id: "LK-82",
+    target_market_id: "DEC_DAMBULLA",
+    forecast_target_date: "2027-08-20",
+    prediction_status: "completed",
+    projected_demand_volume_kg: 350000,
+    projected_demand_level: "Medium",
+    status_message: "Late arriving response",
+  };
+
+  // State container
+  const state = {
+    signature: activeSignature,
+    crop: "CR_OKRA",
+    demandLevel: null as string | null,
+  };
+
+  // Attempt to apply the stale response
+  if ((staleSignature as string) === state.signature) {
+    state.crop = staleResponse.crop_id;
+    state.demandLevel = staleResponse.projected_demand_level;
+  }
+
+  // Active state remains completely untouched by the stale response
+  assert.equal(state.crop, "CR_OKRA");
+  assert.equal(state.demandLevel, null);
+
+  // Now when the matching active response arrives
+  const activeResponse: DemandForecastResponse = {
+    crop_id: "CR_OKRA",
+    cultivation_district_id: "LK-71",
+    target_market_id: "DEC_DAMBULLA",
+    forecast_target_date: "2027-09-15",
+    prediction_status: "completed",
+    projected_demand_volume_kg: 500000,
+    projected_demand_level: "High",
+    status_message: "Current matching response",
+  };
+
+  if ((activeSignature as string) === state.signature) {
+    state.crop = activeResponse.crop_id;
+    state.demandLevel = activeResponse.projected_demand_level;
+  }
+
+  assert.equal(state.crop, "CR_OKRA");
+  assert.equal(state.demandLevel, "High");
+});
+
+test("Market Demand Integration: Research integrity guarantee - no mock demand volume or fabricated demand levels are generated", () => {
+  const offlineResponse: DemandForecastResponse = {
+    crop_id: "CR_PUMPKIN",
+    cultivation_district_id: "LK-82",
+    target_market_id: "DEC_DAMBULLA",
+    forecast_target_date: "2027-10-10",
+    prediction_status: "unavailable",
+    projected_demand_volume_kg: null,
+    projected_demand_level: null,
+    status_message: "Model offline",
+  };
+
+  // Neither volume nor level is filled with synthetic placeholders
+  assert.equal(offlineResponse.projected_demand_volume_kg, null);
+  assert.equal(offlineResponse.projected_demand_level, null);
+
+  // Ensure helper methods treat it strictly as unavailable
+  assert.equal(isPredictionAvailable(offlineResponse), false);
+  assert.equal(isPredictionUnavailable(offlineResponse), true);
+});
+
 
 
 

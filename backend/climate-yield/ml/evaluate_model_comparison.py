@@ -1,10 +1,3 @@
-"""
-Model Comparison & Evaluation Benchmarking
-
-Runs baseline comparisons and the Adaptive Hybrid AI model on the
-locked master seasonal dataset (8,017 samples, 7 crops, 25 districts).
-"""
-
 import os
 import sys
 import numpy as np

@@ -1,0 +1,55 @@
+{
+  "service_name": "climate-early-warning-service",
+  "training_period": "1981 - 2020",
+  "test_period": "2021 - 2025",
+  "total_samples": 29350,
+  "train_samples": 26100,
+  "test_samples": 3250,
+  "winning_model": "Tuned Multi-Class XGBoost Classifier",
+  "metrics": {
+    "accuracy_pct": 98.86,
+    "balanced_accuracy_pct": 97.39,
+    "macro_f1_score": 0.9817,
+    "roc_auc_ovr": 0.9995,
+    "confusion_matrix": [
+      [
+        2001,
+        10,
+        0,
+        0
+      ],
+      [
+        13,
+        958,
+        3,
+        0
+      ],
+      [
+        6,
+        4,
+        231,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        23
+      ]
+    ]
+  },
+  "comparison": {
+    "random_forest": {
+      "accuracy_pct": 98.34,
+      "balanced_accuracy_pct": 74.29,
+      "macro_f1": 0.7458,
+      "roc_auc": 0.9989
+    },
+    "xgboost_classifier": {
+      "accuracy_pct": 98.86,
+      "balanced_accuracy_pct": 97.39,
+      "macro_f1": 0.9817,
+      "roc_auc": 0.9995
+    }
+  }
+}

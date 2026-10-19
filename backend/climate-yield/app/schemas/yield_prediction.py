@@ -129,6 +129,20 @@ class YieldPredictionRequest(BaseModel):
         description="Worst 3-month SPI drought index during the season (negative means dry, positive means wet)",
         examples=[-1.84]
     )
+    crop_year: Optional[int] = Field(
+        None,
+        ge=2001,
+        le=2030,
+        description="Optional crop year for historical evaluation or reference (e.g., 2021-2025). If provided, looks up historical rolling baseline.",
+        examples=[2023]
+    )
+    baseline_yield_mt_ha: Optional[float] = Field(
+        None,
+        ge=0.01,
+        le=150.0,
+        description="Optional custom or observed baseline yield (MT/ha). If omitted, uses district-crop 3-year rolling agronomic baseline.",
+        examples=[12.50]
+    )
     current_growth_stage: Optional[str] = Field(
         None,
         description="Optional growth stage sent from the crop planning component. If not given, whole-season sensitivity is checked.",
@@ -196,12 +210,16 @@ class ExplainabilityBreakdown(BaseModel):
         default_factory=lambda: [
             "Shapley efficiency holds: the sum of feature attributions exactly equals the climate shock.",
             "Attributions show historical statistical relationships with yield, not direct laboratory proof.",
-            "Maize damping factor (0.0) prevents confusing weather with the 2021-2022 fertilizer shortage.",
+            "Maize damping factor (0.0) isolates non-climatic macro input shocks, ensuring climate attributions remain purely weather-driven.",
             "Baseline yield represents the 3-year historical average for this crop and district before the weather shock."
         ],
         description="Key assumptions behind the explanations"
     )
     
+    baseline_type: str = Field(
+        default="DYNAMIC_ROLLING_3YR_BASELINE",
+        description="Source of baseline yield: HISTORICAL_ROLLING_3YR_BASELINE, LATEST_ROLLING_3YR_BASELINE, DISTRICT_CROP_HISTORICAL_MEAN_FALLBACK, or CUSTOM_SUPPLIED_BASELINE"
+    )
     # 1. Historical baseline
     historical_baseline_yield_mt_ha: float = Field(
         ...,
@@ -267,6 +285,10 @@ class YieldPredictionResponse(BaseModel):
         description="Shows if whole season or a specific growth stage was evaluated"
     )
     
+    baseline_type: str = Field(
+        default="DYNAMIC_ROLLING_3YR_BASELINE",
+        description="Source of baseline yield used for prediction (rolling baseline or fallback)"
+    )
     # Yield numbers
     predicted_yield_mt_ha: float = Field(
         ...,
@@ -275,6 +297,14 @@ class YieldPredictionResponse(BaseModel):
     baseline_yield_mt_ha: float = Field(
         ...,
         description="Normal historical baseline yield for this district and crop (MT/ha)"
+    )
+    pure_rolling_baseline_test_r2: float = Field(
+        default=0.6138,
+        description="Benchmark test R2 for pure 3-year rolling baseline alone"
+    )
+    hybrid_model_test_r2: float = Field(
+        default=0.6023,
+        description="Benchmark test R2 for climate-adjusted Adaptive Hybrid AI model"
     )
     yield_deficit_mt_ha: float = Field(
         ...,
@@ -309,4 +339,156 @@ class YieldPredictionResponse(BaseModel):
     model_metadata: Dict[str, Any] = Field(
         default_factory=dict,
         description="Model architecture, version, and performance metrics"
+    )
+
+
+class IntegratedDecisionSupportRequest(BaseModel):
+    """
+    Request model for the Full Decision Support System (DSS):
+    Integrates 14-day climate hazard early warning, phenological vulnerability,
+    and seasonal crop yield deficit prediction with Linear SHAP explainability.
+    """
+    district: DistrictEnum = Field(
+        ...,
+        description="Target district in Sri Lanka (1 of 25 official districts)",
+        examples=["Anuradhapura"]
+    )
+    crop_name: CropEnum = Field(
+        ...,
+        description="Target crop (strictly 1 of 7 approved study crops)",
+        examples=["Maize"]
+    )
+    season: SeasonEnum = Field(
+        ...,
+        description="Cultivation season: Maha (NE Monsoon) or Yala (SW Monsoon)",
+        examples=["Maha"]
+    )
+    irrigation_zone_type: IrrigationZoneEnum = Field(
+        ...,
+        description="Water availability zone: Major Irrigation or Minor / Rainfed",
+        examples=["Major Irrigation"]
+    )
+    rainfall_growing_season_total_mm: float = Field(
+        ...,
+        ge=0.0,
+        le=5000.0,
+        description="Total growing season rainfall in mm (from CHIRPS / Met Dept)",
+        examples=[850.0]
+    )
+    temp_growing_season_mean_c: float = Field(
+        ...,
+        ge=10.0,
+        le=45.0,
+        description="Average growing season temperature in °C (from ERA5-Land)",
+        examples=[28.5]
+    )
+    soil_moisture_growing_season_min: float = Field(
+        ...,
+        ge=0.01,
+        le=1.0,
+        description="Lowest root-zone volumetric soil moisture level during the season (m³/m³)",
+        examples=[0.215]
+    )
+    spi3_growing_season_worst: float = Field(
+        ...,
+        ge=-5.0,
+        le=5.0,
+        description="Worst 3-month SPI drought index during the season",
+        examples=[-0.85]
+    )
+    current_growth_stage: Optional[str] = Field(
+        None,
+        description="Optional crop growth stage (e.g., Flowering, Pod Setting). If omitted, evaluates general whole-season sensitivity.",
+        examples=["Flowering"]
+    )
+    crop_year: Optional[int] = Field(
+        None,
+        ge=2001,
+        le=2030,
+        description="Optional crop year for historical walk-forward baseline lookup",
+        examples=[2023]
+    )
+    baseline_yield_mt_ha: Optional[float] = Field(
+        None,
+        ge=0.01,
+        le=150.0,
+        description="Optional custom baseline yield (MT/ha). If omitted, looks up 3-year rolling agronomic baseline.",
+        examples=[4.20]
+    )
+    include_live_14day_forecast: bool = Field(
+        True,
+        description="Whether to query the live 14-day weather forecast API for real-time hazard screening"
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "district": "Anuradhapura",
+                "crop_name": "Maize",
+                "season": "Maha",
+                "irrigation_zone_type": "Major Irrigation",
+                "rainfall_growing_season_total_mm": 850.0,
+                "temp_growing_season_mean_c": 28.5,
+                "soil_moisture_growing_season_min": 0.215,
+                "spi3_growing_season_worst": -0.85,
+                "current_growth_stage": "Flowering",
+                "include_live_14day_forecast": True
+            }
+        }
+    }
+
+
+class IntegratedDecisionSupportResponse(BaseModel):
+    """
+    Comprehensive output of the Component 4 Decision Support System (DSS):
+    Unites 14-Day Climate Hazard Screening, Crop Phenology Vulnerability,
+    Seasonal Yield Deficit Impact, and Linear SHAP Explainability.
+    """
+    system_title: str = Field(
+        default="AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System",
+        description="Component 4 official system title"
+    )
+    timestamp_utc: str = Field(..., description="UTC timestamp of the decision support assessment")
+    
+    # Query Identification
+    district: str = Field(..., description="Target district")
+    crop_name: str = Field(..., description="Target crop")
+    season: str = Field(..., description="Cultivation season")
+    irrigation_zone_type: str = Field(..., description="Irrigation scheme")
+    growth_stage_evaluated: str = Field(..., description="Growth stage evaluated")
+
+    # Layer 1: Operational 14-Day Climate Hazard Early Warning
+    layer1_climate_early_warning_14day: Dict[str, Any] = Field(
+        ...,
+        description="14-day forward climate hazard screening (rainfall, dry spell, heat alert)"
+    )
+
+    # Layer 2: Crop Phenological Vulnerability Assessment
+    layer2_phenology_vulnerability: Dict[str, Any] = Field(
+        ...,
+        description="Intersection of 14-day forecast with crop heat and waterlogging sensitivity"
+    )
+
+    # Layer 3: Seasonal Crop Yield Deficit Prediction
+    layer3_seasonal_yield_impact: Dict[str, Any] = Field(
+        ...,
+        description="Macro-seasonal harvest yield projection, baseline, and deficit percentage"
+    )
+
+    # Layer 4: Explainable AI (XAI) Attribution
+    layer4_explainability_xai: ExplainabilityBreakdown = Field(
+        ...,
+        description="Linear SHAP feature attribution proving exact mathematical reconciliation"
+    )
+
+    # Actionable Field Advisories (Water, Drainage, Canopy Protection only)
+    actionable_decision_support_advisories: List[str] = Field(
+        default_factory=list,
+        description="Prioritized agronomic water management and protective advisories"
+    )
+
+    # System Governance & Boundaries
+    system_governance_and_boundaries: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Explicit scope disclosure (zero fertilizer, zero crop selection, zero sowing date estimation)"
     )

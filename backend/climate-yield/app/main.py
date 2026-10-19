@@ -7,8 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes.yield_prediction import router as yield_prediction_router
 
 app = FastAPI(
-    title="Climate-Yield Decision Support Service",
-    description="Microservice for meteorological hazard monitoring, pre-harvest crop yield deficit prediction, and TreeSHAP explainability.",
+    title="AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System",
+    description="Comprehensive decision support system integrating 14-day forward climate hazard screening, crop phenological vulnerability assessment, seasonal yield deficit forecasting, and Linear SHAP explainability across all 25 districts of Sri Lanka for 7 approved crops.",
     version="1.0.0"
 )
 

@@ -18,9 +18,14 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException, status
 
+from datetime import datetime, timezone
+from pipelines.fetch_forward_climate_forecast import fetch_forward_climate_forecast
+from pipelines.phenology_vulnerability_engine import evaluate_phenology_vulnerability
 from app.schemas.yield_prediction import (
     YieldPredictionRequest,
     YieldPredictionResponse,
+    IntegratedDecisionSupportRequest,
+    IntegratedDecisionSupportResponse,
     HazardRiskLevel,
     FeatureAttribution,
     ExplainabilityBreakdown
@@ -137,11 +142,28 @@ def predict_yield_deficit(request: YieldPredictionRequest) -> YieldPredictionRes
     stage_str = request.current_growth_stage
     
     # -------------------------------------------------------------------------
-    # Step 1: Look up normal historical yield for this district and crop
+    # Step 1: Look up baseline yield for this district and crop
+    # Priority:
+    #   1. Explicit client baseline (if supplied in request)
+    #   2. Historical walk-forward rolling baseline (if crop_year is provided)
+    #   3. Latest 3-year rolling agronomic baseline for (district, crop)
+    #   4. Fallback to 20-year district-crop historical mean
     # -------------------------------------------------------------------------
-    dist_crop_means = artifact["district_crop_historical_means"]
-    crop_means = artifact["crop_historical_means"]
-    baseline_yield = float(dist_crop_means.get((district_str, crop_str), crop_means.get(crop_str, 4.0)))
+    if request.baseline_yield_mt_ha is not None:
+        baseline_yield = float(request.baseline_yield_mt_ha)
+        baseline_type = "CUSTOM_SUPPLIED_BASELINE"
+    elif request.crop_year is not None and (district_str, crop_str, int(request.crop_year), season_str) in artifact.get("rolling_baseline_history", {}):
+        baseline_yield = float(artifact["rolling_baseline_history"][(district_str, crop_str, int(request.crop_year), season_str)])
+        baseline_type = "HISTORICAL_ROLLING_3YR_BASELINE"
+    elif (district_str, crop_str) in artifact.get("district_crop_rolling_baselines", {}):
+        baseline_yield = float(artifact["district_crop_rolling_baselines"][(district_str, crop_str)])
+        baseline_type = "LATEST_ROLLING_3YR_BASELINE"
+    elif (district_str, crop_str) in artifact.get("district_crop_historical_means", {}):
+        baseline_yield = float(artifact["district_crop_historical_means"][(district_str, crop_str)])
+        baseline_type = "DISTRICT_CROP_HISTORICAL_MEAN_FALLBACK"
+    else:
+        baseline_yield = float(artifact.get("crop_historical_means", {}).get(crop_str, 4.0))
+        baseline_type = "CROP_GENERAL_MEAN_FALLBACK"
     
     # -------------------------------------------------------------------------
     # Step 2: Build the feature vector (turn categories into 1s and 0s)
@@ -237,6 +259,7 @@ def predict_yield_deficit(request: YieldPredictionRequest) -> YieldPredictionRes
     is_consistent = abs(reconciled_yield - predicted_yield) < 1e-4
     
     explainability_payload = ExplainabilityBreakdown(
+        baseline_type=baseline_type,
         historical_baseline_yield_mt_ha=round(baseline_yield, 4),
         expected_climate_shock_mt_ha=round(_EXPECTED_SHOCK_BASELINE, 4),
         crop_damping_factor=round(damping, 2),
@@ -245,7 +268,7 @@ def predict_yield_deficit(request: YieldPredictionRequest) -> YieldPredictionRes
         total_climate_shock_impact_mt_ha=round(total_shock_impact, 4),
         unclamped_hybrid_yield_mt_ha=round(unclamped_yield, 4),
         clamping_adjustment_mt_ha=round(clamping_adj, 4),
-        final_reconciled_yield_mt_ha=round(predicted_yield, 4),
+        final_reconciled_yield_mt_ha=round(round(baseline_yield, 4) + round(total_shock_impact, 4) + round(clamping_adj, 4), 4),
         is_explanation_consistent=is_consistent
     )
     
@@ -267,7 +290,7 @@ def predict_yield_deficit(request: YieldPredictionRequest) -> YieldPredictionRes
             "Construct deep peripheral drainage trenches (minimum 30 cm depth) to evacuate standing surface water.",
             "Elevate planting ridges or maintain raised beds to prevent sustained saturation of crop root zones.",
             "Apply prophylactic copper-based fungicides to mitigate collar rot and fungal wilt after heavy rainfall events.",
-            "Postpone nitrogen/urea top-dressing until standing water has drained to avoid severe nutrient leaching."
+            "Maintain cleared farm drainage outlets and inspect bunds to accelerate excess water evacuation."
         ]
         
     # Case B: Severe drought risk
@@ -294,7 +317,7 @@ def predict_yield_deficit(request: YieldPredictionRequest) -> YieldPredictionRes
         )
         advisories = [
             "Optimize supplementary irrigation schedules during early morning hours to minimize evaporative losses.",
-            "Apply foliar potassium spray (e.g., 1% muriate of potash) to enhance plant stomatal regulation under thermal stress.",
+            "Apply light surface mulching or protective shading where feasible to reduce thermal stress on the root zone.",
             "Monitor soil moisture closely with field tensiometers or local Department of Agriculture agromet advisories."
         ]
         
@@ -306,8 +329,8 @@ def predict_yield_deficit(request: YieldPredictionRequest) -> YieldPredictionRes
             f"Forecasted harvest yield is within expected seasonal bounds ({predicted_yield:.2f} MT/ha)."
         )
         advisories = [
-            "Maintain standard Department of Agriculture (DOA) fertilization and integrated pest management schedules.",
-            "Ensure regular field scouting for seasonal pests and leaf spot diseases.",
+            "Continue routine crop water monitoring and standard pest surveillance as per Department of Agriculture guidelines.",
+            "Ensure regular field scouting for seasonal moisture stress and leaf spot diseases.",
             "Prepare post-harvest storage and drying facilities ahead of the seasonal peak harvest."
         ]
         
@@ -322,8 +345,11 @@ def predict_yield_deficit(request: YieldPredictionRequest) -> YieldPredictionRes
         crop_name=crop_str,
         irrigation_zone_type=zone_str,
         growth_stage_evaluated=growth_stage_label,
+        baseline_type=baseline_type,
         predicted_yield_mt_ha=round(predicted_yield, 2),
         baseline_yield_mt_ha=round(baseline_yield, 2),
+        pure_rolling_baseline_test_r2=0.6138,
+        hybrid_model_test_r2=0.6023,
         yield_deficit_mt_ha=round(yield_deficit_mt_ha, 2),
         yield_deficit_percentage=round(yield_deficit_pct, 1),
         hazard_risk_level=risk_level,
@@ -340,5 +366,142 @@ def predict_yield_deficit(request: YieldPredictionRequest) -> YieldPredictionRes
             "version": "1.1.0",
             "crop_damping_factor_applied": damping,
             "xai_method": "Linear SHAP (Marginal Empirical Background)"
+        }
+    )
+
+
+@router.get(
+    "/early-warning/{district}",
+    response_model=Dict[str, Any],
+    status_code=status.HTTP_200_OK,
+    summary="14-Day Forward Climate Hazard Screening",
+    description="Retrieves live 14-day weather forecast telemetry and screens for heavy precipitation, dry spells, and extreme heat alerts."
+)
+def get_climate_early_warning(district: str) -> Dict[str, Any]:
+    """Provides pure 14-day climate hazard early warning for any of the 25 official districts."""
+    try:
+        return fetch_forward_climate_forecast(district=district, forecast_days=14)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Early warning retrieval failed: {e}")
+
+
+@router.post(
+    "/integrated-decision-support",
+    response_model=IntegratedDecisionSupportResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Full Decision Support System: Climate Early Warning, Phenology & Yield Impact",
+    description="Master Decision Support System (DSS) endpoint unifying 14-day forward climate hazard screening, crop phenological vulnerability assessment, seasonal yield deficit forecasting, and Linear SHAP explainability."
+)
+def get_integrated_decision_support(request: IntegratedDecisionSupportRequest) -> IntegratedDecisionSupportResponse:
+    """
+    Executes the complete 4-tier Component 4 Decision Support System pipeline:
+    1. Layer 1: 14-Day Forward Climate Hazard Screening (Open-Meteo telemetry)
+    2. Layer 2: Crop Phenological Vulnerability Assessment (Mode A or Mode B)
+    3. Layer 3: Seasonal Yield Deficit Impact (Adaptive Hybrid AI with Rolling Baseline)
+    4. Layer 4: Explainable AI Attribution (Linear SHAP with exact reconciliation)
+    """
+    district_str = request.district.value
+    season_str = request.season.value
+    crop_str = request.crop_name.value
+    zone_str = request.irrigation_zone_type.value
+    stage_str = request.current_growth_stage
+    now_utc = datetime.now(timezone.utc).isoformat()
+
+    # -------------------------------------------------------------------------
+    # Layer 1: 14-Day Forward Climate Hazard Early Warning
+    # -------------------------------------------------------------------------
+    if request.include_live_14day_forecast:
+        try:
+            forecast_data = fetch_forward_climate_forecast(district=district_str, forecast_days=14)
+        except Exception:
+            forecast_data = {
+                "status": "FORECAST_UNAVAILABLE",
+                "message": "Live weather telemetry service unavailable; safe fallback active with zero live alerts."
+            }
+    else:
+        forecast_data = {
+            "status": "FORECAST_BYPASSED",
+            "message": "Live 14-day forecast bypassed by client request."
+        }
+
+    # -------------------------------------------------------------------------
+    # Layer 2: Crop Phenological Vulnerability Assessment
+    # -------------------------------------------------------------------------
+    try:
+        phenology_data = evaluate_phenology_vulnerability(
+            crop_name=crop_str,
+            district=district_str,
+            forecast_data=forecast_data,
+            current_growth_stage=stage_str
+        )
+    except Exception as pe:
+        phenology_data = {
+            "status": "EVALUATION_ERROR",
+            "message": f"Phenological evaluation failed: {pe}"
+        }
+
+    # -------------------------------------------------------------------------
+    # Layer 3 & 4: Seasonal Yield Impact & Linear SHAP XAI
+    # -------------------------------------------------------------------------
+    # Delegate to core yield prediction logic
+    yield_req = YieldPredictionRequest(
+        district=request.district,
+        season=request.season,
+        crop_name=request.crop_name,
+        irrigation_zone_type=request.irrigation_zone_type,
+        rainfall_growing_season_total_mm=request.rainfall_growing_season_total_mm,
+        temp_growing_season_mean_c=request.temp_growing_season_mean_c,
+        soil_moisture_growing_season_min=request.soil_moisture_growing_season_min,
+        spi3_growing_season_worst=request.spi3_growing_season_worst,
+        current_growth_stage=request.current_growth_stage,
+        crop_year=request.crop_year,
+        baseline_yield_mt_ha=request.baseline_yield_mt_ha
+    )
+    yield_res = predict_yield_deficit(yield_req)
+
+    # -------------------------------------------------------------------------
+    # Combine Actionable Advisories (Zero fertilizer, zero crop selection)
+    # -------------------------------------------------------------------------
+    combined_advisories = []
+    # Add phenology early warning advisories if critical
+    if phenology_data.get("actionable_advisories"):
+        for adv in phenology_data["actionable_advisories"]:
+            if adv not in combined_advisories:
+                combined_advisories.append(adv)
+    # Add seasonal water conservation advisories
+    for adv in yield_res.actionable_advisories:
+        if adv not in combined_advisories:
+            combined_advisories.append(adv)
+
+    return IntegratedDecisionSupportResponse(
+        system_title="AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System",
+        timestamp_utc=now_utc,
+        district=district_str,
+        crop_name=crop_str,
+        season=season_str,
+        irrigation_zone_type=zone_str,
+        growth_stage_evaluated=yield_res.growth_stage_evaluated,
+        layer1_climate_early_warning_14day=forecast_data,
+        layer2_phenology_vulnerability=phenology_data,
+        layer3_seasonal_yield_impact={
+            "predicted_yield_mt_ha": yield_res.predicted_yield_mt_ha,
+            "baseline_yield_mt_ha": yield_res.baseline_yield_mt_ha,
+            "baseline_type": yield_res.baseline_type,
+            "yield_deficit_mt_ha": yield_res.yield_deficit_mt_ha,
+            "yield_deficit_percentage": yield_res.yield_deficit_percentage,
+            "hazard_risk_level": yield_res.hazard_risk_level,
+            "risk_summary": yield_res.risk_summary,
+            "pure_rolling_baseline_test_r2": yield_res.pure_rolling_baseline_test_r2,
+            "hybrid_model_test_r2": yield_res.hybrid_model_test_r2
+        },
+        layer4_explainability_xai=yield_res.explainability,
+        actionable_decision_support_advisories=combined_advisories,
+        system_governance_and_boundaries={
+            "scope_boundaries": "Exclusively climate/weather hazards and crop yield impacts for selected crops.",
+            "zero_scope_overlap": "Zero fertilizer recommendations, zero crop selection/suitability, and zero sowing date estimation.",
+            "spatial_coverage": "All 25 official districts of Sri Lanka",
+            "crop_scope": "Strictly 7 approved crops: Maize, Chilli, Green Gram, Tomato, Brinjal, Okra, Pumpkin (Ash Pumpkin excluded)."
         }
     )

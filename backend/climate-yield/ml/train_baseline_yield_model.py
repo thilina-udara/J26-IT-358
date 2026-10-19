@@ -18,7 +18,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import xgboost as xgb
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import Ridge, HuberRegressor
 from sklearn.metrics import r2_score, root_mean_squared_error, mean_absolute_error
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -119,7 +119,7 @@ X_h_te = X_h[df_sorted["crop_year"] >= 2021]
 test_sorted_df = df_sorted[df_sorted["crop_year"] >= 2021].copy()
 y_test_actual = test_sorted_df["yield_metric_tons_per_hectare"].values
 
-shock_ridge = Ridge(alpha=100.0, random_state=42)
+shock_ridge = HuberRegressor(epsilon=1.35, alpha=50.0, max_iter=1000)
 shock_ridge.fit(X_h_tr, y_h_tr)
 pred_raw_shock = shock_ridge.predict(X_h_te)
 
@@ -187,8 +187,8 @@ metrics_payload = {
             }
         },
         "adaptive_hybrid_ai_model": {
-            "model_type": "Adaptive Hybrid AI (3-Year Rolling Agronomic Baseline + Attenuated Climate Shock)",
-            "architecture_description": "Combines district-crop lagged rolling historical yield with regularized Ridge climate shock estimation and crop-specific attenuation factors to prevent negative transfer during macro input shocks.",
+            "model_type": "Adaptive Hybrid AI (3-Year Rolling Agronomic Baseline + Robust Huber Climate Shock)",
+            "architecture_description": "Combines district-crop lagged rolling historical yield with robust Huber climate shock estimation and crop-specific attenuation factors to prevent distortion from extreme historical outliers.",
             "overall_metrics": {
                 "test_r2": round(float(r2_hybrid), 4),
                 "test_rmse_mt_ha": round(float(rmse_hybrid), 4),
@@ -200,6 +200,13 @@ metrics_payload = {
 }
 
 target_dirs = [OUTPUT_DIR]
+backend_ml = r"D:\Project\GitHubClone\J26-IT-358\backend\climate-yield\ml"
+if os.path.exists(backend_ml) and backend_ml not in target_dirs:
+    target_dirs.append(backend_ml)
+
+# Pre-build fast lookup dictionaries for rolling baseline consistency
+rolling_baseline_history = df_sorted.set_index(["district", "crop_name", "crop_year", "season"])["rolling_3yr_yield"].to_dict()
+district_crop_rolling_baselines = df_sorted.groupby(["district", "crop_name"])["rolling_3yr_yield"].last().to_dict()
 
 for d in target_dirs:
     os.makedirs(d, exist_ok=True)
@@ -220,6 +227,8 @@ for d in target_dirs:
         "shock_ridge_model": shock_ridge,
         "crop_shock_damping": CROP_SHOCK_DAMPING,
         "feature_columns": list(X_h.columns),
+        "district_crop_rolling_baselines": district_crop_rolling_baselines,
+        "rolling_baseline_history": rolling_baseline_history,
         "crop_historical_means": crop_historical_means,
         "district_crop_historical_means": district_crop_historical_means,
         "cat_cols": CAT_COLS,

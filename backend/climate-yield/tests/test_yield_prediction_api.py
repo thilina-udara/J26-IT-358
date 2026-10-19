@@ -47,7 +47,7 @@ class TestYieldPredictionAPI(unittest.TestCase):
         self.assertEqual(len(self.artifact["feature_columns"]), 40)
         self.assertEqual(len(self.artifact["num_cols"]), 4)
         self.assertEqual(len(_FEATURE_MEANS), 40)
-        self.assertAlmostEqual(_EXPECTED_SHOCK_BASELINE, 0.292315, places=4)
+        self.assertAlmostEqual(_EXPECTED_SHOCK_BASELINE, 0.104296, places=4)
 
     def test_02_prediction_and_explanation_consistency(self):
         """Verify exact mathematical reconciliation between baseline, Linear SHAP shock, and final yield."""
@@ -151,6 +151,12 @@ class TestYieldPredictionAPI(unittest.TestCase):
         self.assertNotIn("sowing date", advisories_text)
         self.assertNotIn("planting calendar", advisories_text)
 
+        # Non-negotiable check: Zero fertilizer, urea, nitrogen, or potash mentions
+        self.assertNotIn("fertiliz", advisories_text)
+        self.assertNotIn("urea", advisories_text)
+        self.assertNotIn("nitrogen", advisories_text)
+        self.assertNotIn("potash", advisories_text)
+
     def test_05_optional_current_growth_stage_handling(self):
         """Verify Mode A (None) vs Mode B (Provided) handling without stage inference."""
         # Test Mode A: None provided
@@ -222,6 +228,99 @@ class TestYieldPredictionAPI(unittest.TestCase):
         bad_sm["soil_moisture_growing_season_min"] = 1.80  # Above physical saturation
         resp = self.client.post("/api/v1/predict-yield-deficit", json=bad_sm)
         self.assertEqual(resp.status_code, 422)
+
+    def test_08_rolling_baseline_consistency_and_benchmarks(self):
+        """Verify rolling baseline lookup, baseline types, and transparent benchmark metrics."""
+        # 1. Latest rolling baseline lookup
+        payload_latest = {
+            "district": "Anuradhapura",
+            "season": "Maha",
+            "crop_name": "Maize",
+            "irrigation_zone_type": "Major Irrigation",
+            "rainfall_growing_season_total_mm": 700.0,
+            "temp_growing_season_mean_c": 27.5,
+            "soil_moisture_growing_season_min": 0.25,
+            "spi3_growing_season_worst": 0.10
+        }
+        res1 = self.client.post("/api/v1/predict-yield-deficit", json=payload_latest)
+        self.assertEqual(res1.status_code, 200)
+        d1 = res1.json()
+        self.assertEqual(d1["baseline_type"], "LATEST_ROLLING_3YR_BASELINE")
+        self.assertEqual(d1["pure_rolling_baseline_test_r2"], 0.6138)
+        self.assertEqual(d1["hybrid_model_test_r2"], 0.6023)
+
+        # 2. Historical rolling baseline lookup by crop_year
+        payload_hist = payload_latest.copy()
+        payload_hist["crop_year"] = 2022
+        res2 = self.client.post("/api/v1/predict-yield-deficit", json=payload_hist)
+        self.assertEqual(res2.status_code, 200)
+        d2 = res2.json()
+        self.assertEqual(d2["baseline_type"], "HISTORICAL_ROLLING_3YR_BASELINE")
+
+        # 3. Custom supplied baseline override
+        payload_custom = payload_latest.copy()
+        payload_custom["baseline_yield_mt_ha"] = 6.50
+        res3 = self.client.post("/api/v1/predict-yield-deficit", json=payload_custom)
+        self.assertEqual(res3.status_code, 200)
+        d3 = res3.json()
+        self.assertEqual(d3["baseline_type"], "CUSTOM_SUPPLIED_BASELINE")
+        self.assertEqual(d3["baseline_yield_mt_ha"], 6.50)
+
+    def test_09_early_warning_endpoint(self):
+        """Verify GET /api/v1/early-warning/{district} returns 14-day hazard screening."""
+        response = self.client.get("/api/v1/early-warning/Anuradhapura")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("status", data)
+        self.assertIn("climate_hazard_screening", data)
+        self.assertIn("daily_forecast_series", data)
+
+    def test_10_integrated_decision_support_system_endpoint(self):
+        """Verify POST /api/v1/integrated-decision-support unites all 4 Decision Support layers."""
+        payload = {
+            "district": "Anuradhapura",
+            "season": "Maha",
+            "crop_name": "Maize",
+            "irrigation_zone_type": "Major Irrigation",
+            "rainfall_growing_season_total_mm": 850.0,
+            "temp_growing_season_mean_c": 28.5,
+            "soil_moisture_growing_season_min": 0.22,
+            "spi3_growing_season_worst": -0.50,
+            "current_growth_stage": "Flowering",
+            "include_live_14day_forecast": True
+        }
+        response = self.client.post("/api/v1/integrated-decision-support", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        # Check Official Title
+        self.assertEqual(data["system_title"], "AI-Powered Climate Early Warning and Crop Yield Impact Decision Support System")
+
+        # Verify all 4 layers are present in the response
+        self.assertIn("layer1_climate_early_warning_14day", data)
+        self.assertIn("layer2_phenology_vulnerability", data)
+        self.assertIn("layer3_seasonal_yield_impact", data)
+        self.assertIn("layer4_explainability_xai", data)
+        self.assertIn("actionable_decision_support_advisories", data)
+        self.assertIn("system_governance_and_boundaries", data)
+
+        # Verify Layer 3 has predicted yield and deficit
+        l3 = data["layer3_seasonal_yield_impact"]
+        self.assertIn("predicted_yield_mt_ha", l3)
+        self.assertIn("yield_deficit_percentage", l3)
+
+        # Verify Layer 4 XAI exact mathematical consistency
+        l4 = data["layer4_explainability_xai"]
+        self.assertTrue(l4["is_explanation_consistent"])
+
+        # Verify Strict Zero Fertilizer / Crop Selection / Sowing Date in combined advisories
+        advisories_text = " ".join(data["actionable_decision_support_advisories"]).lower()
+        self.assertNotIn("fertiliz", advisories_text)
+        self.assertNotIn("urea", advisories_text)
+        self.assertNotIn("nitrogen", advisories_text)
+        self.assertNotIn("potash", advisories_text)
+        self.assertNotIn("sowing date", advisories_text)
+        self.assertNotIn("planting calendar", advisories_text)
 
 
 if __name__ == "__main__":

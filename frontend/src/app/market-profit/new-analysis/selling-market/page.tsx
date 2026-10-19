@@ -12,15 +12,12 @@ import {
   Calendar,
   Compass,
   Scale,
-  Sprout,
   MapPin,
   Store,
-  Info,
   Check,
-  Building2,
-  HelpCircle,
-  Clock,
-  Tag,
+  ChevronRight,
+  Package,
+  ShoppingBag,
 } from "lucide-react";
 
 import { WizardProgress } from "../../components/WizardProgress";
@@ -34,10 +31,8 @@ import {
 } from "../../lib/constants";
 import { formatDateDisplay, formatKg } from "../../lib/formatters";
 import {
-  validateStep1,
   loadStep1FromStorage,
   Step1FormData,
-  validateStep2,
   loadStep2FromStorage,
   Step2FormData,
   validateStep3,
@@ -46,14 +41,13 @@ import {
   saveStep3ToStorage,
   saveValidatedStep3ToStorage,
   checkPreviousStepsForStep3,
-  isWizardReadyForStep4,
+  clearAnalysisSnapshot,
   PriceType,
 } from "../../lib/wizard";
 
-// Statically import the 6 verified crop photographs for summary cards
+// Statically import the 5 verified crop photographs for Component 1
 import okraImg from "../../assets/crops/okra.jpg";
 import brinjalImg from "../../assets/crops/brinjal.jpg";
-import pumpkinImg from "../../assets/crops/pumpkin.jpg";
 import maizeImg from "../../assets/crops/maize.jpg";
 import mungBeanImg from "../../assets/crops/mung-bean.jpg";
 import chilliImg from "../../assets/crops/chilli.jpg";
@@ -61,7 +55,6 @@ import chilliImg from "../../assets/crops/chilli.jpg";
 const CROP_IMAGE_MAP: Record<string, StaticImageData> = {
   CR_OKRA: okraImg,
   CR_BRINJAL: brinjalImg,
-  CR_PUMPKIN: pumpkinImg,
   CR_MAIZE: maizeImg,
   CR_MUNG_BEAN: mungBeanImg,
   CR_CHILLI: chilliImg,
@@ -140,6 +133,7 @@ export default function SellingMarketPage() {
 
   // Handle market selection
   const handleMarketSelect = (marketId: string) => {
+    clearAnalysisSnapshot();
     setSelectedMarketId(marketId);
     setMarketError(undefined);
     setIsStep3Saved(false);
@@ -154,6 +148,7 @@ export default function SellingMarketPage() {
 
   // Handle price type selection
   const handlePriceTypeSelect = (priceType: PriceType) => {
+    clearAnalysisSnapshot();
     setSelectedPriceType(priceType);
     setPriceTypeError(undefined);
     setIsStep3Saved(false);
@@ -166,7 +161,7 @@ export default function SellingMarketPage() {
     });
   };
 
-  // Handle Step 3 submission with previous steps re-verification and first-invalid focus
+  // Handle Step 3 submission with validation
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -199,7 +194,6 @@ export default function SellingMarketPage() {
 
       if (!validation.isValid) {
         setIsStep3Saved(false);
-        // Focus first invalid field accessibly and scroll into view
         if (mError) {
           firstMarketCardRef.current?.focus();
           marketSelectionSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -234,12 +228,31 @@ export default function SellingMarketPage() {
     STANDARD_MARKETS.find((m) => m.id === selectedMarketId);
   const cropImage = step1Data.crop_id ? CROP_IMAGE_MAP[step1Data.crop_id] : null;
 
+  const isFormValid = Boolean(
+    selectedMarketId && (selectedPriceType === "wholesale" || selectedPriceType === "retail")
+  );
+
+  const getCategoryBadgeClass = (category: string) => {
+    switch (category) {
+      case "Vegetable":
+        return "bg-[#E7F5EB] text-[#166534] border-[#22A06B]/40";
+      case "Grain":
+        return "bg-amber-50 text-amber-900 border-amber-300";
+      case "Condiment":
+        return "bg-rose-50 text-rose-900 border-rose-300";
+      case "Legume":
+        return "bg-teal-50 text-teal-900 border-teal-300";
+      default:
+        return "bg-slate-50 text-slate-800 border-slate-200";
+    }
+  };
+
   // Render friendly redirect notice if prerequisites are not met
   if (guardStatus === "invalid_step1" || guardStatus === "invalid_step2") {
     return (
       <div className="max-w-2xl mx-auto py-12 text-center space-y-4">
-        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-          <AlertCircle className="h-6 w-6" />
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 shadow-2xs">
+          <AlertCircle className="h-7 w-7" />
         </div>
         <h2 className="text-xl font-bold text-slate-900">
           Previous Steps Required
@@ -247,14 +260,13 @@ export default function SellingMarketPage() {
         <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
           {guardMessage}
         </p>
-        <p className="text-xs text-slate-400">Redirecting automatically...</p>
-        <div>
+        <div className="pt-2">
           <Link
             href={guardTarget}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#15803d] hover:underline"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#15803d] hover:text-[#166534] hover:underline"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Go to previous incomplete step</span>
+            <span>Go to incomplete step</span>
           </Link>
         </div>
       </div>
@@ -270,88 +282,90 @@ export default function SellingMarketPage() {
     );
   }
 
-  // Recommended pilot hubs vs regional economic centres
-  const recommendedMarkets = STANDARD_MARKETS.filter((m) => m.is_pilot_recommended);
-  const otherMarkets = STANDARD_MARKETS.filter((m) => !m.is_pilot_recommended);
-
   return (
     <div className="space-y-8 pb-16">
       {/* Top Navigation & Breadcrumb */}
       <div className="flex items-center justify-between gap-4">
         <Link
           href="/market-profit/new-analysis/harvest-details"
-          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-[#15803d] transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs group"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
           <span>Back to Harvest Details</span>
         </Link>
 
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100/80 text-[#166534]">
-          Step 3 of 4
+        <span className="text-xs font-semibold text-[#166534] bg-[#E7F5EB] border border-[#22A06B]/30 px-3 py-1 rounded-full shadow-2xs">
+          New Analysis Wizard · Step 3 of 4
         </span>
       </div>
 
       {/* Page Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-          Target Selling Market
+          Where Will You Sell Your Harvest?
         </h1>
         <p className="text-sm sm:text-base text-slate-600 mt-1.5 leading-relaxed">
-          Step 3 of 4: Select the Dedicated Economic Centre (DEC) or terminal wholesale hub where you plan to market your produce.
+          Choose your selling market and price type.
         </p>
       </div>
 
       {/* Progress Stepper - Step 3 is Active */}
       <WizardProgress currentStep={3} />
 
-      {/* Confirmed Steps 1 & 2 Summary Card */}
-      <section className="rounded-2xl border border-emerald-200/90 bg-emerald-50/40 p-4 sm:p-5 shadow-2xs">
+      {/* Selected Harvest Summary */}
+      <section className="rounded-2xl sm:rounded-3xl border border-emerald-200/80 bg-linear-to-r from-emerald-50/70 via-emerald-50/30 to-white p-4 sm:p-5 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5 min-w-0">
+          <div className="flex items-center gap-4 min-w-0">
             {cropImage && (
-              <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 border border-emerald-300 shadow-xs bg-white">
+              <div className="relative h-16 w-24 sm:h-18 sm:w-28 rounded-2xl overflow-hidden shrink-0 border border-emerald-200 shadow-xs bg-white">
                 <Image
                   src={cropImage}
                   alt={selectedCropMeta?.name_en || "Selected crop"}
                   fill
                   className="object-cover"
+                  sizes="(max-width: 640px) 96px, 112px"
                 />
               </div>
             )}
-            <div className="min-w-0 space-y-0.5">
-              <div className="flex items-center gap-2 text-xs font-semibold text-[#15803d] uppercase tracking-wider">
-                <Sprout className="h-3.5 w-3.5" />
-                <span>Confirmed Harvest Profile</span>
+            <div className="min-w-0 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#15803d] bg-white border border-[#22A06B]/30 px-2 py-0.5 rounded-full shadow-2xs">
+                  Harvest Summary
+                </span>
+                {selectedCropMeta && (
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getCategoryBadgeClass(
+                      selectedCropMeta.category
+                    )}`}
+                  >
+                    {selectedCropMeta.category}
+                  </span>
+                )}
               </div>
-              <div className="text-base font-bold text-slate-900 truncate">
-                {selectedCropMeta?.name_en || "Crop"}{" "}
-                <span className="text-xs font-normal text-slate-500">
+              <div className="text-base sm:text-lg font-bold text-slate-900 truncate flex items-baseline gap-2">
+                <span>{selectedCropMeta?.name_en || "Crop"}</span>
+                <span className="text-xs sm:text-sm font-medium text-slate-500">
                   ({selectedCropMeta?.name_si})
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3 text-emerald-600" />
-                  {selectedDistrictMeta?.name || "District"}
-                  {selectedDistrictMeta?.is_pilot && (
-                    <span className="text-[10px] bg-emerald-100 text-[#166534] px-1 py-0.2 rounded font-semibold ml-0.5">
-                      Pilot Zone
-                    </span>
-                  )}
+                <span className="flex items-center gap-1 font-medium text-slate-700">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  {selectedDistrictMeta?.name || "District"} District
                 </span>
-                <span>•</span>
+                <span className="text-slate-300">•</span>
                 <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-emerald-600" />
+                  <Calendar className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                   {formatDateDisplay(step2Data.harvest_date)}
                 </span>
-                <span>•</span>
+                <span className="text-slate-300">•</span>
                 <span className="flex items-center gap-1">
-                  <Compass className="h-3 w-3 text-emerald-600" />
+                  <Compass className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                   {step2Data.land_extent_acres} Acres
                 </span>
-                <span>•</span>
+                <span className="text-slate-300">•</span>
                 <span className="flex items-center gap-1">
-                  <Scale className="h-3 w-3 text-emerald-600" />
+                  <Scale className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                   {formatKg(step2Data.expected_yield_kg)}
                 </span>
               </div>
@@ -360,44 +374,21 @@ export default function SellingMarketPage() {
 
           <Link
             href="/market-profit/new-analysis/harvest-details"
-            className="inline-flex items-center justify-center gap-1 text-xs font-bold text-[#15803d] hover:text-[#166534] hover:underline self-start sm:self-auto shrink-0 bg-white px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs"
+            className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-[#15803d] hover:text-[#166534] bg-white hover:bg-emerald-50 px-3.5 py-2 rounded-xl border border-emerald-200/90 shadow-2xs transition-colors self-start sm:self-auto shrink-0 group"
           >
-            <span>Change Details</span>
+            <span>Edit Harvest Details</span>
+            <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
       </section>
 
-      {/* Farmer Educational Guidance: Cultivation Location vs. Selling Market */}
-      <section className="rounded-2xl border border-sky-200/90 bg-sky-50/50 p-4 sm:p-5 shadow-2xs space-y-2">
-        <div className="flex items-start gap-3">
-          <div className="h-8 w-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0 mt-0.5">
-            <HelpCircle className="h-5 w-5" />
-          </div>
-          <div className="text-xs sm:text-sm text-slate-700 space-y-1 leading-relaxed">
-            <span className="font-bold text-slate-900 block">
-              Why can your selling market differ from your cultivation district?
-            </span>
-            <p>
-              Many commercial farmers in Sri Lanka grow crops in rural cultivation districts like{" "}
-              <span className="font-semibold text-slate-800">Matara</span> or{" "}
-              <span className="font-semibold text-slate-800">Hambantota</span>, but transport their harvest to major regional Dedicated Economic Centres (such as{" "}
-              <span className="font-semibold text-[#166534]">Embilipitiya Dedicated Economic Centre</span> or{" "}
-              <span className="font-semibold text-slate-800">Pettah Manning Market</span>) as they serve as regional wholesale collection hubs connecting local farming areas to wider commercial distribution networks.
-            </p>
-            <p className="text-xs text-slate-500 pt-0.5">
-              Select the market where your harvest will actually be sold or auctioned.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Market & Price Type Selection Form */}
+      {/* Main Market & Price Type Form */}
       <form onSubmit={handleFormSubmit} className="space-y-8" noValidate>
         {/* Error Alert Banner */}
         {hasAttemptedSubmit && (marketError || priceTypeError) && (
           <div
             role="alert"
-            className="rounded-2xl border border-red-200 bg-red-50/80 p-4 text-red-900 shadow-2xs flex items-center gap-3 animate-in fade-in"
+            className="rounded-2xl border border-red-200 bg-red-50/90 p-4 sm:p-5 text-red-900 shadow-xs flex items-center gap-3 animate-in fade-in"
           >
             <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
             <div className="text-sm font-semibold">
@@ -408,21 +399,21 @@ export default function SellingMarketPage() {
           </div>
         )}
 
-        {/* Market Selection Section */}
+        {/* 1. Market Selection Section */}
         <section
           ref={marketSelectionSectionRef}
-          className="rounded-2xl bg-white p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-6"
+          className="rounded-2xl sm:rounded-3xl bg-white p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-5"
         >
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#15803d]">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#15803d]">
               <Store className="h-4 w-4" />
-              <span>Step 3 — Selling Hub</span>
+              <span>Step 3.1 — Selling Market</span>
             </div>
             <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
-              Select Target Selling Market <span className="text-red-500">*</span>
+              Select Selling Market <span className="text-red-500">*</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Choose ONE Dedicated Economic Centre (DEC) or commercial terminal market from the verified national catalog.
+              Select the Dedicated Economic Centre or terminal wholesale market where your harvest will be sold.
             </p>
           </div>
 
@@ -437,140 +428,83 @@ export default function SellingMarketPage() {
             </div>
           )}
 
-          {/* 1. Highlighted Pilot Hubs */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#166534]">
-              <Building2 className="h-3.5 w-3.5 text-[#15803d]" />
-              <span>Highlighted Pilot Study Hubs</span>
-            </div>
+          {/* Markets Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {STANDARD_MARKETS.map((market, idx) => {
+              const isSelected = selectedMarketId === market.id;
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-              {recommendedMarkets.map((market, idx) => {
-                const isSelected = selectedMarketId === market.id;
-                const isEmbilipitiya = market.id === "DEC_EMBILIPITIYA";
-
-                return (
-                  <div
-                    key={market.id}
-                    ref={idx === 0 ? firstMarketCardRef : undefined}
-                    tabIndex={0}
-                    role="button"
-                    aria-pressed={isSelected}
-                    onClick={() => handleMarketSelect(market.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === " " || e.key === "Enter") {
-                        e.preventDefault();
-                        handleMarketSelect(market.id);
-                      }
-                    }}
-                    className={`relative rounded-2xl border-2 p-4.5 cursor-pointer transition-all shadow-2xs flex flex-col justify-between gap-3 focus:outline-hidden focus:ring-2 focus:ring-[#15803d]/40 ${
-                      isSelected
-                        ? "border-[#15803d] bg-emerald-50/60 ring-2 ring-emerald-500/20 shadow-xs"
-                        : "border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50/60"
-                    }`}
-                  >
-                    <div className="space-y-1.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isEmbilipitiya
-                            ? "bg-[#15803d] text-white"
-                            : "bg-emerald-100 text-[#166534]"
-                        }`}>
-                          {isEmbilipitiya ? "Southern Scope Pilot Hub" : "Pilot Study Hub"}
-                        </span>
-
-                        <div className={`h-5 w-5 rounded-full border flex items-center justify-center shrink-0 ${
+              return (
+                <div
+                  key={market.id}
+                  ref={idx === 0 ? firstMarketCardRef : undefined}
+                  tabIndex={0}
+                  role="button"
+                  aria-pressed={isSelected}
+                  onClick={() => handleMarketSelect(market.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === " " || e.key === "Enter") {
+                      e.preventDefault();
+                      handleMarketSelect(market.id);
+                    }
+                  }}
+                  className={`relative rounded-2xl border-2 p-4 cursor-pointer transition-all shadow-2xs flex items-center justify-between gap-3 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/20 ${
+                    isSelected
+                      ? "border-[#15803d] bg-emerald-50/60 shadow-xs"
+                      : "border-slate-200/90 bg-white hover:border-emerald-300 hover:bg-slate-50/70"
+                  }`}
+                >
+                  <div className="space-y-1 min-w-0 pr-2">
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
                           isSelected
-                            ? "border-[#15803d] bg-[#15803d] text-white"
-                            : "border-slate-300 bg-white"
-                        }`}>
-                          {isSelected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                        </div>
+                            ? "bg-[#15803d] text-white"
+                            : "bg-[#E7F5EB] text-[#15803d]"
+                        }`}
+                      >
+                        <Store className="h-4 w-4" />
                       </div>
-
-                      <h3 className="text-sm font-bold text-slate-900 tracking-tight leading-snug">
+                      <h3 className="text-sm font-bold text-slate-900 tracking-tight leading-snug truncate">
                         {market.name}
                       </h3>
-
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        {market.region}
-                      </p>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                      <span>{market.short_name}</span>
-                      <span className="font-semibold text-emerald-700">
-                        {isSelected ? "Selected" : "Select hub"}
-                      </span>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 pl-10.5">
+                      <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
+                      <span className="truncate">{market.region}</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* 2. Other Regional Economic Centres */}
-          <div className="space-y-3 pt-4 border-t border-slate-100">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
-              <Store className="h-3.5 w-3.5 text-slate-500" />
-              <span>Other Regional Dedicated Economic Centres</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {otherMarkets.map((market) => {
-                const isSelected = selectedMarketId === market.id;
-
-                return (
                   <div
-                    key={market.id}
-                    onClick={() => handleMarketSelect(market.id)}
-                    className={`rounded-xl border p-3.5 cursor-pointer transition-all shadow-2xs flex items-start justify-between gap-3 ${
-                      isSelected
-                        ? "border-[#15803d] bg-emerald-50/50 ring-1 ring-emerald-500/20"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                    }`}
-                  >
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <Store className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                        <h4 className="text-xs font-bold text-slate-900 truncate">
-                          {market.name}
-                        </h4>
-                      </div>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        {market.region}
-                      </p>
-                    </div>
-
-                    <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                       isSelected
                         ? "border-[#15803d] bg-[#15803d] text-white"
                         : "border-slate-300 bg-white"
-                    }`}>
-                      {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
-                    </div>
+                    }`}
+                  >
+                    {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
-        {/* Price Type Selection Section */}
+        {/* 2. Price Type Selection Section */}
         <section
           ref={priceTypeSectionRef}
-          className="rounded-2xl bg-white p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-5"
+          className="rounded-2xl sm:rounded-3xl bg-white p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-5"
         >
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#15803d]">
-              <Tag className="h-4 w-4" />
-              <span>Step 3 — Price Valuation Type</span>
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#15803d]">
+              <Package className="h-4 w-4" />
+              <span>Step 3.2 — Price Type</span>
             </div>
             <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
-              Which price type would you like to use? <span className="text-red-500">*</span>
+              Select Price Type <span className="text-red-500">*</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Select whether your financial assessment should use wholesale or retail market prices.
+              Choose whether your financial analysis should use wholesale or retail market prices.
             </p>
           </div>
 
@@ -585,14 +519,14 @@ export default function SellingMarketPage() {
             </div>
           )}
 
-          {/* Accessible Radio Cards */}
+          {/* Two Accessible Cards: Wholesale and Retail */}
           <div
             role="radiogroup"
-            aria-label="Which price type would you like to use?"
+            aria-label="Choose your price type"
             aria-required="true"
             className="grid grid-cols-1 sm:grid-cols-2 gap-4"
           >
-            {/* Wholesale */}
+            {/* WHOLESALE */}
             <div
               ref={firstPriceTypeRadioRef}
               role="radio"
@@ -605,28 +539,33 @@ export default function SellingMarketPage() {
                   handlePriceTypeSelect("wholesale");
                 }
               }}
-              className={`relative rounded-2xl border-2 p-5 cursor-pointer transition-all shadow-2xs flex flex-col justify-between gap-3 focus:outline-hidden focus:ring-2 focus:ring-[#15803d]/40 ${
+              className={`relative rounded-2xl border-2 p-5 cursor-pointer transition-all shadow-2xs flex flex-col justify-between gap-3 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/20 ${
                 selectedPriceType === "wholesale"
-                  ? "border-[#15803d] bg-emerald-50/60 ring-2 ring-emerald-500/20 shadow-xs"
-                  : "border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50/60"
+                  ? "border-[#15803d] bg-emerald-50/60 shadow-xs"
+                  : "border-slate-200/90 bg-white hover:border-emerald-300 hover:bg-slate-50/70"
               }`}
             >
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <span className="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#166534]">
-                    Bulk / Trade
-                  </span>
+                  <div
+                    className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      selectedPriceType === "wholesale"
+                        ? "bg-[#15803d] text-white"
+                        : "bg-[#E7F5EB] text-[#15803d]"
+                    }`}
+                  >
+                    <Package className="h-5 w-5" />
+                  </div>
 
-                  {/* Radio indicator */}
                   <div
                     className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                       selectedPriceType === "wholesale"
-                        ? "border-[#15803d] bg-white"
+                        ? "border-[#15803d] bg-[#15803d] text-white"
                         : "border-slate-300 bg-white"
                     }`}
                   >
                     {selectedPriceType === "wholesale" && (
-                      <div className="h-2.5 w-2.5 rounded-full bg-[#15803d]" />
+                      <Check className="h-3 w-3 stroke-[3]" />
                     )}
                   </div>
                 </div>
@@ -636,19 +575,19 @@ export default function SellingMarketPage() {
                 </h3>
 
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Use wholesale market prices for your analysis.
+                  Prices for bulk market trading.
                 </p>
               </div>
 
               <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Standard market transactions</span>
+                <span className="font-medium text-slate-600">Bulk trading at Economic Centres</span>
                 <span className="font-semibold text-emerald-700">
-                  {selectedPriceType === "wholesale" ? "Selected" : "Select wholesale"}
+                  {selectedPriceType === "wholesale" ? "Selected" : "Select Wholesale"}
                 </span>
               </div>
             </div>
 
-            {/* Retail */}
+            {/* RETAIL */}
             <div
               role="radio"
               aria-checked={selectedPriceType === "retail"}
@@ -660,28 +599,33 @@ export default function SellingMarketPage() {
                   handlePriceTypeSelect("retail");
                 }
               }}
-              className={`relative rounded-2xl border-2 p-5 cursor-pointer transition-all shadow-2xs flex flex-col justify-between gap-3 focus:outline-hidden focus:ring-2 focus:ring-[#15803d]/40 ${
+              className={`relative rounded-2xl border-2 p-5 cursor-pointer transition-all shadow-2xs flex flex-col justify-between gap-3 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/20 ${
                 selectedPriceType === "retail"
-                  ? "border-[#15803d] bg-emerald-50/60 ring-2 ring-emerald-500/20 shadow-xs"
-                  : "border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50/60"
+                  ? "border-[#15803d] bg-emerald-50/60 shadow-xs"
+                  : "border-slate-200/90 bg-white hover:border-emerald-300 hover:bg-slate-50/70"
               }`}
             >
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <span className="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800">
-                    Consumer
-                  </span>
+                  <div
+                    className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      selectedPriceType === "retail"
+                        ? "bg-[#15803d] text-white"
+                        : "bg-[#E7F5EB] text-[#15803d]"
+                    }`}
+                  >
+                    <ShoppingBag className="h-5 w-5" />
+                  </div>
 
-                  {/* Radio indicator */}
                   <div
                     className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                       selectedPriceType === "retail"
-                        ? "border-[#15803d] bg-white"
+                        ? "border-[#15803d] bg-[#15803d] text-white"
                         : "border-slate-300 bg-white"
                     }`}
                   >
                     {selectedPriceType === "retail" && (
-                      <div className="h-2.5 w-2.5 rounded-full bg-[#15803d]" />
+                      <Check className="h-3 w-3 stroke-[3]" />
                     )}
                   </div>
                 </div>
@@ -691,32 +635,23 @@ export default function SellingMarketPage() {
                 </h3>
 
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Use retail market prices for your analysis.
+                  Prices paid by consumers.
                 </p>
               </div>
 
               <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Direct-to-consumer pricing</span>
+                <span className="font-medium text-slate-600">Consumer market pricing</span>
                 <span className="font-semibold text-emerald-700">
-                  {selectedPriceType === "retail" ? "Selected" : "Select retail"}
+                  {selectedPriceType === "retail" ? "Selected" : "Select Retail"}
                 </span>
               </div>
-            </div>
-          </div>
-
-          {/* Educational disclaimer notice */}
-          <div className="rounded-xl border border-amber-200/90 bg-amber-50/60 p-3.5 text-xs text-amber-900 flex items-start gap-2.5">
-            <Info className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
-            <div className="leading-relaxed">
-              <span className="font-semibold text-amber-950">Price Type &amp; Market Data Availability:</span>{" "}
-              Selecting a price type indicates your analysis preference. It does not confirm that corresponding historical prices are available for the chosen market, nor does it imply that all regional Dedicated Economic Centres conduct retail transactions.
             </div>
           </div>
         </section>
 
         {/* Farmer-Friendly Step 3 Completion Summary */}
         {isStep3Saved && selectedMarketMeta && selectedPriceType && (
-          <section className="rounded-2xl border-2 border-emerald-300 bg-linear-to-br from-emerald-50/90 via-emerald-50/50 to-white p-6 sm:p-7 shadow-xs space-y-5 animate-in fade-in">
+          <section className="rounded-2xl sm:rounded-3xl border-2 border-emerald-300 bg-linear-to-br from-emerald-50/90 via-emerald-50/40 to-white p-6 sm:p-7 shadow-xs space-y-4 animate-in fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-200/80 pb-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-2xl bg-[#15803d] text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -724,155 +659,62 @@ export default function SellingMarketPage() {
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                    Step 3 Complete — Selling Market &amp; Price Type Confirmed
+                    Selling Market &amp; Price Type Confirmed
                   </h3>
                   <p className="text-xs text-emerald-800 font-medium">
-                    Your candidate crop, cultivation district, harvest timeline, target selling hub, and price valuation type are verified.
+                    Your market preferences are verified and stored for price trend forecasting.
                   </p>
                 </div>
               </div>
 
               <Link
                 href="/market-profit/new-analysis/cultivation-costs"
-                className="inline-flex items-center gap-1.5 self-start sm:self-auto text-xs font-bold text-[#15803d] bg-white border border-emerald-200 px-3.5 py-2 rounded-lg hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 self-start sm:self-auto text-xs font-bold text-[#15803d] bg-white border border-emerald-200 px-3.5 py-2 rounded-xl hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer group"
               >
                 <span>Proceed to Step 4</span>
-                <ArrowRight className="h-3.5 w-3.5" />
+                <ArrowRight className="h-3.5 w-3.5 text-emerald-600 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
 
-            {/* Complete 7-parameter Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {/* Crop */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
-                {cropImage && (
-                  <div className="relative h-11 w-11 rounded-lg overflow-hidden shrink-0 border border-emerald-200">
-                    <Image
-                      src={cropImage}
-                      alt={selectedCropMeta?.name_en || "Selected crop"}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Candidate Crop
-                  </span>
-                  <span className="text-sm font-bold text-slate-900 truncate block">
-                    {selectedCropMeta?.name_en || "Crop"}{" "}
-                    <span className="text-xs font-normal text-slate-500">
-                      ({selectedCropMeta?.name_si})
-                    </span>
-                  </span>
-                </div>
-              </div>
-
-              {/* District */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
-                <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
-                  <MapPin className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Cultivation District
-                  </span>
-                  <span className="text-sm font-bold text-slate-900 truncate block">
-                    {selectedDistrictMeta?.name || "District"}
-                    {selectedDistrictMeta?.is_pilot && (
-                      <span className="ml-1 text-[10px] bg-emerald-100 text-[#166534] px-1 py-0.2 rounded font-semibold">
-                        Pilot Zone
-                      </span>
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              {/* Harvest Date */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
-                <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
-                  <Calendar className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Harvest Date
-                  </span>
-                  <span className="text-sm font-bold text-slate-900 truncate block">
-                    {formatDateDisplay(step2Data.harvest_date)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Land Extent */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
-                <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
-                  <Compass className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Cultivation Extent
-                  </span>
-                  <span className="text-sm font-bold text-slate-900 truncate block">
-                    {step2Data.land_extent_acres} Acres
-                  </span>
-                </div>
-              </div>
-
-              {/* Expected Yield */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
-                <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
-                  <Scale className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Expected Yield
-                  </span>
-                  <span className="text-sm font-bold text-slate-900 truncate block">
-                    {formatKg(step2Data.expected_yield_kg)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Target Selling Market */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
-                <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+                <div className="h-10 w-10 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
                   <Store className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Target Selling Hub
+                    Selected Market
                   </span>
                   <span className="text-sm font-bold text-slate-900 truncate block">
                     {selectedMarketMeta.name}
                   </span>
+                  <span className="text-xs text-slate-500 truncate block">
+                    {selectedMarketMeta.region}
+                  </span>
                 </div>
               </div>
 
-              {/* Analysis Price Type */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
-                <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
-                  <Tag className="h-5 w-5" />
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+                <div className="h-10 w-10 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
+                  {selectedPriceType === "wholesale" ? (
+                    <Package className="h-5 w-5" />
+                  ) : (
+                    <ShoppingBag className="h-5 w-5" />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Analysis Price Type
+                    Selected Price Type
                   </span>
-                  <span className="text-sm font-bold text-slate-900 truncate block capitalize">
+                  <span className="text-sm font-bold text-slate-900 capitalize block">
                     {selectedPriceType} Market Price
-                    <span className="ml-1 text-[10px] bg-emerald-100 text-[#166534] px-1.5 py-0.2 rounded font-semibold capitalize">
-                      {selectedPriceType === "retail" ? "Consumer" : "Bulk"}
-                    </span>
+                  </span>
+                  <span className="text-xs text-slate-500 block">
+                    {selectedPriceType === "wholesale"
+                      ? "Prices for bulk market trading"
+                      : "Prices paid by consumers"}
                   </span>
                 </div>
-              </div>
-            </div>
-
-            {/* Next Step Guidance Notice */}
-            <div className="rounded-xl border border-emerald-200 bg-white/80 p-3.5 text-xs text-slate-700 flex items-start gap-2.5">
-              <Info className="h-4 w-4 text-[#15803d] shrink-0 mt-0.5" />
-              <div className="leading-relaxed">
-                <span className="font-bold text-[#166534]">Next Stage: Step 4 — Cultivation Costs &amp; Financial Risk.</span>{" "}
-                In the upcoming sprint task, you will enter cultivation expenditure (seed, fertilizer, labor, transport) to evaluate projected profit margins, break-even unit prices, and financial risk.
               </div>
             </div>
           </section>
@@ -882,19 +724,19 @@ export default function SellingMarketPage() {
         <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
           <Link
             href="/market-profit/new-analysis/harvest-details"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-2xs group"
           >
-            <ArrowLeft className="h-4 w-4 text-slate-500" />
+            <ArrowLeft className="h-4 w-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
             <span>Back to Harvest Details</span>
           </Link>
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !isFormValid}
             aria-busy={isSubmitting}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white px-8 py-3.5 text-sm font-bold shadow-sm shadow-emerald-800/20 transition-all cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>{isSubmitting ? "Validating Selection..." : "Next: Cultivation Costs"}</span>
+            <span>Next: Cultivation Costs</span>
             <ArrowRight className="h-4 w-4 text-emerald-100 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>

@@ -26,10 +26,14 @@ from app.schemas.yield_prediction import (
     YieldPredictionResponse,
     IntegratedDecisionSupportRequest,
     IntegratedDecisionSupportResponse,
+    EarlyWarningRiskProbabilities,
+    EarlyWarningClassifierOutput,
+    EarlyWarningClassifyRequest,
     HazardRiskLevel,
     FeatureAttribution,
     ExplainabilityBreakdown
 )
+from pipelines.early_warning_classifier_engine import predict_climate_hazard_risk
 
 router = APIRouter(prefix="/api/v1", tags=["Yield Prediction & Climate Hazard Decision Support"])
 
@@ -505,3 +509,34 @@ def get_integrated_decision_support(request: IntegratedDecisionSupportRequest) -
             "crop_scope": "Strictly 7 approved crops: Maize, Chilli, Green Gram, Tomato, Brinjal, Okra, Pumpkin (Ash Pumpkin excluded)."
         }
     )
+
+
+@router.post(
+    "/early-warning/classify",
+    response_model=EarlyWarningClassifierOutput,
+    status_code=status.HTTP_200_OK,
+    summary="Model 1: Direct 14-Day Multi-Hazard Risk Classification",
+    description="Direct inference endpoint for Model 1 (AI-Powered Climate Early Warning Multi-Hazard Classifier). Ingests 14-day agro-meteorological indicators and outputs hazard risk tiers (0 to 3) with full Softmax probabilities."
+)
+def classify_climate_hazard(request: EarlyWarningClassifyRequest) -> EarlyWarningClassifierOutput:
+    """Classifies custom or simulated 14-day meteorological conditions into multi-hazard risk tiers."""
+    try:
+        result = predict_climate_hazard_risk(
+            district=request.district.value,
+            rainfall_14d_sum_mm=request.rainfall_14d_sum_mm,
+            rainfall_max_1d_mm=request.rainfall_max_1d_mm,
+            temp_max_14d_peak_c=request.temp_max_14d_peak_c,
+            temp_mean_14d_c=request.temp_mean_14d_c,
+            temp_min_14d_c=request.temp_min_14d_c,
+            humidity_mean_pct=request.humidity_mean_pct,
+            consecutive_heat_days=request.consecutive_heat_days,
+            consecutive_dry_days=request.consecutive_dry_days,
+            soil_moisture_topsoil_m3_m3=request.soil_moisture_topsoil_m3_m3,
+            spi3_current=request.spi3_current,
+            month=request.month
+        )
+        return EarlyWarningClassifierOutput(**result)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Early warning classification failed: {exc}")

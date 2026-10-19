@@ -7,7 +7,6 @@ import { saveStep1ToStorage, loadStep1FromStorage, clearAnalysisSnapshot } from 
 
 import okraImg from "../assets/crops/okra.jpg";
 import brinjalImg from "../assets/crops/brinjal.jpg";
-import pumpkinImg from "../assets/crops/pumpkin.jpg";
 import maizeImg from "../assets/crops/maize.jpg";
 import mungBeanImg from "../assets/crops/mung-bean.jpg";
 import chilliImg from "../assets/crops/chilli.jpg";
@@ -15,7 +14,6 @@ import chilliImg from "../assets/crops/chilli.jpg";
 const CROP_IMAGE_MAP: Record<string, StaticImageData> = {
   CR_OKRA: okraImg,
   CR_BRINJAL: brinjalImg,
-  CR_PUMPKIN: pumpkinImg,
   CR_MAIZE: maizeImg,
   CR_MUNG_BEAN: mungBeanImg,
   CR_CHILLI: chilliImg,
@@ -64,11 +62,11 @@ export function CropsCatalogCard() {
         </div>
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#E7F5EB] text-[#166534] border border-[#22A06B]/30 w-fit self-start sm:self-auto shadow-2xs">
           <CheckCircle2 className="h-3.5 w-3.5 text-[#22A06B]" />
-          <span>6 Active Crops</span>
+          <span>5 Active Crops</span>
         </div>
       </div>
 
-      {/* 6 Crops Grid with Consistent Aspect Ratios & Direct Actions */}
+      {/* 5 Crops Grid with Consistent Aspect Ratios & Direct Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {SUPPORTED_FRONTEND_CROPS.map((crop: FrontendCropMetadata) => {
           const imageAsset = CROP_IMAGE_MAP[crop.crop_id];

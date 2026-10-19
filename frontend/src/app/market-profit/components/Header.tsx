@@ -53,7 +53,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               : isHarvestDetails
               ? "New Analysis (Step 2: Harvest Details)"
               : isNewAnalysis
-              ? "New Analysis (Step 1: Crop & Location)"
+              ? "New Analysis (Step 1: Crop & District)"
               : "Dashboard"}
           </span>
         </div>

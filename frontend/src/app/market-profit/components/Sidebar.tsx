@@ -259,7 +259,7 @@ export function Sidebar({ isOpen, onClose, onStartAnalysisClick }: SidebarProps)
               </div>
               <div className="flex justify-between items-center py-1 border-b border-emerald-900/10">
                 <span className="text-slate-500 font-medium">Active Crop Types</span>
-                <span className="font-bold text-[#166534]">Okra, Brinjal, Pumpkin, Maize, G.Gram, Chilli</span>
+                <span className="font-bold text-[#166534]">Okra, Brinjal, Maize, G.Gram, Chilli</span>
               </div>
               <div className="flex justify-between items-center py-1 border-b border-emerald-900/10">
                 <span className="text-slate-500 font-medium">Research Scope</span>

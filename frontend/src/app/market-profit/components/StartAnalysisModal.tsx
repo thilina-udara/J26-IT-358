@@ -57,7 +57,7 @@ export function StartAnalysisModal({ isOpen, onClose }: StartAnalysisModalProps)
                 1
               </span>
               <div>
-                <span className="font-bold text-slate-900">Select Crop:</span> Choose from the 6 supported varieties (Okra, Brinjal, Pumpkin, Maize, Mung Bean, Chilli).
+                <span className="font-bold text-slate-900">Select Crop:</span> Choose from the 5 supported varieties (Okra, Brinjal, Maize, Mung Bean, Chilli).
               </div>
             </div>
 

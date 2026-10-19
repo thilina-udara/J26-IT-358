@@ -10,6 +10,8 @@ import {
   MASTER_CROPS,
   SUPPORTED_FRONTEND_CROPS,
   SRI_LANKA_DISTRICTS,
+  SUPPORTED_PILOT_DISTRICT_IDS,
+  SUPPORTED_PILOT_DISTRICTS,
   STANDARD_MARKETS,
   PRICE_TYPES,
   DEFAULT_RISK_THRESHOLDS,
@@ -142,19 +144,19 @@ test("Catalogs: Master crops catalog contains 7 registered crops", () => {
   assert.ok(cropIds.includes("CR_MUNG_BEAN"));
 });
 
-test("Catalogs: Farmer-facing supported crops contains exactly 6 crops excluding Tomato", () => {
-  assert.equal(SUPPORTED_FRONTEND_CROPS.length, 6);
+test("Catalogs: Farmer-facing supported crops contains exactly 5 crops excluding Tomato and Pumpkin", () => {
+  assert.equal(SUPPORTED_FRONTEND_CROPS.length, 5);
   const cropIds = SUPPORTED_FRONTEND_CROPS.map((c) => c.crop_id);
   assert.equal(cropIds.includes("CR_TOMATO"), false);
+  assert.equal(cropIds.includes("CR_PUMPKIN"), false);
   assert.deepEqual(cropIds, [
     "CR_OKRA",
     "CR_BRINJAL",
-    "CR_PUMPKIN",
     "CR_MAIZE",
     "CR_MUNG_BEAN",
     "CR_CHILLI",
   ]);
-  // Confirm all 6 have valid image asset names and alt text
+  // Confirm all 5 have valid image asset names and alt text
   for (const crop of SUPPORTED_FRONTEND_CROPS) {
     assert.ok(crop.image_name && crop.image_name.endsWith(".jpg"));
     assert.ok(crop.alt_text && crop.alt_text.length > 5);
@@ -173,6 +175,13 @@ test("Catalogs: Districts include Matara (LK-32) and Hambantota (LK-33) pilot di
   assert.ok(hambantota, "Hambantota district must exist");
   assert.equal(hambantota.name, "Hambantota");
   assert.equal(hambantota.is_pilot, true);
+});
+
+test("Catalogs: Component 1 research pilot districts are strictly Matara (LK-32) and Hambantota (LK-33)", () => {
+  assert.equal(SUPPORTED_PILOT_DISTRICT_IDS.length, 2);
+  assert.deepEqual([...SUPPORTED_PILOT_DISTRICT_IDS], ["LK-32", "LK-33"]);
+  assert.equal(SUPPORTED_PILOT_DISTRICTS.length, 2);
+  assert.deepEqual(SUPPORTED_PILOT_DISTRICTS.map((d) => d.id), ["LK-32", "LK-33"]);
 });
 
 test("Catalogs: Markets include DEC_EMBILIPITIYA as recommended pilot hub", () => {
@@ -638,13 +647,25 @@ test("Wizard Step 1: Rejects excluded Tomato (CR_TOMATO) from frontend active ca
   assert.equal(result.isValid, false);
   assert.equal(
     result.errors.crop_id,
-    "The selected crop is not part of the active 6-crop pilot catalog."
+    "The selected crop is not part of the active 5-crop pilot catalog."
+  );
+});
+
+test("Wizard Step 1: Rejects Pumpkin (CR_PUMPKIN) as outside current model scope", () => {
+  const result = validateStep1({
+    crop_id: "CR_PUMPKIN",
+    cultivation_district_id: "LK-33",
+  });
+  assert.equal(result.isValid, false);
+  assert.equal(
+    result.errors.crop_id,
+    "Pumpkin is outside the current model training scope. Please select one of the 5 supported crops."
   );
 });
 
 test("Wizard Step 1: Rejects unrecognized district code", () => {
   const result = validateStep1({
-    crop_id: "CR_PUMPKIN",
+    crop_id: "CR_OKRA",
     cultivation_district_id: "LK-999",
   });
   assert.equal(result.isValid, false);
@@ -654,7 +675,19 @@ test("Wizard Step 1: Rejects unrecognized district code", () => {
   );
 });
 
-test("Wizard Step 1: All 6 supported frontend crops pass validation with pilot districts", () => {
+test("Wizard Step 1: Rejects non-pilot Sri Lankan district with pilot requirement message", () => {
+  const result = validateStep1({
+    crop_id: "CR_OKRA",
+    cultivation_district_id: "LK-82",
+  });
+  assert.equal(result.isValid, false);
+  assert.equal(
+    result.errors.cultivation_district_id,
+    "Component 1 analysis is currently piloted in Matara (LK-32) and Hambantota (LK-33). Please select Matara or Hambantota."
+  );
+});
+
+test("Wizard Step 1: All 5 supported frontend crops pass validation with pilot districts", () => {
   const pilotDistricts = ["LK-32", "LK-33"];
   for (const crop of SUPPORTED_FRONTEND_CROPS) {
     for (const districtId of pilotDistricts) {
@@ -1887,7 +1920,7 @@ test("Wizard Step 4: Session storage helpers save, restore, clear, and guard aga
 test("Wizard Step 4: checkPreviousStepsForStep4 identifies earliest incomplete step and redirect target", () => {
   const FIXED_TODAY = new Date(2026, 9, 17); // October 17, 2026
 
-  const validStep1 = { crop_id: "CR_OKRA", cultivation_district_id: "LK-82" };
+  const validStep1 = { crop_id: "CR_OKRA", cultivation_district_id: "LK-32" };
   const validStep2 = { harvest_date: "2027-05-15", land_extent_acres: "2.5", expected_yield_kg: "1500" };
   const validStep3 = { target_market_id: "DEC_EMBILIPITIYA", price_type: "wholesale" as PriceType };
 
@@ -2511,7 +2544,7 @@ test("Wizard Step 4 Storage Protection: saveValidatedStep4ToStorage guards again
 test("Wizard Completion: validateFullWizard and isFullWizardComplete validate all 4 steps composite", () => {
   const FIXED_TODAY = new Date(2026, 9, 17); // October 17, 2026
 
-  const step1 = { crop_id: "CR_OKRA", cultivation_district_id: "LK-82" };
+  const step1 = { crop_id: "CR_OKRA", cultivation_district_id: "LK-32" };
   const step2 = { harvest_date: "2027-05-15", land_extent_acres: "2.5", expected_yield_kg: "1500" };
   const step3 = { target_market_id: "DEC_EMBILIPITIYA", price_type: "wholesale" as PriceType };
   const step4Quick = { budget_mode: "quick" as BudgetMode, quick_total_cultivation_cost_lkr: "185000" };
@@ -2522,7 +2555,7 @@ test("Wizard Completion: validateFullWizard and isFullWizardComplete validate al
   assert.equal(fullValQuick.earliestIncompleteStep, undefined);
   assert.ok(fullValQuick.snapshot);
   assert.equal(fullValQuick.snapshot.crop_id, "CR_OKRA");
-  assert.equal(fullValQuick.snapshot.cultivation_district_id, "LK-82");
+  assert.equal(fullValQuick.snapshot.cultivation_district_id, "LK-32");
   assert.equal(fullValQuick.snapshot.harvest_date, "2027-05-15");
   assert.equal(fullValQuick.snapshot.forecast_target_date, "2027-05-15");
   assert.equal(fullValQuick.snapshot.expected_yield_kg, 1500);
@@ -2556,13 +2589,13 @@ test("Wizard Completion: validateFullWizard and isFullWizardComplete validate al
 test("Wizard Completion: Earliest invalid step detection and redirection targeting", () => {
   const FIXED_TODAY = new Date(2026, 9, 17);
 
-  const validStep1 = { crop_id: "CR_OKRA", cultivation_district_id: "LK-82" };
+  const validStep1 = { crop_id: "CR_OKRA", cultivation_district_id: "LK-32" };
   const validStep2 = { harvest_date: "2027-05-15", land_extent_acres: "2.5", expected_yield_kg: "1500" };
   const validStep3 = { target_market_id: "DEC_EMBILIPITIYA", price_type: "wholesale" as PriceType };
   const validStep4 = { budget_mode: "quick" as BudgetMode, quick_total_cultivation_cost_lkr: "185000" };
 
   // Scenario 1: Step 1 incomplete (missing crop) -> points to /market-profit/new-analysis
-  const r1 = validateFullWizard({ crop_id: "", cultivation_district_id: "LK-82" }, validStep2, validStep3, validStep4, FIXED_TODAY);
+  const r1 = validateFullWizard({ crop_id: "", cultivation_district_id: "LK-32" }, validStep2, validStep3, validStep4, FIXED_TODAY);
   assert.equal(r1.isValid, false);
   assert.equal(r1.earliestIncompleteStep, 1);
   assert.equal(r1.redirectTarget, "/market-profit/new-analysis");
@@ -2589,7 +2622,7 @@ test("Wizard Completion: Earliest invalid step detection and redirection targeti
 test("Wizard Completion: Zero cultivation cost is accepted with advisory warning and no selling price required", () => {
   const FIXED_TODAY = new Date(2026, 9, 17);
 
-  const step1 = { crop_id: "CR_BRINJAL", cultivation_district_id: "LK-81" };
+  const step1 = { crop_id: "CR_BRINJAL", cultivation_district_id: "LK-33" };
   const step2 = { harvest_date: "2027-06-20", land_extent_acres: "1.0", expected_yield_kg: "2500" };
   const step3 = { target_market_id: "DEC_DAMBULLA", price_type: "retail" as PriceType };
   const step4Zero = { budget_mode: "quick" as BudgetMode, quick_total_cultivation_cost_lkr: "0" };
@@ -2609,7 +2642,7 @@ test("Wizard Completion: Zero cultivation cost is accepted with advisory warning
 test("Wizard Completion: buildValidatedAnalysisPayload maps backend contracts cleanly without invented fields", () => {
   const FIXED_TODAY = new Date(2026, 9, 17);
 
-  const step1 = { crop_id: "CR_MAIZE", cultivation_district_id: "LK-82" };
+  const step1 = { crop_id: "CR_MAIZE", cultivation_district_id: "LK-32" };
   const step2 = { harvest_date: "2027-07-15", land_extent_acres: "3.5", expected_yield_kg: "4200" };
   const step3 = { target_market_id: "DEC_PETTAH", price_type: "wholesale" as PriceType };
   const step4 = { budget_mode: "quick" as BudgetMode, quick_total_cultivation_cost_lkr: "240000" };
@@ -2617,7 +2650,7 @@ test("Wizard Completion: buildValidatedAnalysisPayload maps backend contracts cl
   const payload = buildValidatedAnalysisPayload(step1, step2, step3, step4, FIXED_TODAY);
   assert.ok(payload);
   assert.equal(payload.crop_id, "CR_MAIZE");
-  assert.equal(payload.cultivation_district_id, "LK-82");
+  assert.equal(payload.cultivation_district_id, "LK-32");
   assert.equal(payload.harvest_date, "2027-07-15");
   assert.equal(payload.forecast_target_date, "2027-07-15");
   assert.equal(payload.expected_yield_kg, 4200);
@@ -2650,7 +2683,7 @@ test("Wizard Completion: Snapshot session persistence survives refresh and rejec
   try {
     const validSnapshot: ValidatedAnalysisSnapshot = {
       crop_id: "CR_OKRA",
-      cultivation_district_id: "LK-82",
+      cultivation_district_id: "LK-32",
       harvest_date: "2027-05-15",
       forecast_target_date: "2027-05-15",
       expected_yield_kg: 1500,
@@ -2727,7 +2760,7 @@ test("Wizard Completion: loadAndValidateWizardFromStorage constructs snapshot fr
     // Seed individual step records
     mockStorage[STEP1_STORAGE_KEY] = JSON.stringify({
       crop_id: "CR_CHILLI",
-      cultivation_district_id: "LK-82",
+      cultivation_district_id: "LK-32",
     });
     mockStorage[STEP2_STORAGE_KEY] = JSON.stringify({
       harvest_date: "2027-08-20",
@@ -3117,7 +3150,7 @@ test("Market Demand Integration: Stale response protection prevents out-of-order
 
 test("Market Demand Integration: Research integrity guarantee - no mock demand volume or fabricated demand levels are generated", () => {
   const offlineResponse: DemandForecastResponse = {
-    crop_id: "CR_PUMPKIN",
+    crop_id: "CR_OKRA",
     cultivation_district_id: "LK-82",
     target_market_id: "DEC_DAMBULLA",
     forecast_target_date: "2027-10-10",
@@ -3572,7 +3605,7 @@ test("Price Trend Integration: Stale response protection prevents out-of-order r
 
 test("Price Trend Integration: Research integrity guarantee - no mock prices, simulated trend curves, or fabricated confidence intervals are generated", () => {
   const offlineResponse: PriceForecastResponse = {
-    crop_id: "CR_PUMPKIN",
+    crop_id: "CR_OKRA",
     cultivation_district_id: "LK-82",
     target_market_id: "DEC_DAMBULLA",
     forecast_target_date: "2027-10-10",
@@ -4361,8 +4394,8 @@ test("E2E Workflow: Complete 10-step farmer journey with Detailed Budget mode (i
       },
     };
 
-    // Step 1: Chilli in Monaragala
-    const step1Data = { crop_id: "CR_CHILLI", cultivation_district_id: "LK-82" };
+    // Step 1: Chilli in Hambantota
+    const step1Data = { crop_id: "CR_CHILLI", cultivation_district_id: "LK-33" };
     assert.equal(validateStep1(step1Data).isValid, true);
     saveStep1ToStorage(step1Data);
 
@@ -4502,6 +4535,9 @@ test("E2E Workflow: Input error rejection matrix across all four wizard steps", 
   assert.equal(validateStep1({ crop_id: "CR_OKRA", cultivation_district_id: "" }).isValid, false);
   assert.equal(validateStep1({ crop_id: "INVALID_CROP", cultivation_district_id: "LK-32" }).isValid, false);
   assert.equal(validateStep1({ crop_id: "CR_OKRA", cultivation_district_id: "LK-999" }).isValid, false);
+  assert.equal(validateStep1({ crop_id: "CR_OKRA", cultivation_district_id: "LK-82" }).isValid, false);
+  assert.equal(validateStep1({ crop_id: "CR_OKRA", cultivation_district_id: "LK-32" }).isValid, true);
+  assert.equal(validateStep1({ crop_id: "CR_OKRA", cultivation_district_id: "LK-33" }).isValid, true);
 
   // Step 2 Errors
   assert.equal(validateHarvestDate("").isValid, false);

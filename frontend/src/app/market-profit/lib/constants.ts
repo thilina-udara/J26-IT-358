@@ -103,8 +103,8 @@ export const MASTER_CROPS: CropMetadata[] = [
   },
 ];
 
-// 6 Farmer-Facing Supported Crops for Component 1 (Excludes Tomato per pilot scope)
-// Displayed exactly: Okra, Brinjal (Eggplant), Pumpkin, Maize (Corn), Mung Bean (Green Gram), Chilli
+// 5 Farmer-Facing Supported Crops for Component 1 (Excludes Tomato and Pumpkin per model scope)
+// Displayed exactly: Okra, Brinjal (Eggplant), Maize (Corn), Mung Bean (Green Gram), Chilli
 export interface FrontendCropMetadata {
   crop_id: string;
   name_en: string;
@@ -130,14 +130,6 @@ export const SUPPORTED_FRONTEND_CROPS: FrontendCropMetadata[] = [
     category: "Vegetable",
     image_name: "brinjal.jpg",
     alt_text: "Fresh glossy purple brinjals",
-  },
-  {
-    crop_id: "CR_PUMPKIN",
-    name_en: "Pumpkin",
-    name_si: "වට්ටක්කා (Wattakka)",
-    category: "Vegetable",
-    image_name: "pumpkin.jpg",
-    alt_text: "Whole ripe Sri Lankan pumpkin",
   },
   {
     crop_id: "CR_MAIZE",
@@ -204,6 +196,16 @@ export const SRI_LANKA_DISTRICTS: DistrictMetadata[] = [
   { id: "LK-52", name: "Ampara", zone: "Dry Zone", is_pilot: false },
   { id: "LK-53", name: "Trincomalee", zone: "Dry Zone", is_pilot: false },
 ];
+
+// Component 1 Research Pilot Districts (Matara LK-32 & Hambantota LK-33)
+export const SUPPORTED_PILOT_DISTRICT_IDS: readonly string[] = [
+  "LK-32",
+  "LK-33",
+] as const;
+
+export const SUPPORTED_PILOT_DISTRICTS: DistrictMetadata[] = SRI_LANKA_DISTRICTS.filter(
+  (d) => d.is_pilot
+);
 
 // 10 Verified Dedicated Economic Centres (DECs) from backend STANDARD_MARKETS
 export const STANDARD_MARKETS: MarketMetadata[] = [

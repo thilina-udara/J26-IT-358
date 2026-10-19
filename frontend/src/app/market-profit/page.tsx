@@ -209,7 +209,7 @@ export default function MarketProfitHomePage() {
             <Sprout className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-sm sm:text-base font-extrabold text-slate-900">6 Supported Crops</div>
+            <div className="text-sm sm:text-base font-extrabold text-slate-900">5 Supported Crops</div>
             <div className="text-xs sm:text-sm text-[#334155] font-medium mt-0.5">Vegetables, Grains & Legumes</div>
           </div>
         </div>

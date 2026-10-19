@@ -6,6 +6,7 @@
 import {
   SUPPORTED_FRONTEND_CROPS,
   SRI_LANKA_DISTRICTS,
+  SUPPORTED_PILOT_DISTRICT_IDS,
   STANDARD_MARKETS,
 } from "./constants";
 import type {
@@ -40,7 +41,7 @@ export const STEP1_STORAGE_KEY = "agrodecision_wizard_step1";
 
 /**
  * Validates Step 1 selections.
- * Enforces single selection of a supported 6-crop candidate and a registered district.
+ * Enforces single selection of a supported 5-crop candidate and a registered district.
  */
 export function validateStep1(data: Partial<Step1FormData>): Step1ValidationResult {
   const errors: { crop_id?: string; cultivation_district_id?: string } = {};
@@ -52,8 +53,13 @@ export function validateStep1(data: Partial<Step1FormData>): Step1ValidationResu
       (c) => c.crop_id === data.crop_id
     );
     if (!isSupported) {
-      errors.crop_id =
-        "The selected crop is not part of the active 6-crop pilot catalog.";
+      if (data.crop_id === "CR_PUMPKIN") {
+        errors.crop_id =
+          "Pumpkin is outside the current model training scope. Please select one of the 5 supported crops.";
+      } else {
+        errors.crop_id =
+          "The selected crop is not part of the active 5-crop pilot catalog.";
+      }
     }
   }
 
@@ -61,12 +67,20 @@ export function validateStep1(data: Partial<Step1FormData>): Step1ValidationResu
     errors.cultivation_district_id =
       "Please select a cultivation district in Sri Lanka.";
   } else {
-    const isDistrictValid = SRI_LANKA_DISTRICTS.some(
-      (d) => d.id === data.cultivation_district_id
+    const isPilot = (SUPPORTED_PILOT_DISTRICT_IDS as readonly string[]).includes(
+      data.cultivation_district_id
     );
-    if (!isDistrictValid) {
-      errors.cultivation_district_id =
-        "The selected district code is not recognized in Sri Lanka districts.";
+    if (!isPilot) {
+      const isSriLankaDistrict = SRI_LANKA_DISTRICTS.some(
+        (d) => d.id === data.cultivation_district_id
+      );
+      if (isSriLankaDistrict) {
+        errors.cultivation_district_id =
+          "Component 1 analysis is currently piloted in Matara (LK-32) and Hambantota (LK-33). Please select Matara or Hambantota.";
+      } else {
+        errors.cultivation_district_id =
+          "The selected district code is not recognized in Sri Lanka districts.";
+      }
     }
   }
 
@@ -1800,7 +1814,7 @@ export function isAnalysisSnapshotValid(
   }
   if (
     typeof s.cultivation_district_id !== "string" ||
-    !SRI_LANKA_DISTRICTS.some((d) => d.id === s.cultivation_district_id)
+    !(SUPPORTED_PILOT_DISTRICT_IDS as readonly string[]).includes(s.cultivation_district_id)
   ) {
     return false;
   }

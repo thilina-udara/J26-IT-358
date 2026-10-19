@@ -6,7 +6,7 @@ interface WizardProgressProps {
 }
 
 const STEPS = [
-  { step: 1, title: "Crop & Location", description: "Select variety & district" },
+  { step: 1, title: "Crop & District", description: "Select variety & location" },
   { step: 2, title: "Harvest Details", description: "Yield & planned date" },
   { step: 3, title: "Selling Market", description: "Target economic centre" },
   { step: 4, title: "Cultivation Costs", description: "Farming expenditure" },

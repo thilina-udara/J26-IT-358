@@ -492,3 +492,39 @@ class IntegratedDecisionSupportResponse(BaseModel):
         default_factory=dict,
         description="Explicit scope disclosure (zero fertilizer, zero crop selection, zero sowing date estimation)"
     )
+
+
+class EarlyWarningRiskProbabilities(BaseModel):
+    """Calibrated Softmax probability distribution from Model 1 multi-hazard classifier."""
+    Normal: float = Field(..., description="Probability of Normal / Low Risk conditions (Tier 0)")
+    Moderate: float = Field(..., description="Probability of Moderate Alert conditions (Tier 1)")
+    Severe: float = Field(..., description="Probability of Severe Alert conditions (Tier 2)")
+    Extreme: float = Field(..., description="Probability of Extreme Crisis conditions (Tier 3)")
+
+
+class EarlyWarningClassifierOutput(BaseModel):
+    """Detailed output from Model 1 (AI-Powered Climate Early Warning Multi-Hazard Classifier)."""
+    status: str = Field(..., description="Execution status of the classifier")
+    predicted_risk_tier: Optional[int] = Field(None, ge=0, le=3, description="Predicted hazard risk tier (0=Normal, 1=Moderate, 2=Severe, 3=Extreme)")
+    risk_tier_name: str = Field(..., description="Official descriptive name of the predicted hazard risk tier")
+    risk_probabilities: Optional[EarlyWarningRiskProbabilities] = Field(None, description="Softmax probability distribution across tiers")
+    dominant_hazard_probability_pct: Optional[float] = Field(None, description="Confidence percentage for the winning tier")
+    input_features_summary: Optional[Dict[str, Any]] = Field(None, description="Summary of input meteorological and soil indicators")
+    model_metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata describing trained XGBoost classifier and validation metrics")
+    hazard_interpretation: str = Field(..., description="Plain English agronomic interpretation of hazard risks")
+
+
+class EarlyWarningClassifyRequest(BaseModel):
+    """Direct input vector for testing or simulating 14-day climate hazard risk classification."""
+    district: DistrictEnum = Field(..., description="Target district in Sri Lanka (1 of 25 official districts)", examples=["Anuradhapura"])
+    rainfall_14d_sum_mm: float = Field(..., ge=0.0, le=3000.0, description="14-day cumulative rainfall in mm", examples=[85.0])
+    rainfall_max_1d_mm: float = Field(..., ge=0.0, le=1000.0, description="Peak single-day rainfall in mm", examples=[25.0])
+    temp_max_14d_peak_c: float = Field(..., ge=5.0, le=55.0, description="Peak daily maximum temperature in °C", examples=[33.0])
+    temp_mean_14d_c: float = Field(..., ge=5.0, le=45.0, description="Mean temperature across the 14-day window in °C", examples=[28.0])
+    temp_min_14d_c: float = Field(..., ge=0.0, le=40.0, description="Minimum daily temperature in °C", examples=[23.5])
+    humidity_mean_pct: float = Field(75.0, ge=10.0, le=100.0, description="Average relative humidity percentage", examples=[78.0])
+    consecutive_heat_days: int = Field(0, ge=0, le=14, description="Consecutive days with Tmax >= 35°C", examples=[0])
+    consecutive_dry_days: int = Field(0, ge=0, le=14, description="Consecutive dry days (rain < 1.0 mm)", examples=[3])
+    soil_moisture_topsoil_m3_m3: float = Field(0.25, ge=0.0, le=1.0, description="Volumetric topsoil root-zone moisture (m³/m³)", examples=[0.26])
+    spi3_current: float = Field(0.0, ge=-5.0, le=5.0, description="Current 3-month Standardized Precipitation Index (SPI-3)", examples=[-0.2])
+    month: Optional[int] = Field(None, ge=1, le=12, description="Calendar month (1 to 12)", examples=[10])

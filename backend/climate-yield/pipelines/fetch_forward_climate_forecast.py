@@ -251,10 +251,36 @@ def fetch_forward_climate_forecast(
             "No provisional hazard threshold was breached."
         )
 
+    # 6. Model 1: AI-Powered Multi-Hazard Risk Classification (Tiers 0-3 with Softmax Probabilities)
+    ai_hazard_classification: Optional[Dict[str, Any]] = None
+    try:
+        from pipelines.early_warning_classifier_engine import predict_climate_hazard_risk
+        ai_hazard_classification = predict_climate_hazard_risk(
+            district=district,
+            rainfall_14d_sum_mm=total_rain_mm,
+            rainfall_max_1d_mm=max(precip_list) if precip_list else 0.0,
+            temp_max_14d_peak_c=max_t,
+            temp_mean_14d_c=mean_t,
+            temp_min_14d_c=min_t,
+            consecutive_heat_days=heat_days,
+            consecutive_dry_days=consec_dry,
+            soil_moisture_topsoil_m3_m3=min_sm,
+            month=datetime.strptime(time_dates[0], "%Y-%m-%d").month if time_dates else None
+        )
+    except Exception as exc:
+        ai_hazard_classification = {
+            "status": "CLASSIFIER_EXECUTION_ERROR",
+            "message": f"AI Hazard classifier execution encountered an issue: {exc}",
+            "predicted_risk_tier": None,
+            "risk_tier_name": "Error",
+            "risk_probabilities": None
+        }
+
     model_gen_ms = raw_json.get("generationtime_ms")
 
     return {
         "status": "FORECAST_AVAILABLE",
+        "ai_hazard_classification": ai_hazard_classification,
         "metadata": {
             "data_category": "FORWARD_NUMERICAL_WEATHER_PREDICTION",
             "forecast_provider": "Open-Meteo API",
@@ -368,5 +394,6 @@ def _build_unavailable_forecast_payload(
             ],
             "screening_metrics": None
         },
+        "ai_hazard_classification": None,
         "daily_forecast_series": []
     }

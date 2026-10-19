@@ -1,6 +1,5 @@
 {
   "project": "J26-IT-358 Component 3",
-  "student": "Lakruwan W.M.K. (IT23330382)",
   "models": {
     "regressor": {
       "algorithm": "XGBoost Regressor (3.4.1)",

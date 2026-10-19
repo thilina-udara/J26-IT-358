@@ -1,9 +1,5 @@
 """
 Capacitated Vehicle Routing & Distribution Logistics Engine
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-Supervised by: Prof. Dasuni Nawinna
 
 Features:
 1. Solves the Capacitated Vehicle Routing Problem (CVRP) with 2-Opt heuristic optimization.

@@ -1,10 +1,4 @@
-"""
-FastAPI Route Handlers for Fertilizer Management, NPK Demand Matching & Regional Logistics
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-Supervised by: Prof. Dasuni Nawinna
-"""
+"""FastAPI route handlers for fertilizer management, NPK demand matching and regional logistics."""
 
 from typing import Any
 

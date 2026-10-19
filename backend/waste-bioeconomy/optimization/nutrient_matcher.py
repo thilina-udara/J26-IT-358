@@ -1,9 +1,5 @@
 """
 Nutrient Demand Matching & Agronomic Growth-Stage Allocation Engine
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-Supervised by: Prof. Dasuni Nawinna
 
 Features:
 1. Cross-references mature solid organic compost & liquid digestate with Component 2 cultivation plans.

@@ -1,15 +1,4 @@
-"""
-Stage 4: Data Type Standardization & Canonical Categorical Encoding
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-
-Features:
-- Enforces strict IEEE 64-bit floating point precision
-- Canonical categorical enum normalization (uppercase snake_case)
-- Ordinal mapping for physical risk factors (road roughness & packaging vulnerability)
-- Stoichiometric consistency check for composting dry matter & C:N ratios
-"""
+"""Data type standardization and canonical categorical encoding pipeline."""
 
 import os
 

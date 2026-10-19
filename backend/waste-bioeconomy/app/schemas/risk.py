@@ -1,9 +1,4 @@
-"""
-Pydantic Schemas for In-Transit Spoilage Risk Scoring & Mass-Partitioning
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-"""
+"""Pydantic schemas for in-transit spoilage risk scoring and mass-partitioning."""
 
 from typing import Any
 

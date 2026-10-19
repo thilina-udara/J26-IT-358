@@ -1,9 +1,4 @@
-"""
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks (Waste Management & Organic Fertilizer)
-Owner: WMK Lakruwan (IT23330382)
-Project: J26-IT-358
-Supervised by: Prof. Dasuni Nawinna
-"""
+"""FastAPI application for waste-bioeconomy service."""
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,7 +40,6 @@ def root() -> dict[str, str | int]:
     return {
         "service": "Algorithmic Optimization of Circular Bioeconomy Networks",
         "component": "Component 03",
-        "owner": "WMK Lakruwan (IT23330382)",
         "project": "J26-IT-358",
         "status": "online",
         "port": 8003,

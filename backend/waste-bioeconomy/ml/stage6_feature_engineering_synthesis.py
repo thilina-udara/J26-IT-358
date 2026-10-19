@@ -1,20 +1,4 @@
-"""
-Stage 6: Feature Engineering, Scaling & Multi-Crop Synthesis
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-
-Features:
-- Multi-crop synthesis across 8 focal commodities (8,000 verified trip instances)
-- Biochemical and kinematic feature engineering:
-  * Mechanical Vibration Index (MVI)
-  * Thermal Stress Index (H_22 Degree-Hours)
-  * Physiological Q_10 Respiration Acceleration Factor
-  * Bioeconomy Feedstock Mass & Biogas Fallback Flags
-- Dual target formulation: Continuous Spoilage Loss % & 3-Tier Risk Classes
-- Leakage-safe Train/Validation/Test stratified partitioning (70% / 15% / 15%)
-- Feature scaling metadata generation for comparative baseline models
-"""
+"""Feature engineering, scaling, and multi-crop synthesis pipeline."""
 
 import json
 import os

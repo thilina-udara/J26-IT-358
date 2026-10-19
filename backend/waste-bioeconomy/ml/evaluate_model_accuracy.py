@@ -1,10 +1,4 @@
-"""
-Model Accuracy & Evaluation Benchmark Audit Script
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-Supervised by: Prof. Dasuni Nawinna
-"""
+"""Model accuracy and evaluation benchmark audit script."""
 
 import os
 

@@ -1,9 +1,4 @@
-"""
-Pydantic Schemas for MILP C:N Compost Ratio Optimization & Bioeconomy Bridging
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-"""
+"""Pydantic schemas for MILP C:N compost ratio optimization and bioeconomy bridging."""
 
 from typing import Any
 

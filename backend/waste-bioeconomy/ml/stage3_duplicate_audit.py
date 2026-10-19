@@ -1,9 +1,4 @@
-"""
-Stage 3: Duplicate Audit & Ground-Truth Invariance Verification
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-"""
+"""Duplicate audit and ground-truth invariance verification."""
 
 import os
 from typing import Any

@@ -1,8 +1,5 @@
 """
 Deterministic MILP C:N & Moisture Compost Ratio Optimization Engine
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
 
 Features:
 1. Formulates Mixed-Integer Linear Program (MILP) in PuLP (with HiGHS / SciPy dual solvers)

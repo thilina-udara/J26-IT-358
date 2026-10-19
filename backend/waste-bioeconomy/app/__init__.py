@@ -1,1 +1,1 @@
-# Component 3 FastAPI Application Package
+# FastAPI Application Package

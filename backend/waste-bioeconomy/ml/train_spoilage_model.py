@@ -1,8 +1,5 @@
 """
 Model Training & Benchmarking: Pre-Arrival Post-Harvest Spoilage Risk Scoring
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
 
 Core Objectives:
 1. Train Dual XGBoost Spoilage Models:
@@ -479,7 +476,6 @@ def train_and_evaluate() -> dict[str, Any]:
 
     metadata = {
         "project": "J26-IT-358 Component 3",
-        "student": "Lakruwan W.M.K. (IT23330382)",
         "models": {
             "regressor": {
                 "algorithm": "XGBoost Regressor (3.4.1)",

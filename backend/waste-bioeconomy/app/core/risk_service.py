@@ -1,9 +1,4 @@
-"""
-ML Inference Service for In-Transit Spoilage Risk Scoring & Mass-Partitioning
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-"""
+"""ML inference service for in-transit spoilage risk scoring and mass-partitioning."""
 
 import json
 import os

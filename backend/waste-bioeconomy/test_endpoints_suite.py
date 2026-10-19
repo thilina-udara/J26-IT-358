@@ -1,9 +1,4 @@
-"""
-Comprehensive Integration Test Suite for Component 3 FastAPI Endpoints
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-"""
+"""Comprehensive integration test suite for FastAPI endpoints."""
 
 import os
 import sys

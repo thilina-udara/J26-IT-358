@@ -1,9 +1,4 @@
-"""
-FastAPI Route Handlers for MILP C:N Compost Ratio Optimization & Bioeconomy Bridging
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-"""
+"""FastAPI route handlers for MILP C:N compost ratio optimization and bioeconomy bridging."""
 
 import os
 from typing import Any

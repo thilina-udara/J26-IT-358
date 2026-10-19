@@ -1,9 +1,4 @@
-"""
-FastAPI Route Handlers for Spoilage Risk Scoring & Telemetry Stress
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks & Waste Management
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-"""
+"""FastAPI route handlers for spoilage risk scoring and telemetry stress."""
 
 from typing import Any
 

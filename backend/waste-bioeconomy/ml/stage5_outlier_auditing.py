@@ -1,16 +1,4 @@
-"""
-Stage 5: Outlier Auditing & Agronomic Physical Plausibility Bounding
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks
-Student: Lakruwan W.M.K. (IT23330382)
-Project: J26-IT-358
-
-Features:
-- Dual-method statistical outlier detection: Tukey's IQR (1.5x, 3.0x) & Z-Score (|Z| > 3)
-- Physical plausibility verification grounded in tropical agricultural physics
-- Kinematic velocity auditing (road transit speed feasibility in Sri Lanka)
-- Domain-aware Winsorization/clamping preserving high-stress tail events for ML robustness
-- Generates comparative audit report: Naive Deletion vs. Domain Bounding
-"""
+"""Outlier auditing and agronomic physical plausibility bounding pipeline."""
 
 import os
 

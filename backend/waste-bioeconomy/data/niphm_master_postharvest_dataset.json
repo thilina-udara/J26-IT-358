@@ -1,0 +1,274 @@
+{
+  "source_study": "Wasala et al. (2025), National Institute of Post Harvest Management (NIPHM), Anuradhapura, Sri Lanka",
+  "journal": "International Journal of Environmental & Agriculture Research (IJOEAR), Vol-11, Issue-8, pp. 176-183",
+  "figure_1_maturity": [
+    {
+      "index": 1,
+      "commodity": "Snap Bean",
+      "category": "Vegetable",
+      "maturity_considered_pct": 87.0,
+      "maturity_not_considered_pct": 13.0
+    },
+    {
+      "index": 2,
+      "commodity": "Long Bean",
+      "category": "Vegetable",
+      "maturity_considered_pct": 69.0,
+      "maturity_not_considered_pct": 31.0
+    },
+    {
+      "index": 3,
+      "commodity": "Brinjal",
+      "category": "Vegetable",
+      "maturity_considered_pct": 87.0,
+      "maturity_not_considered_pct": 13.0
+    },
+    {
+      "index": 4,
+      "commodity": "Papaya",
+      "category": "Fruit",
+      "maturity_considered_pct": 100.0,
+      "maturity_not_considered_pct": 0.0
+    },
+    {
+      "index": 5,
+      "commodity": "Okra",
+      "category": "Vegetable",
+      "maturity_considered_pct": 84.0,
+      "maturity_not_considered_pct": 16.0
+    },
+    {
+      "index": 6,
+      "commodity": "Tomato",
+      "category": "Vegetable",
+      "maturity_considered_pct": 90.0,
+      "maturity_not_considered_pct": 10.0
+    },
+    {
+      "index": 7,
+      "commodity": "Bitter Gourd",
+      "category": "Vegetable",
+      "maturity_considered_pct": 85.0,
+      "maturity_not_considered_pct": 15.0
+    },
+    {
+      "index": 8,
+      "commodity": "Guava",
+      "category": "Fruit",
+      "maturity_considered_pct": 95.0,
+      "maturity_not_considered_pct": 5.0
+    },
+    {
+      "index": 9,
+      "commodity": "Capsicum",
+      "category": "Vegetable",
+      "maturity_considered_pct": 82.0,
+      "maturity_not_considered_pct": 18.0
+    },
+    {
+      "index": 10,
+      "commodity": "Mango",
+      "category": "Fruit",
+      "maturity_considered_pct": 92.0,
+      "maturity_not_considered_pct": 8.0
+    },
+    {
+      "index": 11,
+      "commodity": "Potato",
+      "category": "Vegetable",
+      "maturity_considered_pct": 88.0,
+      "maturity_not_considered_pct": 12.0
+    }
+  ],
+  "figure_2_transport_vehicles": [
+    {
+      "index": 1,
+      "commodity": "Papaya",
+      "category": "Fruit",
+      "open_truck_pct": 25.0,
+      "close_truck_pct": 62.0,
+      "other_pct": 13.0,
+      "refrigerated_pct": 0.0
+    },
+    {
+      "index": 2,
+      "commodity": "Mango",
+      "category": "Fruit",
+      "open_truck_pct": 29.0,
+      "close_truck_pct": 71.0,
+      "other_pct": 0.0,
+      "refrigerated_pct": 0.0
+    },
+    {
+      "index": 3,
+      "commodity": "Tomato",
+      "category": "Vegetable",
+      "open_truck_pct": 28.0,
+      "close_truck_pct": 72.0,
+      "other_pct": 0.0,
+      "refrigerated_pct": 0.0
+    },
+    {
+      "index": 4,
+      "commodity": "Brinjal",
+      "category": "Vegetable",
+      "open_truck_pct": 46.0,
+      "close_truck_pct": 42.0,
+      "other_pct": 12.0,
+      "refrigerated_pct": 0.0
+    },
+    {
+      "index": 5,
+      "commodity": "Okra",
+      "category": "Vegetable",
+      "open_truck_pct": 21.0,
+      "close_truck_pct": 50.0,
+      "other_pct": 29.0,
+      "refrigerated_pct": 0.0
+    },
+    {
+      "index": 6,
+      "commodity": "Guava",
+      "category": "Fruit",
+      "open_truck_pct": 61.0,
+      "close_truck_pct": 24.0,
+      "other_pct": 15.0,
+      "refrigerated_pct": 0.0
+    },
+    {
+      "index": 7,
+      "commodity": "Snap Bean",
+      "category": "Vegetable",
+      "open_truck_pct": 52.0,
+      "close_truck_pct": 32.0,
+      "other_pct": 13.0,
+      "refrigerated_pct": 3.0
+    },
+    {
+      "index": 8,
+      "commodity": "Capsicum",
+      "category": "Vegetable",
+      "open_truck_pct": 50.0,
+      "close_truck_pct": 30.0,
+      "other_pct": 17.0,
+      "refrigerated_pct": 3.0
+    },
+    {
+      "index": 9,
+      "commodity": "Long Bean",
+      "category": "Vegetable",
+      "open_truck_pct": 48.0,
+      "close_truck_pct": 32.0,
+      "other_pct": 20.0,
+      "refrigerated_pct": 0.0
+    },
+    {
+      "index": 10,
+      "commodity": "Potato",
+      "category": "Vegetable",
+      "open_truck_pct": 51.0,
+      "close_truck_pct": 42.0,
+      "other_pct": 7.0,
+      "refrigerated_pct": 0.0
+    },
+    {
+      "index": 11,
+      "commodity": "Bitter Gourd",
+      "category": "Vegetable",
+      "open_truck_pct": 42.0,
+      "close_truck_pct": 34.0,
+      "other_pct": 24.0,
+      "refrigerated_pct": 0.0
+    }
+  ],
+  "figure_3_perishable_packaging": [
+    {
+      "index": 1,
+      "commodity": "Guava",
+      "category": "Fruit",
+      "polysack_pct": 46.0,
+      "plastic_crate_pct": 38.0,
+      "wooden_or_carton_pct": 16.0
+    },
+    {
+      "index": 2,
+      "commodity": "Mango",
+      "category": "Fruit",
+      "polysack_pct": 63.0,
+      "plastic_crate_pct": 11.0,
+      "wooden_or_carton_pct": 26.0
+    },
+    {
+      "index": 3,
+      "commodity": "Okra",
+      "category": "Vegetable",
+      "polysack_pct": 96.0,
+      "plastic_crate_pct": 4.0,
+      "wooden_or_carton_pct": 0.0
+    },
+    {
+      "index": 4,
+      "commodity": "Papaya",
+      "category": "Fruit",
+      "polysack_pct": 4.0,
+      "plastic_crate_pct": 94.0,
+      "wooden_or_carton_pct": 2.0
+    },
+    {
+      "index": 5,
+      "commodity": "Snap Bean",
+      "category": "Vegetable",
+      "polysack_pct": 79.0,
+      "plastic_crate_pct": 21.0,
+      "wooden_or_carton_pct": 0.0
+    },
+    {
+      "index": 6,
+      "commodity": "Tomato",
+      "category": "Vegetable",
+      "polysack_pct": 6.0,
+      "plastic_crate_pct": 11.0,
+      "wooden_or_carton_pct": 83.0
+    },
+    {
+      "index": 7,
+      "commodity": "Long Bean",
+      "category": "Vegetable",
+      "polysack_pct": 96.0,
+      "plastic_crate_pct": 4.0,
+      "wooden_or_carton_pct": 0.0
+    },
+    {
+      "index": 8,
+      "commodity": "Bitter Gourd",
+      "category": "Vegetable",
+      "polysack_pct": 79.0,
+      "plastic_crate_pct": 16.0,
+      "wooden_or_carton_pct": 5.0
+    },
+    {
+      "index": 9,
+      "commodity": "Capsicum",
+      "category": "Vegetable",
+      "polysack_pct": 91.0,
+      "plastic_crate_pct": 8.0,
+      "wooden_or_carton_pct": 1.0
+    },
+    {
+      "index": 10,
+      "commodity": "Brinjal",
+      "category": "Vegetable",
+      "polysack_pct": 94.0,
+      "plastic_crate_pct": 5.0,
+      "wooden_or_carton_pct": 1.0
+    },
+    {
+      "index": 11,
+      "commodity": "Potato",
+      "category": "Vegetable",
+      "polysack_pct": 78.0,
+      "plastic_crate_pct": 18.0,
+      "wooden_or_carton_pct": 4.0
+    }
+  ]
+}

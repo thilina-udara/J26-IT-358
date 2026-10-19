@@ -1,0 +1,12 @@
+index,commodity,category,maturity_considered_pct,maturity_not_considered_pct
+1,Snap Bean,Vegetable,87.0,13.0
+2,Long Bean,Vegetable,69.0,31.0
+3,Brinjal,Vegetable,87.0,13.0
+4,Papaya,Fruit,100.0,0.0
+5,Okra,Vegetable,84.0,16.0
+6,Tomato,Vegetable,90.0,10.0
+7,Bitter Gourd,Vegetable,85.0,15.0
+8,Guava,Fruit,95.0,5.0
+9,Capsicum,Vegetable,82.0,18.0
+10,Mango,Fruit,92.0,8.0
+11,Potato,Vegetable,88.0,12.0

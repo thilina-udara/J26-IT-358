@@ -1,0 +1,12 @@
+index,commodity,category,polysack_pct,plastic_crate_pct,wooden_or_carton_pct
+1,Guava,Fruit,46.0,38.0,16.0
+2,Mango,Fruit,63.0,11.0,26.0
+3,Okra,Vegetable,96.0,4.0,0.0
+4,Papaya,Fruit,4.0,94.0,2.0
+5,Snap Bean,Vegetable,79.0,21.0,0.0
+6,Tomato,Vegetable,6.0,11.0,83.0
+7,Long Bean,Vegetable,96.0,4.0,0.0
+8,Bitter Gourd,Vegetable,79.0,16.0,5.0
+9,Capsicum,Vegetable,91.0,8.0,1.0
+10,Brinjal,Vegetable,94.0,5.0,1.0
+11,Potato,Vegetable,78.0,18.0,4.0

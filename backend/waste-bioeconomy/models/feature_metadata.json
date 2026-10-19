@@ -1,0 +1,79 @@
+{
+  "project": "J26-IT-358 Component 3",
+  "models": {
+    "regressor": {
+      "algorithm": "XGBoost Regressor (3.4.1)",
+      "target": "spoilage_loss_pct",
+      "rmse": 1.444,
+      "mae": 1.029,
+      "r2": 0.9691,
+      "target_met": true
+    },
+    "classifier": {
+      "algorithm": "XGBoost Classifier (3.4.1)",
+      "target": "risk_class (0=LOW, 1=MEDIUM, 2=HIGH)",
+      "accuracy_pct": 81.98,
+      "macro_f1": 0.7977,
+      "weighted_f1": 0.8218,
+      "target_met": false
+    }
+  },
+  "features": {
+    "numerical_count": 17,
+    "categorical_count": 7,
+    "total_encoded_features": 45,
+    "feature_names": [
+      "quantity_kg",
+      "distance_km",
+      "transit_hours",
+      "transit_speed_kmh",
+      "ambient_temperature_c",
+      "effective_temperature_c",
+      "ambient_humidity_pct",
+      "mechanical_vibration_index",
+      "thermal_stress_index",
+      "q10_respiration_factor",
+      "crop_moisture_pct",
+      "crop_c_n_ratio",
+      "respiration_rate_baseline",
+      "road_vibration_rank",
+      "road_vibration_multiplier",
+      "packaging_penalty_factor",
+      "is_refrigerated",
+      "crop_name_Big Onion",
+      "crop_name_Brinjal",
+      "crop_name_Chilli",
+      "crop_name_Maize",
+      "crop_name_Okra",
+      "crop_name_Pumpkin",
+      "crop_name_Tomato",
+      "crop_name_Yard Long Bean",
+      "perishability_class_EXTREME",
+      "perishability_class_HIGH",
+      "perishability_class_LOW",
+      "perishability_class_LOW_MEDIUM",
+      "perishability_class_MEDIUM",
+      "perishability_class_MEDIUM_HIGH",
+      "route_DAMBULLA - COLOMBO",
+      "season_DRY",
+      "season_WET",
+      "vehicle_type_COVERED_TRUCK",
+      "vehicle_type_OPEN_TRUCK",
+      "vehicle_type_REFRIGERATED_VAN",
+      "vehicle_type_THREE_WHEELER",
+      "road_condition_GOOD",
+      "road_condition_MODERATE",
+      "road_condition_POOR",
+      "packaging_type_CARDBOARD_BOX",
+      "packaging_type_PLASTIC_CRATE",
+      "packaging_type_POLYSACK_MESH",
+      "packaging_type_VENTILATED_BOX"
+    ]
+  },
+  "artifacts": {
+    "regressor_json": "spoilage_xgboost_regressor.json",
+    "classifier_json": "spoilage_xgboost_classifier.json",
+    "preprocessor_bundle": "encoder_and_scaler.joblib",
+    "benchmark_table": "model_benchmark_comparison_table.csv"
+  }
+}

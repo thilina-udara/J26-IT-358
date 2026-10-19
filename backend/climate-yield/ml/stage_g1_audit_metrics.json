@@ -1,0 +1,263 @@
+{
+  "audit_metadata": {
+    "stage": "Stage G.1",
+    "audit_type": "Independent Methodology and Threshold Audit",
+    "scope": "Candidate Model 1A v3 vs Preserved Production Baseline",
+    "test_observations": 45650,
+    "test_flood_positives": 1879
+  },
+  "task1_preprocessing_verification": {
+    "status": "VERIFIED_CLEAN",
+    "climatology_exact_match": true,
+    "max_discrepancy_mm": 0.0,
+    "training_period": "2000-2014 strictly",
+    "finding": "Candidate Model 1A v3 strictly uses training-only district rainfall climatology. Zero validation or test data contaminated feature scaling."
+  },
+  "task2_feature_audit": {
+    "status": "VERIFIED_CLEAN",
+    "total_features": 40,
+    "missing_values_count": 0,
+    "temporal_leakage_detected": false,
+    "feature_audit_log": {
+      "rainfall_rolling_windows": "Backward-looking 1d, 3d, 7d, 14d sums. Verified strictly <= day t.",
+      "antecedent_precip_index": "Exponential decay API_t = 0.85 * API_{t-1} + P_t. Backward-only.",
+      "rainfall_intensity_ratio": "P_1d / (P_14d / 14 + 1e-4). Backward-only.",
+      "district_relative_rain_3d": "P_3d / (1 + train_climatology_2000_2014). Verified training-only.",
+      "flash_flood_shock_index": "P_1d / (1 + API). Pure contemporaneous arithmetic.",
+      "compound_saturation_surge": "(P_1d * API) / 100. Pure contemporaneous arithmetic.",
+      "upstream_rainfall_3d_mm": "Sum of 3d rainfall in upstream mountain districts. Backward-only.",
+      "upstream_catchment_surge": "(P_upstream_3d * API) / 100. Pure contemporaneous arithmetic.",
+      "weather_14d_stats": "temp_mean_14d_c, temp_max_14d_peak_c, humidity_mean_14d_pct. Backward-only.",
+      "soil_moisture": "ERA5 daily topsoil volumetric moisture. Day t.",
+      "district_dummies": "25 fixed administrative categories. One-hot indicator, no learning."
+    }
+  },
+  "task3_threshold_01504_forensic_audit": {
+    "status": "METHODOLOGICAL_DEFECT_CONFIRMED",
+    "threshold_value": 0.15040118992328644,
+    "selection_source": "LOCKED_TEST_SPLIT_PERCENTILE",
+    "finding": "Threshold 0.1504 was selected post-hoc by sorting test set predicted probabilities to match the baseline test alert count (top 2,394). It was NOT tuned on validation data.",
+    "reclassification": "EXPLORATORY_POST_HOC_DIAGNOSTIC_ONLY",
+    "legitimate_validation_threshold": {
+      "threshold_value": 0.115,
+      "selection_basis": "Validation baseline alert rate matching (9.904% on 2018-2020)",
+      "test_performance": {
+        "threshold": 0.115,
+        "tp": 799,
+        "fp": 4984,
+        "fn": 1080,
+        "tn": 38787,
+        "total": 45650,
+        "alarms": 5783,
+        "alarm_rate_pct": 12.67,
+        "pod_recall_pct": 42.52,
+        "far_pct": 86.18,
+        "csi_pct": 11.64,
+        "precision_pct": 13.82,
+        "accuracy_pct": 86.72,
+        "roc_auc": 0.8151,
+        "pr_auc": 0.1363,
+        "brier_score": 0.03722
+      },
+      "test_episode_performance": {
+        "total_episodes": 278,
+        "testable_episodes": 274,
+        "detected_episodes": 189,
+        "detection_rate_pct": 67.99,
+        "detection_rate_testable_pct": 68.98,
+        "mean_lead_days": 5.39,
+        "median_lead_days": 6.0,
+        "mean_alarms_per_detected_episode": 4.33
+      }
+    }
+  },
+  "task4_calibration_and_hygiene": {
+    "calibrator_fitting": "Validation split 2018-2020 strictly (N=24,050). Clean.",
+    "tier1_advisory_threshold": {
+      "threshold": 0.11,
+      "source": "Validation CSI maximization (tau=0.110). Clean."
+    },
+    "tier2_warning_threshold": {
+      "threshold": 0.16,
+      "source": "Validation Precision >= 20% (tau=0.160). Clean."
+    }
+  },
+  "task5_recomputed_test_metrics": {
+    "preserved_baseline": {
+      "threshold": 0.5,
+      "tp": 231,
+      "fp": 2163,
+      "fn": 1648,
+      "tn": 41608,
+      "total": 45650,
+      "alarms": 2394,
+      "alarm_rate_pct": 5.24,
+      "pod_recall_pct": 12.29,
+      "far_pct": 90.35,
+      "csi_pct": 5.71,
+      "precision_pct": 9.65,
+      "accuracy_pct": 91.65,
+      "roc_auc": 0.5375,
+      "pr_auc": 0.0577,
+      "brier_score": 0.08156
+    },
+    "candidate_v3_advisory": {
+      "threshold": 0.11,
+      "tp": 870,
+      "fp": 5489,
+      "fn": 1009,
+      "tn": 38282,
+      "total": 45650,
+      "alarms": 6359,
+      "alarm_rate_pct": 13.93,
+      "pod_recall_pct": 46.3,
+      "far_pct": 86.32,
+      "csi_pct": 11.81,
+      "precision_pct": 13.68,
+      "accuracy_pct": 85.77,
+      "roc_auc": 0.8151,
+      "pr_auc": 0.1363,
+      "brier_score": 0.03722
+    },
+    "candidate_v3_warning": {
+      "threshold": 0.16,
+      "tp": 316,
+      "fp": 1371,
+      "fn": 1563,
+      "tn": 42400,
+      "total": 45650,
+      "alarms": 1687,
+      "alarm_rate_pct": 3.7,
+      "pod_recall_pct": 16.82,
+      "far_pct": 81.27,
+      "csi_pct": 9.72,
+      "precision_pct": 18.73,
+      "accuracy_pct": 93.57,
+      "roc_auc": 0.8151,
+      "pr_auc": 0.1363,
+      "brier_score": 0.03722
+    },
+    "candidate_v3_validation_equal_volume": {
+      "threshold": 0.115,
+      "tp": 799,
+      "fp": 4984,
+      "fn": 1080,
+      "tn": 38787,
+      "total": 45650,
+      "alarms": 5783,
+      "alarm_rate_pct": 12.67,
+      "pod_recall_pct": 42.52,
+      "far_pct": 86.18,
+      "csi_pct": 11.64,
+      "precision_pct": 13.82,
+      "accuracy_pct": 86.72,
+      "roc_auc": 0.8151,
+      "pr_auc": 0.1363,
+      "brier_score": 0.03722
+    },
+    "candidate_v3_test_equal_volume_exploratory": {
+      "threshold": 0.1504,
+      "tp": 412,
+      "fp": 1983,
+      "fn": 1467,
+      "tn": 41788,
+      "total": 45650,
+      "alarms": 2395,
+      "alarm_rate_pct": 5.25,
+      "pod_recall_pct": 21.93,
+      "far_pct": 82.8,
+      "csi_pct": 10.67,
+      "precision_pct": 17.2,
+      "accuracy_pct": 92.44,
+      "roc_auc": 0.8151,
+      "pr_auc": 0.1363,
+      "brier_score": 0.03722
+    }
+  },
+  "task6_episode_and_lead_time_audit": {
+    "total_episodes": 278,
+    "temporal_boundary_effect": {
+      "episodes_with_zero_pre_event_test_days": 4,
+      "zero_pre_event_episodes_list": [
+        [
+          "Ampara",
+          "2021-01-01"
+        ],
+        [
+          "Batticaloa",
+          "2021-01-01"
+        ],
+        [
+          "Jaffna",
+          "2021-01-01"
+        ],
+        [
+          "Mannar",
+          "2021-01-01"
+        ]
+      ],
+      "explanation": "4 episodes occurred on 2021-01-01. Their 7-day pre-event windows fall into December 2020 (validation split). When evaluating strictly inside test split, these 4 episodes cannot be alerted."
+    },
+    "episode_detection_results": {
+      "preserved_baseline": {
+        "total_episodes": 278,
+        "testable_episodes": 274,
+        "detected_episodes": 75,
+        "detection_rate_pct": 26.98,
+        "detection_rate_testable_pct": 27.37,
+        "mean_lead_days": 4.75,
+        "median_lead_days": 5.0,
+        "mean_alarms_per_detected_episode": 3.15
+      },
+      "candidate_v3_advisory": {
+        "total_episodes": 278,
+        "testable_episodes": 274,
+        "detected_episodes": 200,
+        "detection_rate_pct": 71.94,
+        "detection_rate_testable_pct": 72.99,
+        "mean_lead_days": 5.49,
+        "median_lead_days": 7.0,
+        "mean_alarms_per_detected_episode": 4.46
+      },
+      "candidate_v3_warning": {
+        "total_episodes": 278,
+        "testable_episodes": 274,
+        "detected_episodes": 107,
+        "detection_rate_pct": 38.49,
+        "detection_rate_testable_pct": 39.05,
+        "mean_lead_days": 4.41,
+        "median_lead_days": 5.0,
+        "mean_alarms_per_detected_episode": 3.03
+      },
+      "candidate_v3_val_eqvol": {
+        "total_episodes": 278,
+        "testable_episodes": 274,
+        "detected_episodes": 189,
+        "detection_rate_pct": 67.99,
+        "detection_rate_testable_pct": 68.98,
+        "mean_lead_days": 5.39,
+        "median_lead_days": 6.0,
+        "mean_alarms_per_detected_episode": 4.33
+      },
+      "candidate_v3_test_eqvol": {
+        "total_episodes": 278,
+        "testable_episodes": 274,
+        "detected_episodes": 130,
+        "detection_rate_pct": 46.76,
+        "detection_rate_testable_pct": 47.45,
+        "mean_lead_days": 4.65,
+        "median_lead_days": 5.0,
+        "mean_alarms_per_detected_episode": 3.25
+      }
+    },
+    "repeated_alerts_inflation_check": "PASSED (Loop increments hits by episode, not by alert day)"
+  },
+  "task7_recommendation": {
+    "overall_status": "APPROVED_FOR_RESEARCH_AND_SHADOW_STAGING_ONLY",
+    "methodological_defects_summary": [
+      "Defect 1: Equal-alert-volume threshold 0.1504 was derived from the locked test set. Reclassified as exploratory post-hoc diagnostic. The legitimate validation-selected threshold is tau=0.1150.",
+      "Defect 2: Temporal boundary omission for 4 episodes on 2021-01-01 whose 7-day pre-event windows fall into December 2020."
+    ],
+    "core_scientific_validity": "UNCOMPROMISED. The candidate model's superiority over baseline is threshold-independent (ROC-AUC 0.8151 vs 0.5375, PR-AUC 0.1363 vs 0.0577). Furthermore, Tier 1 Advisory (tau=0.110) and Tier 2 Warning (tau=0.160) are 100% clean validation-selected thresholds. Even at Tier 2 Warning (tau=0.160), the candidate fires 29.5% fewer alarms than the baseline while detecting 36.8% more flood days."
+  }
+}

@@ -17,6 +17,8 @@ import {
   Clock,
   Info,
   Store,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 
 import { WizardProgress } from "../../components/WizardProgress";
@@ -39,12 +41,12 @@ import {
   loadStep2FromStorage,
   saveValidatedStep2ToStorage,
   getTodayDateString,
+  clearAnalysisSnapshot,
 } from "../../lib/wizard";
 
-// Statically import the 6 verified crop photographs for the summary badge
+// Statically import the 5 verified crop photographs for Component 1
 import okraImg from "../../assets/crops/okra.jpg";
 import brinjalImg from "../../assets/crops/brinjal.jpg";
-import pumpkinImg from "../../assets/crops/pumpkin.jpg";
 import maizeImg from "../../assets/crops/maize.jpg";
 import mungBeanImg from "../../assets/crops/mung-bean.jpg";
 import chilliImg from "../../assets/crops/chilli.jpg";
@@ -52,7 +54,6 @@ import chilliImg from "../../assets/crops/chilli.jpg";
 const CROP_IMAGE_MAP: Record<string, StaticImageData> = {
   CR_OKRA: okraImg,
   CR_BRINJAL: brinjalImg,
-  CR_PUMPKIN: pumpkinImg,
   CR_MAIZE: maizeImg,
   CR_MUNG_BEAN: mungBeanImg,
   CR_CHILLI: chilliImg,
@@ -126,6 +127,7 @@ export default function HarvestDetailsPage() {
   // Handle date input change
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value;
+    clearAnalysisSnapshot();
     setHarvestDate(newDate);
     setIsStep2Saved(false);
 
@@ -146,6 +148,7 @@ export default function HarvestDetailsPage() {
   // Handle land extent input change
   const handleLandExtentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
+    clearAnalysisSnapshot();
     setLandExtent(val);
     setIsStep2Saved(false);
 
@@ -166,6 +169,7 @@ export default function HarvestDetailsPage() {
   // Handle expected yield input change
   const handleYieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
+    clearAnalysisSnapshot();
     setExpectedYield(val);
     setIsStep2Saved(false);
 
@@ -216,7 +220,7 @@ export default function HarvestDetailsPage() {
         return;
       }
 
-      // Valid: safely persist to session storage without risk of invalid values
+      // Valid: safely persist to session storage
       saveValidatedStep2ToStorage({
         harvest_date: harvestDate,
         land_extent_acres: landExtent,
@@ -237,27 +241,53 @@ export default function HarvestDetailsPage() {
     SRI_LANKA_DISTRICTS.find((d) => d.id === step1Data.cultivation_district_id);
   const cropImage = step1Data.crop_id ? CROP_IMAGE_MAP[step1Data.crop_id] : null;
 
+  // Compute calculated yield rate if both extent and yield are positive numbers
+  const parsedExtent = parseFloat(landExtent);
+  const parsedYield = parseFloat(expectedYield);
+  const hasValidYieldRate =
+    !isNaN(parsedExtent) &&
+    parsedExtent > 0 &&
+    !isNaN(parsedYield) &&
+    parsedYield > 0;
+  const calculatedYieldPerAcre = hasValidYieldRate
+    ? Math.round(parsedYield / parsedExtent)
+    : null;
+
+  const getCategoryBadgeClass = (category: string) => {
+    switch (category) {
+      case "Vegetable":
+        return "bg-[#E7F5EB] text-[#166534] border-[#22A06B]/40";
+      case "Grain":
+        return "bg-amber-50 text-amber-900 border-amber-300";
+      case "Condiment":
+        return "bg-rose-50 text-rose-900 border-rose-300";
+      case "Legume":
+        return "bg-teal-50 text-teal-900 border-teal-300";
+      default:
+        return "bg-slate-50 text-slate-800 border-slate-200";
+    }
+  };
+
   // If Step 1 is invalid, show friendly redirect notice
   if (isStep1Valid === false) {
     return (
       <div className="max-w-2xl mx-auto py-12 text-center space-y-4">
-        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-          <AlertCircle className="h-6 w-6" />
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 shadow-2xs">
+          <AlertCircle className="h-7 w-7" />
         </div>
         <h2 className="text-xl font-bold text-slate-900">
           Step 1 Information Missing
         </h2>
-        <p className="text-sm text-slate-600 max-w-md mx-auto">
-          Please select your candidate crop and cultivation district first.
-          Redirecting you to Step 1...
+        <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
+          Please select your crop and cultivation district first. Redirecting you to Step 1...
         </p>
-        <div>
+        <div className="pt-2">
           <Link
             href="/market-profit/new-analysis"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#15803d] hover:underline"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#15803d] hover:text-[#166534] hover:underline"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Go to Step 1: Crop & Location</span>
+            <span>Go to Step 1: Crop &amp; District</span>
           </Link>
         </div>
       </div>
@@ -270,24 +300,24 @@ export default function HarvestDetailsPage() {
       <div className="flex items-center justify-between gap-4">
         <Link
           href="/market-profit/new-analysis"
-          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-[#15803d] transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs group"
         >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Crop & Location</span>
+          <ArrowLeft className="h-4 w-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back to Crop &amp; District</span>
         </Link>
 
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100/80 text-[#166534]">
-          Step 2 of 4
+        <span className="text-xs font-semibold text-[#166534] bg-[#E7F5EB] border border-[#22A06B]/30 px-3 py-1 rounded-full shadow-2xs">
+          New Analysis Wizard · Step 2 of 4
         </span>
       </div>
 
       {/* Page Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-          Harvest Details
+          Plan Your Expected Harvest
         </h1>
         <p className="text-sm sm:text-base text-slate-600 mt-1.5 leading-relaxed">
-          Step 2 of 4: Specify the timing of your harvest to align with historical price seasons and wholesale demand.
+          Enter when you expect to harvest and how much you plan to produce.
         </p>
       </div>
 
@@ -295,62 +325,71 @@ export default function HarvestDetailsPage() {
       <WizardProgress currentStep={2} />
 
       {/* Step 1 Selections Summary Banner */}
-      <section className="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-4 sm:p-5 shadow-2xs">
+      <section className="rounded-2xl sm:rounded-3xl border border-emerald-200/80 bg-linear-to-r from-emerald-50/70 via-emerald-50/30 to-white p-4 sm:p-5 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5 min-w-0">
+          <div className="flex items-center gap-4 min-w-0">
             {cropImage && (
-              <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 border border-emerald-300 shadow-xs bg-white">
+              <div className="relative h-16 w-24 sm:h-18 sm:w-28 rounded-2xl overflow-hidden shrink-0 border border-emerald-200 shadow-xs bg-white">
                 <Image
                   src={cropImage}
                   alt={selectedCropMeta?.name_en || "Selected crop"}
                   fill
                   className="object-cover"
+                  sizes="(max-width: 640px) 96px, 112px"
                 />
               </div>
             )}
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-xs font-semibold text-[#15803d] uppercase tracking-wider">
-                <Sprout className="h-3.5 w-3.5" />
-                <span>Selected Crop & Location</span>
+            <div className="min-w-0 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#15803d] bg-white border border-[#22A06B]/30 px-2 py-0.5 rounded-full shadow-2xs">
+                  Selected Crop &amp; District
+                </span>
+                {selectedCropMeta && (
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getCategoryBadgeClass(
+                      selectedCropMeta.category
+                    )}`}
+                  >
+                    {selectedCropMeta.category}
+                  </span>
+                )}
               </div>
-              <div className="text-base font-bold text-slate-900 truncate">
-                {selectedCropMeta?.name_en || "Crop"}{" "}
-                <span className="text-xs font-normal text-slate-500">
+              <div className="text-base sm:text-lg font-bold text-slate-900 truncate flex items-baseline gap-2">
+                <span>{selectedCropMeta?.name_en || "Crop"}</span>
+                <span className="text-xs sm:text-sm font-medium text-slate-500">
                   ({selectedCropMeta?.name_si})
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-0.5">
+              <div className="flex items-center gap-1.5 text-xs text-slate-600">
                 <MapPin className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                <span>{selectedDistrictMeta?.name || "District"}, Sri Lanka</span>
-                {selectedDistrictMeta?.is_pilot && (
-                  <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-emerald-100 text-[#166534]">
-                    Pilot District
-                  </span>
-                )}
+                <span className="font-medium text-slate-700">
+                  {selectedDistrictMeta?.name || "District"} District, Sri Lanka
+                </span>
               </div>
             </div>
           </div>
 
           <Link
             href="/market-profit/new-analysis"
-            className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-[#15803d] hover:text-[#166534] hover:underline self-start sm:self-auto shrink-0 bg-white px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs"
+            className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-[#15803d] hover:text-[#166534] bg-white hover:bg-emerald-50 px-3.5 py-2 rounded-xl border border-emerald-200/90 shadow-2xs transition-colors self-start sm:self-auto shrink-0 group"
           >
-            <span>Change</span>
+            <span>Change Selection</span>
+            <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
       </section>
 
       {/* Main Step 2 Form */}
-      <form onSubmit={handleFormSubmit} className="space-y-8" noValidate>
+      <form onSubmit={handleFormSubmit} className="space-y-6" noValidate>
         {/* Top Form Validation Alert Banner */}
         {hasAttemptedSubmit && (dateError || extentError || yieldError) && (
           <div
             role="alert"
-            className="rounded-2xl border border-red-200 bg-red-50/80 p-4 text-red-900 shadow-2xs space-y-1.5 animate-in fade-in"
+            className="rounded-2xl border border-red-200 bg-red-50/90 p-4 sm:p-5 text-red-900 shadow-xs space-y-1.5 animate-in fade-in"
           >
             <div className="flex items-center gap-2 text-sm font-bold text-red-800">
-              <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
-              <span>Please correct the highlighted issues before proceeding:</span>
+              <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
+              <span>Please correct the highlighted fields before proceeding:</span>
             </div>
             <ul className="list-disc list-inside text-xs text-red-700 space-y-0.5 pl-2">
               {dateError && <li>{dateError}</li>}
@@ -360,200 +399,315 @@ export default function HarvestDetailsPage() {
           </div>
         )}
 
-        <section className="rounded-2xl bg-white p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-6">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#15803d]">
-              <Calendar className="h-4 w-4" />
-              <span>Step 2.1 — Timeline</span>
-            </div>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
-              Expected Harvest Date
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Select the date you expect to harvest your crop.
-            </p>
-          </div>
-
-          {/* Date Input Field */}
-          <div className="max-w-md space-y-2">
-            <label
-              htmlFor="harvest_date"
-              className="block text-sm font-semibold text-slate-700"
-            >
-              Expected Harvest Date <span className="text-red-500">*</span>
-            </label>
-
-            <div className="relative">
-              <input
-                ref={harvestDateInputRef}
-                type="date"
-                id="harvest_date"
-                name="harvest_date"
-                min={todayString}
-                value={harvestDate}
-                onChange={handleDateChange}
-                aria-describedby="harvest_date_help harvest_date_error"
-                className={`w-full rounded-xl border px-4 py-3 text-sm text-slate-900 shadow-2xs transition-colors focus:outline-hidden ${
-                  dateError
-                    ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-400/20 bg-red-50/20"
-                    : "border-slate-300 focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 bg-white"
-                }`}
-              />
+        {/* The Three Farmer Inputs as Clean, Distinctive Cards */}
+        <div className="space-y-6">
+          {/* Card 1: Expected Harvest Date */}
+          <section className="rounded-2xl sm:rounded-3xl bg-white p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#E7F5EB] text-[#15803d] flex items-center justify-center shrink-0 border border-[#22A06B]/20">
+                  <Calendar className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#15803d]">
+                      Field 1 of 3
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">· Timeline</span>
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
+                    Expected Harvest Date
+                  </h2>
+                </div>
+              </div>
+              {harvestDate && !dateError && (
+                <div className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-[#166534] border border-emerald-200 shadow-2xs">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[#15803d]" />
+                  <span>{formatDateDisplay(harvestDate)}</span>
+                </div>
+              )}
             </div>
 
-            <p id="harvest_date_help" className="text-xs text-slate-500">
-              Select the date you expect to harvest your crop. Today or any future calendar date is accepted.
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">
+              Select the calendar date you expect to complete your harvest. This identifies the monthly wholesale demand cycles and seasonal price forecast period.
             </p>
 
-            {dateError && (
-              <p
-                id="harvest_date_error"
-                role="alert"
-                className="text-xs font-semibold text-red-600 flex items-center gap-1.5 pt-1"
+            <div className="max-w-md space-y-2 pt-1">
+              <label
+                htmlFor="harvest_date"
+                className="block text-xs font-bold uppercase tracking-wider text-slate-700"
               >
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{dateError}</span>
-              </p>
-            )}
-          </div>
+                Expected Harvest Date <span className="text-red-500">*</span>
+              </label>
 
-          {/* Land Extent Input Field */}
-          <div className="max-w-md space-y-2 pt-4 border-t border-slate-100">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#15803d]">
-                <Compass className="h-4 w-4" />
-                <span>Step 2.2 — Land Extent</span>
+              <div className="relative">
+                <input
+                  ref={harvestDateInputRef}
+                  type="date"
+                  id="harvest_date"
+                  name="harvest_date"
+                  min={todayString}
+                  value={harvestDate}
+                  onChange={handleDateChange}
+                  aria-describedby="harvest_date_help harvest_date_error"
+                  className={`w-full rounded-xl border px-4 py-3 text-sm font-medium text-slate-900 shadow-2xs transition-colors focus:outline-hidden ${
+                    dateError
+                      ? "border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-400/20 bg-red-50/20"
+                      : "border-slate-300 focus:border-[#15803d] focus:ring-4 focus:ring-emerald-500/15 bg-white"
+                  }`}
+                />
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight mt-0.5">
-                Cultivation Land Extent
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Enter the land area you plan to cultivate.
-              </p>
+
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
+                <span id="harvest_date_help">
+                  Today or any future calendar date is accepted.
+                </span>
+                {harvestDate && !dateError && (
+                  <span className="sm:hidden font-semibold text-[#15803d]">
+                    {formatDateDisplay(harvestDate)}
+                  </span>
+                )}
+              </div>
+
+              {dateError && (
+                <p
+                  id="harvest_date_error"
+                  role="alert"
+                  className="text-xs font-semibold text-red-600 flex items-center gap-1.5 pt-1"
+                >
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{dateError}</span>
+                </p>
+              )}
+            </div>
+          </section>
+
+          {/* Card 2: Cultivation Land Extent */}
+          <section className="rounded-2xl sm:rounded-3xl bg-white p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#E7F5EB] text-[#15803d] flex items-center justify-center shrink-0 border border-[#22A06B]/20">
+                  <Compass className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#15803d]">
+                      Field 2 of 3
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">· Farm Area</span>
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
+                    Cultivation Land Extent (Acres)
+                  </h2>
+                </div>
+              </div>
+              {landExtent && !extentError && (
+                <div className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-[#166534] border border-emerald-200 shadow-2xs">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[#15803d]" />
+                  <span>{landExtent} Acres</span>
+                </div>
+              )}
             </div>
 
-            <label
-              htmlFor="land_extent"
-              className="block text-sm font-semibold text-slate-700"
-            >
-              Cultivation Land Extent (Acres) <span className="text-red-500">*</span>
-            </label>
-
-            <div className="relative">
-              <input
-                ref={landExtentInputRef}
-                type="number"
-                id="land_extent"
-                name="land_extent"
-                step="any"
-                min="0.01"
-                placeholder="1.5"
-                value={landExtent}
-                onChange={handleLandExtentChange}
-                aria-describedby="land_extent_help land_extent_error"
-                className={`w-full rounded-xl border pl-4 pr-20 py-3 text-sm text-slate-900 shadow-2xs transition-colors focus:outline-hidden ${
-                  extentError
-                    ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-400/20 bg-red-50/20"
-                    : "border-slate-300 focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 bg-white"
-                }`}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-xs font-bold text-slate-500 bg-slate-100/80 border-l border-slate-200 px-3 rounded-r-xl">
-                Acres
-              </div>
-            </div>
-
-            <p id="land_extent_help" className="text-xs text-slate-500">
-              Enter the land area you plan to cultivate. Decimal values are supported (e.g. 0.5, 1.25, 2.5). Must be greater than 0 acres.
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">
+              Enter the total land area dedicated to this crop cultivation in acres. Decimal values are fully supported.
             </p>
 
-            {extentError && (
-              <p
-                id="land_extent_error"
-                role="alert"
-                className="text-xs font-semibold text-red-600 flex items-center gap-1.5 pt-1"
+            <div className="max-w-md space-y-2 pt-1">
+              <label
+                htmlFor="land_extent"
+                className="block text-xs font-bold uppercase tracking-wider text-slate-700"
               >
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{extentError}</span>
-              </p>
-            )}
-          </div>
+                Cultivation Land Extent <span className="text-red-500">*</span>
+              </label>
 
-          {/* Expected Harvest Yield Input Field */}
-          <div className="max-w-md space-y-2 pt-4 border-t border-slate-100">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#15803d]">
-                <Scale className="h-4 w-4" />
-                <span>Step 2.3 — Expected Yield</span>
+              <div className="relative">
+                <input
+                  ref={landExtentInputRef}
+                  type="number"
+                  id="land_extent"
+                  name="land_extent"
+                  step="any"
+                  min="0.01"
+                  max="1000"
+                  placeholder="e.g. 1.5"
+                  value={landExtent}
+                  onChange={handleLandExtentChange}
+                  aria-describedby="land_extent_help land_extent_error"
+                  className={`w-full rounded-xl border pl-4 pr-24 py-3 text-sm font-semibold text-slate-900 shadow-2xs transition-colors focus:outline-hidden ${
+                    extentError
+                      ? "border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-400/20 bg-red-50/20"
+                      : "border-slate-300 focus:border-[#15803d] focus:ring-4 focus:ring-emerald-500/15 bg-white"
+                  }`}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-xs font-bold text-slate-600 bg-slate-100 border-l border-slate-300 px-3.5 rounded-r-xl">
+                  Acres
+                </div>
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight mt-0.5">
-                Expected Harvest Yield
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Enter the total amount of crop you expect to harvest.
-              </p>
+
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
+                <span id="land_extent_help">
+                  Allowed range: 0.01 to 1,000 Acres.
+                </span>
+                {landExtent && !extentError && (
+                  <span className="sm:hidden font-semibold text-[#15803d]">
+                    {landExtent} Acres
+                  </span>
+                )}
+              </div>
+
+              {extentError && (
+                <p
+                  id="land_extent_error"
+                  role="alert"
+                  className="text-xs font-semibold text-red-600 flex items-center gap-1.5 pt-1"
+                >
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{extentError}</span>
+                </p>
+              )}
+            </div>
+          </section>
+
+          {/* Card 3: Expected Harvest Yield */}
+          <section className="rounded-2xl sm:rounded-3xl bg-white p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#E7F5EB] text-[#15803d] flex items-center justify-center shrink-0 border border-[#22A06B]/20">
+                  <Scale className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#15803d]">
+                      Field 3 of 3
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">· Expected Production</span>
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
+                    Expected Harvest Yield (kg)
+                  </h2>
+                </div>
+              </div>
+              {expectedYield && !yieldError && (
+                <div className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-[#166534] border border-emerald-200 shadow-2xs">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[#15803d]" />
+                  <span>{formatKg(expectedYield)}</span>
+                </div>
+              )}
             </div>
 
-            <label
-              htmlFor="expected_yield"
-              className="block text-sm font-semibold text-slate-700"
-            >
-              Expected Harvest Yield (kg) <span className="text-red-500">*</span>
-            </label>
-
-            <div className="relative">
-              <input
-                ref={expectedYieldInputRef}
-                type="number"
-                id="expected_yield"
-                name="expected_yield"
-                step="any"
-                min="0.01"
-                placeholder="1500"
-                value={expectedYield}
-                onChange={handleYieldChange}
-                aria-describedby="expected_yield_help expected_yield_error"
-                className={`w-full rounded-xl border pl-4 pr-16 py-3 text-sm text-slate-900 shadow-2xs transition-colors focus:outline-hidden ${
-                  yieldError
-                    ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-400/20 bg-red-50/20"
-                    : "border-slate-300 focus:border-[#15803d] focus:ring-2 focus:ring-emerald-500/20 bg-white"
-                }`}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-xs font-bold text-slate-500 bg-slate-100/80 border-l border-slate-200 px-3 rounded-r-xl">
-                kg
-              </div>
-            </div>
-
-            <p id="expected_yield_help" className="text-xs text-slate-500">
-              Enter the total amount of crop you expect to harvest in kilograms (e.g. 500, 1500, 2500.5). Must be greater than 0 kg.
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">
+              Enter the total marketable harvest weight you expect to produce across your cultivated area in kilograms.
             </p>
 
-            {yieldError && (
-              <p
-                id="expected_yield_error"
-                role="alert"
-                className="text-xs font-semibold text-red-600 flex items-center gap-1.5 pt-1"
+            <div className="max-w-md space-y-2 pt-1">
+              <label
+                htmlFor="expected_yield"
+                className="block text-xs font-bold uppercase tracking-wider text-slate-700"
               >
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{yieldError}</span>
-              </p>
-            )}
-          </div>
+                Expected Harvest Yield <span className="text-red-500">*</span>
+              </label>
 
-          {/* Informational Guidance Box */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-xs text-slate-600 space-y-1.5 max-w-xl">
-            <div className="flex items-center gap-2 font-semibold text-slate-800">
-              <Clock className="h-4 w-4 text-[#15803d]" />
-              <span>How your harvest details are used</span>
+              <div className="relative">
+                <input
+                  ref={expectedYieldInputRef}
+                  type="number"
+                  id="expected_yield"
+                  name="expected_yield"
+                  step="any"
+                  min="0.01"
+                  max="1000000"
+                  placeholder="e.g. 1500"
+                  value={expectedYield}
+                  onChange={handleYieldChange}
+                  aria-describedby="expected_yield_help expected_yield_error"
+                  className={`w-full rounded-xl border pl-4 pr-20 py-3 text-sm font-semibold text-slate-900 shadow-2xs transition-colors focus:outline-hidden ${
+                    yieldError
+                      ? "border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-400/20 bg-red-50/20"
+                      : "border-slate-300 focus:border-[#15803d] focus:ring-4 focus:ring-emerald-500/15 bg-white"
+                  }`}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-xs font-bold text-slate-600 bg-slate-100 border-l border-slate-300 px-3.5 rounded-r-xl">
+                  kg
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
+                <span id="expected_yield_help">
+                  Allowed range: 0.01 to 1,000,000 kg.
+                </span>
+                {expectedYield && !yieldError && (
+                  <span className="sm:hidden font-semibold text-[#15803d]">
+                    {formatKg(expectedYield)}
+                  </span>
+                )}
+              </div>
+
+              {yieldError && (
+                <p
+                  id="expected_yield_error"
+                  role="alert"
+                  className="text-xs font-semibold text-red-600 flex items-center gap-1.5 pt-1"
+                >
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{yieldError}</span>
+                </p>
+              )}
             </div>
-            <p className="leading-relaxed">
-              AgroDecision evaluates seasonal wholesale price fluctuations and demand trends for the month of your harvest, and calculates production scale based on your cultivation land extent and expected yield to project revenue and assess financial risk.
-            </p>
-          </div>
-        </section>
+          </section>
 
-        {/* Farmer-Friendly Step 2 Completion Summary (TASK 2) */}
+          {/* Dynamic Harvest Intensity Callout (Calculated helper insight) */}
+          {hasValidYieldRate && calculatedYieldPerAcre !== null && (
+            <div className="rounded-2xl sm:rounded-3xl border border-emerald-200/90 bg-[#E7F5EB]/60 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-white border border-[#22A06B]/30 flex items-center justify-center text-[#15803d] shadow-2xs shrink-0">
+                  <Sprout className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-[#166534] uppercase tracking-wider block">
+                    Expected Yield per Acre
+                  </span>
+                  <span className="text-sm font-semibold text-slate-800">
+                    Expected Yield per Acre:{" "}
+                    <span className="font-extrabold text-[#15803d]">
+                      ~{calculatedYieldPerAcre.toLocaleString("en-LK")} kg / acre
+                    </span>
+                  </span>
+                </div>
+              </div>
+              <div className="text-left sm:text-right pl-13 sm:pl-0">
+                <span className="text-[11px] text-slate-500 block">
+                  Derived from your entered land extent and expected yield
+                </span>
+                <span className="text-xs font-medium text-emerald-800">
+                  {formatKg(expectedYield)} total across {landExtent} {parsedExtent === 1 ? "acre" : "acres"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Contextual Guidance Box */}
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-emerald-700 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-xs text-slate-600 leading-relaxed">
+                <span className="font-bold text-slate-800 block text-sm">
+                  How your harvest details are used
+                </span>
+                <p>
+                  <strong className="text-slate-700">Expected Harvest Date:</strong> Aligns with seasonal wholesale price forecasts and terminal market demand cycles.
+                </p>
+                <p>
+                  <strong className="text-slate-700">Land Extent &amp; Expected Yield:</strong> Determine your planned harvest volume to project cultivation costs, revenue, and profit risk.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Farmer-Friendly Step 2 Completion Summary */}
         {isStep2Saved && (
-          <section className="rounded-2xl border-2 border-emerald-300 bg-linear-to-br from-emerald-50/90 via-emerald-50/50 to-white p-6 sm:p-7 shadow-xs space-y-5">
+          <section className="rounded-2xl sm:rounded-3xl border-2 border-emerald-300 bg-linear-to-br from-emerald-50/90 via-emerald-50/40 to-white p-6 sm:p-7 shadow-xs space-y-5 animate-in fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-200/80 pb-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-2xl bg-[#15803d] text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -561,16 +715,16 @@ export default function HarvestDetailsPage() {
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                    Step 2 Complete — Harvest Details Confirmed
+                    Harvest Details Confirmed
                   </h3>
                   <p className="text-xs text-emerald-800 font-medium">
-                    Your production schedule and scale parameters have been verified and saved to session storage.
+                    Your harvest timing and production scale are verified and stored for market analysis.
                   </p>
                 </div>
               </div>
               <Link
                 href="/market-profit/new-analysis/selling-market"
-                className="inline-flex items-center gap-1.5 self-start sm:self-auto text-xs font-bold text-[#15803d] bg-white border border-emerald-200 px-3.5 py-2 rounded-lg hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer group"
+                className="inline-flex items-center gap-1.5 self-start sm:self-auto text-xs font-bold text-[#15803d] bg-white border border-emerald-200 px-3.5 py-2 rounded-xl hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer group"
               >
                 <Store className="h-3.5 w-3.5" />
                 <span>Proceed to Selling Market</span>
@@ -581,7 +735,7 @@ export default function HarvestDetailsPage() {
             {/* Summary Parameters Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {/* 1. Crop */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-emerald-100 shadow-2xs">
                 {cropImage && (
                   <div className="relative h-11 w-11 rounded-lg overflow-hidden shrink-0 border border-emerald-200">
                     <Image
@@ -606,7 +760,7 @@ export default function HarvestDetailsPage() {
               </div>
 
               {/* 2. District */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-emerald-100 shadow-2xs">
                 <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
                   <MapPin className="h-5 w-5" />
                 </div>
@@ -616,17 +770,12 @@ export default function HarvestDetailsPage() {
                   </span>
                   <span className="text-sm font-bold text-slate-900 truncate block">
                     {selectedDistrictMeta?.name || "District"}
-                    {selectedDistrictMeta?.is_pilot && (
-                      <span className="ml-1.5 text-[10px] bg-emerald-100 text-[#166534] px-1.5 py-0.5 rounded font-semibold">
-                        Pilot Zone
-                      </span>
-                    )}
                   </span>
                 </div>
               </div>
 
               {/* 3. Expected Harvest Date */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-emerald-100 shadow-2xs">
                 <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
                   <Calendar className="h-5 w-5" />
                 </div>
@@ -641,7 +790,7 @@ export default function HarvestDetailsPage() {
               </div>
 
               {/* 4. Cultivation Land Extent */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-emerald-100 shadow-2xs">
                 <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
                   <Compass className="h-5 w-5" />
                 </div>
@@ -656,7 +805,7 @@ export default function HarvestDetailsPage() {
               </div>
 
               {/* 5. Expected Harvest Yield */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 shadow-2xs sm:col-span-2 lg:col-span-2">
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-emerald-100 shadow-2xs sm:col-span-2 lg:col-span-2">
                 <div className="h-11 w-11 rounded-lg bg-emerald-100 text-[#15803d] flex items-center justify-center shrink-0">
                   <Scale className="h-5 w-5" />
                 </div>
@@ -676,7 +825,7 @@ export default function HarvestDetailsPage() {
               <Info className="h-4 w-4 text-[#15803d] shrink-0 mt-0.5" />
               <div className="leading-relaxed">
                 <span className="font-bold text-[#166534]">Next Stage: Step 3 — Selling Market Selection.</span>{" "}
-                In the upcoming sprint task, you will choose wholesale terminal markets (such as Embilipitiya Dedicated Economic Centre or Colombo Manning Market) to evaluate local demand and seasonal price forecasts.
+                Select your intended wholesale terminal market (e.g. Meegoda, Embilipitiya, Colombo Manning Market) to evaluate local demand and seasonal price trends.
               </div>
             </div>
           </section>
@@ -686,10 +835,10 @@ export default function HarvestDetailsPage() {
         <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
           <Link
             href="/market-profit/new-analysis"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-2xs group"
           >
-            <ArrowLeft className="h-4 w-4 text-slate-500" />
-            <span>Back to Crop & Location</span>
+            <ArrowLeft className="h-4 w-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back to Crop &amp; District</span>
           </Link>
 
           <button

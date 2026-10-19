@@ -8,6 +8,7 @@ interface HeaderProps {
 
 export function Header({ onToggleSidebar }: HeaderProps) {
   const pathname = usePathname();
+  const isResults = pathname.includes("/results");
   const isHarvestDetails = pathname.includes("/harvest-details");
   const isNewAnalysis = pathname.includes("/new-analysis");
 
@@ -47,20 +48,34 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           <span>Market & Profit</span>
           <span>/</span>
           <span className="text-[#166534] font-semibold">
-            {isHarvestDetails
+            {isResults
+              ? "Analysis Results"
+              : isHarvestDetails
               ? "New Analysis (Step 2: Harvest Details)"
               : isNewAnalysis
               ? "New Analysis (Step 1: Crop & Location)"
-              : "Overview"}
+              : "Dashboard"}
           </span>
         </div>
       </div>
 
-      {/* Right section: Simple Pilot Zone Tag */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      {/* Right section: Pilot Zone Tag + Logged-in Farmer Profile Pill */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
         <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-[#166534]">
           <MapPin className="h-3.5 w-3.5 text-[#15803d] shrink-0" />
-          <span>Southern Province Pilot</span>
+          <span>Southern Pilot</span>
+        </div>
+
+        {/* Logged-In Farmer Profile Chip */}
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#22A06B]/25 bg-[#F7F5ED] pl-1 pr-2.5 py-1 text-xs font-semibold text-slate-800 shadow-2xs">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#166534] text-white text-[10px] font-extrabold">
+            JB
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-900 font-bold hidden sm:inline">Janidu B.</span>
+            <span className="text-[10px] text-slate-400 font-normal hidden sm:inline">•</span>
+            <span className="text-[11px] text-[#166534] font-semibold">Farmer</span>
+          </div>
         </div>
       </div>
     </header>

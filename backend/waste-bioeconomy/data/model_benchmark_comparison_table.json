@@ -1,0 +1,42 @@
+[
+  {
+    "Model":"Static Rule-Based Baseline",
+    "Type":"Heuristic Rule",
+    "Accuracy (%)":24.1,
+    "Precision":0.3334,
+    "Recall":0.3333,
+    "Macro F1":0.1548,
+    "RMSE (%)":8.49,
+    "MAE (%)":6.9
+  },
+  {
+    "Model":"Linear \/ Logistic Regression",
+    "Type":"Parametric Linear",
+    "Accuracy (%)":79.73,
+    "Precision":0.7766,
+    "Recall":0.7725,
+    "Macro F1":0.7736,
+    "RMSE (%)":3.35,
+    "MAE (%)":2.62
+  },
+  {
+    "Model":"Random Forest",
+    "Type":"Bagging Ensemble",
+    "Accuracy (%)":79.15,
+    "Precision":0.7741,
+    "Recall":0.7699,
+    "Macro F1":0.7704,
+    "RMSE (%)":3.08,
+    "MAE (%)":2.3
+  },
+  {
+    "Model":"XGBoost (Proposed Component 3)",
+    "Type":"Gradient Boosted Trees",
+    "Accuracy (%)":81.98,
+    "Precision":0.7995,
+    "Recall":0.7972,
+    "Macro F1":0.7977,
+    "RMSE (%)":1.44,
+    "MAE (%)":1.03
+  }
+]

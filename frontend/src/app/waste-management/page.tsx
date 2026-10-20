@@ -17,11 +17,16 @@ import {
 import { BarcodeScannerModal } from "./components/barcode-scanner-modal";
 import { ProductLotPopupForm, TransportLotItem } from "./components/product-lot-popup-form";
 import { RiskPredictionModal } from "./components/risk-prediction-modal";
+import { TransportTrackingHistory } from "./components/transport-tracking-history";
 
 export default function WasteBioeconomyDashboard() {
   // Backend connection status (Component 3 Microservice on port 8003)
   const [isBackendOnline, setIsBackendOnline] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Tab state: "register" (lot intake), "tracking" (current process), "history" (delivered batches)
+  const [activeTab, setActiveTab] = useState<"register" | "tracking" | "history">("register");
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   // ---------------------------------------------------------------------------
   // Module: Farmer Transport Tracking & Spoilage Risk Prediction State
@@ -168,16 +173,29 @@ export default function WasteBioeconomyDashboard() {
   // Confirm and Save Transport Batch to Database
   const handleConfirmTransportSave = async () => {
     if (!predictionResultData) return;
-    const res = await fetch("http://localhost:8003/api/transport/confirm", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        farmer_id: "farmer_kamal",
-        destination_center: transportItems[0]?.destination_center || "Dambulla Dedicated Economic Centre",
-        items: predictionResultData.items,
-      }),
-    });
-    if (!res.ok) throw new Error("Confirm failed");
+    try {
+      const res = await fetch("http://localhost:8003/api/transport/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          farmer_id: "farmer_kamal",
+          destination_center: transportItems[0]?.destination_center || "Dambulla Dedicated Economic Centre",
+          items: predictionResultData.items,
+        }),
+      });
+      if (!res.ok) throw new Error("Confirm failed");
+      const confData = await res.json();
+      setValidatedNotification(
+        `Transport batch [${confData.transport_id}] officially confirmed with status 'Ready'! You can now track its journey in Current Process.`
+      );
+      setTransportItems([]);
+      setSelectedLotIds([]);
+      setIsRiskModalOpen(false);
+      setRefreshTrigger((prev) => prev + 1);
+      setActiveTab("tracking");
+    } catch (e: any) {
+      alert("Error confirming transport: " + e.message);
+    }
   };
 
   // Metrics for Transport Tracking
@@ -263,7 +281,21 @@ export default function WasteBioeconomyDashboard() {
             </div>
           )}
 
-          {/* Section Action Bar */}
+        {/* Navigation Tabs, Current Process Tracking & Product History Log */}
+        <TransportTrackingHistory
+          farmerId="farmer_kamal"
+          refreshTrigger={refreshTrigger}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onNotification={(msg) => {
+            setValidatedNotification(msg);
+            setTimeout(() => setValidatedNotification(null), 8000);
+          }}
+        />
+
+        {activeTab === "register" && (
+          <div>
+            {/* Section Action Bar */}
           <div
             style={{
               background: "#ffffff",
@@ -776,7 +808,9 @@ export default function WasteBioeconomyDashboard() {
               </div>
             </div>
           )}
-        </div>
+          </div>
+        )}
+      </div>
 
       {/* Barcode Scanner Modal */}
       <BarcodeScannerModal

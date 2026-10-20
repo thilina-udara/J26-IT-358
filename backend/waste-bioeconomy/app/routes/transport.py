@@ -21,7 +21,12 @@ from app.schemas.transport import (
     BatchPredictResponse,
     ConfirmTransportRequest,
     ConfirmTransportResponse,
+    DispatchTransportRequest,
+    FarmerTransportHistoryResponse,
+    ReceiveTransportRequest,
+    TimelineEvent,
     TransportLotItem,
+    TransportTrackingDetailResponse,
 )
 
 router = APIRouter(prefix="/api/transport", tags=["Farmer Transport Tracking & Risk Prediction"])
@@ -335,6 +340,438 @@ def confirm_transport(payload: ConfirmTransportRequest) -> ConfirmTransportRespo
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Database error confirming transport: {exc!s}"
+        ) from exc
+
+
+def _row_to_transport_item(row: dict) -> TransportLotItem:
+    """Helper to convert a transport_items DB row to a TransportLotItem schema."""
+    advice_list: List[str] = []
+    if row.get("advice_json"):
+        try:
+            advice_list = json.loads(row["advice_json"])
+        except Exception:
+            advice_list = []
+
+    return TransportLotItem(
+        id=row.get("id"),
+        barcode_no=row["barcode_no"],
+        crop_category=row["crop_category"],
+        food_name=row["food_name"],
+        kg=float(row["kg"]),
+        destination_center=row["destination_center"],
+        origin_district=row["origin_district"],
+        distance_km=float(row["distance_km"]),
+        transit_hours=float(row["transit_hours"]),
+        harvest_datetime=row["harvest_datetime"],
+        transport_date=row["transport_date"],
+        transport_time=row["transport_time"],
+        transport_type=row["transport_type"],
+        vehicle_no=row["vehicle_no"],
+        packing_type=row["packing_type"],
+        maturity=row["maturity"],
+        is_covered=bool(row["is_covered"]),
+        has_cooling=bool(row["has_cooling"]),
+        is_washed=bool(row["is_washed"]),
+        is_graded=bool(row["is_graded"]),
+        ambient_temp_c=float(row["ambient_temp_c"]) if row.get("ambient_temp_c") is not None else None,
+        ambient_humidity_pct=float(row["ambient_humidity_pct"]) if row.get("ambient_humidity_pct") is not None else None,
+        is_rainy=bool(row["is_rainy"]),
+        predicted_waste_pct=float(row["predicted_waste_pct"]) if row.get("predicted_waste_pct") is not None else None,
+        predicted_waste_kg=float(row["predicted_waste_kg"]) if row.get("predicted_waste_kg") is not None else None,
+        risk_level=row.get("risk_level"),
+        actual_received_kg=float(row["actual_received_kg"]) if row.get("actual_received_kg") is not None else None,
+        accepted_fresh_kg=float(row["accepted_fresh_kg"]) if row.get("accepted_fresh_kg") is not None else None,
+        cull_waste_kg=float(row["cull_waste_kg"]) if row.get("cull_waste_kg") is not None else None,
+        item_status=row.get("item_status") or "Ready",
+        advice=advice_list,
+        created_at=row.get("created_at"),
+    )
+
+
+def _build_transport_timeline(t_dict: dict, items: List[TransportLotItem]) -> List[TimelineEvent]:
+    status = t_dict.get("status", "Ready")
+    created_at = t_dict.get("created_at")
+    dispatched_at = t_dict.get("dispatched_at")
+    received_at = t_dict.get("received_at")
+    dest = t_dict.get("destination_center", "Collection Centre")
+    inspector = t_dict.get("inspector_name") or "Quality Officer"
+    grade = t_dict.get("quality_grade") or "Grade A"
+    fresh_kg = t_dict.get("accepted_fresh_kg")
+    cull_kg = t_dict.get("cull_waste_kg")
+    bio_action = t_dict.get("bioeconomy_action") or "Bioeconomy Organic Recovery"
+
+    # Step 1: Registration
+    t1 = TimelineEvent(
+        step=1,
+        title="Produce Lot Registered & Crate Barcodes Locked",
+        status="completed",
+        timestamp=created_at,
+        description=f"{len(items)} produce lot(s) weighed and assigned official traceability barcodes.",
+    )
+
+    # Step 2: Dispatched
+    if status == "Ready":
+        t2 = TimelineEvent(
+            step=2,
+            title="Awaiting Farm Gate Departure",
+            status="current",
+            timestamp=None,
+            description="Produce loaded into vehicle. Ready for transit dispatch.",
+        )
+    else:
+        t2 = TimelineEvent(
+            step=2,
+            title="Dispatched & In Transit",
+            status="completed",
+            timestamp=dispatched_at or created_at,
+            description=f"Cargo dispatched via road corridor to {dest}.",
+        )
+
+    # Step 3: Arrived at Collection Center
+    if status in ["Ready"]:
+        t3 = TimelineEvent(
+            step=3,
+            title=f"Arrival at {dest.split()[0]} DEC",
+            status="pending",
+            timestamp=None,
+            description="Vehicle will check in at the reception bay.",
+        )
+    elif status == "In Transit":
+        t3 = TimelineEvent(
+            step=3,
+            title=f"In Transit to {dest.split()[0]} DEC",
+            status="current",
+            timestamp=None,
+            description=f"Estimated transit: {items[0].transit_hours if items else 1.0} hrs on road corridor.",
+        )
+    else:  # Delivered / Processed
+        t3 = TimelineEvent(
+            step=3,
+            title=f"Arrived at {dest.split()[0]} DEC Reception",
+            status="completed",
+            timestamp=received_at or dispatched_at,
+            description="Vehicle checked in at wholesale receiving dock.",
+        )
+
+    # Step 4: Inspected & Weighed
+    if status in ["Ready", "In Transit"]:
+        t4 = TimelineEvent(
+            step=4,
+            title="Dock Weighing & SLSI Quality Inspection",
+            status="pending",
+            timestamp=None,
+            description="Gross scale verification and post-harvest damage grading.",
+        )
+    else:
+        actual_kg = t_dict.get("actual_received_kg") or t_dict.get("total_kg")
+        t4 = TimelineEvent(
+            step=4,
+            title="Weighed & Inspected at Receiving Dock",
+            status="completed",
+            timestamp=received_at,
+            description=f"Certified by {inspector}. Net scale: {actual_kg} kg ({grade}).",
+        )
+
+    # Step 5: Dual-Stream Mass Partitioning
+    if status in ["Ready", "In Transit"]:
+        t5 = TimelineEvent(
+            step=5,
+            title="Dual-Stream Partitioning: Fresh Retail & Bioeconomy Cull",
+            status="pending",
+            timestamp=None,
+            description="Separating retail commercial produce from bioeconomy cull feedstock.",
+        )
+    else:
+        t5 = TimelineEvent(
+            step=5,
+            title="Dual-Stream Recovery Completed",
+            status="completed",
+            timestamp=received_at,
+            description=f"Fresh Retail: {fresh_kg or (t_dict['total_kg'] * 0.8):.1f} kg | Cull Stream: {cull_kg or (t_dict['total_kg'] * 0.2):.1f} kg -> {bio_action}.",
+        )
+
+    return [t1, t2, t3, t4, t5]
+
+
+@router.get("/farmer/{farmer_id}/history", response_model=FarmerTransportHistoryResponse)
+def get_farmer_transport_history(farmer_id: str) -> FarmerTransportHistoryResponse:
+    """Returns the authenticated farmer's active shipments (Current Process) and past delivered history."""
+    try:
+        with get_db_connection() as conn:
+            # Query all transports for farmer
+            trans_rows = conn.execute(
+                """
+                SELECT * FROM transports
+                WHERE farmer_id = ?
+                ORDER BY created_at DESC
+                """,
+                (farmer_id,)
+            ).fetchall()
+
+            active_list: List[TransportTrackingDetailResponse] = []
+            completed_list: List[TransportTrackingDetailResponse] = []
+
+            total_produce_kg = 0.0
+            total_fresh_kg = 0.0
+            total_cull_kg = 0.0
+
+            for t_row in trans_rows:
+                t_dict = dict(t_row)
+                t_id = t_dict["id"]
+
+                # Fetch items for this transport
+                item_rows = conn.execute(
+                    "SELECT * FROM transport_items WHERE transport_id = ? ORDER BY created_at ASC",
+                    (t_id,)
+                ).fetchall()
+                items = [_row_to_transport_item(dict(ir)) for ir in item_rows]
+
+                timeline = _build_transport_timeline(t_dict, items)
+
+                detail = TransportTrackingDetailResponse(
+                    id=t_dict["id"],
+                    farmer_id=t_dict["farmer_id"],
+                    status=t_dict["status"],
+                    destination_center=t_dict["destination_center"],
+                    total_kg=float(t_dict["total_kg"]),
+                    created_at=t_dict["created_at"],
+                    updated_at=t_dict["updated_at"],
+                    dispatched_at=t_dict.get("dispatched_at"),
+                    received_at=t_dict.get("received_at"),
+                    actual_received_kg=float(t_dict["actual_received_kg"]) if t_dict.get("actual_received_kg") is not None else None,
+                    accepted_fresh_kg=float(t_dict["accepted_fresh_kg"]) if t_dict.get("accepted_fresh_kg") is not None else None,
+                    cull_waste_kg=float(t_dict["cull_waste_kg"]) if t_dict.get("cull_waste_kg") is not None else None,
+                    inspector_name=t_dict.get("inspector_name"),
+                    receiving_notes=t_dict.get("receiving_notes"),
+                    quality_grade=t_dict.get("quality_grade"),
+                    bioeconomy_action=t_dict.get("bioeconomy_action"),
+                    items=items,
+                    timeline=timeline,
+                )
+
+                total_produce_kg += float(t_dict["total_kg"])
+                if detail.status in ["Delivered", "Cancelled"]:
+                    completed_list.append(detail)
+                    if detail.accepted_fresh_kg is not None:
+                        total_fresh_kg += detail.accepted_fresh_kg
+                    if detail.cull_waste_kg is not None:
+                        total_cull_kg += detail.cull_waste_kg
+                else:
+                    active_list.append(detail)
+
+            return FarmerTransportHistoryResponse(
+                farmer_id=farmer_id,
+                total_shipments=len(trans_rows),
+                active_shipments_count=len(active_list),
+                delivered_shipments_count=len(completed_list),
+                total_produce_kg=round(total_produce_kg, 2),
+                total_fresh_delivered_kg=round(total_fresh_kg, 2),
+                total_cull_recovered_kg=round(total_cull_kg, 2),
+                active_transports=active_list,
+                completed_transports=completed_list,
+            )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error fetching farmer transport history: {exc!s}"
+        ) from exc
+
+
+@router.get("/{transport_id}", response_model=TransportTrackingDetailResponse)
+def get_transport_tracking_detail(transport_id: str) -> TransportTrackingDetailResponse:
+    """Returns complete real-time tracking details and 5-step milestone timeline for a transport batch."""
+    try:
+        with get_db_connection() as conn:
+            t_row = conn.execute("SELECT * FROM transports WHERE id = ?", (transport_id,)).fetchone()
+            if not t_row:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Transport '{transport_id}' not found.")
+
+            t_dict = dict(t_row)
+            item_rows = conn.execute(
+                "SELECT * FROM transport_items WHERE transport_id = ? ORDER BY created_at ASC",
+                (transport_id,)
+            ).fetchall()
+            items = [_row_to_transport_item(dict(ir)) for ir in item_rows]
+            timeline = _build_transport_timeline(t_dict, items)
+
+            return TransportTrackingDetailResponse(
+                id=t_dict["id"],
+                farmer_id=t_dict["farmer_id"],
+                status=t_dict["status"],
+                destination_center=t_dict["destination_center"],
+                total_kg=float(t_dict["total_kg"]),
+                created_at=t_dict["created_at"],
+                updated_at=t_dict["updated_at"],
+                dispatched_at=t_dict.get("dispatched_at"),
+                received_at=t_dict.get("received_at"),
+                actual_received_kg=float(t_dict["actual_received_kg"]) if t_dict.get("actual_received_kg") is not None else None,
+                accepted_fresh_kg=float(t_dict["accepted_fresh_kg"]) if t_dict.get("accepted_fresh_kg") is not None else None,
+                cull_waste_kg=float(t_dict["cull_waste_kg"]) if t_dict.get("cull_waste_kg") is not None else None,
+                inspector_name=t_dict.get("inspector_name"),
+                receiving_notes=t_dict.get("receiving_notes"),
+                quality_grade=t_dict.get("quality_grade"),
+                bioeconomy_action=t_dict.get("bioeconomy_action"),
+                items=items,
+                timeline=timeline,
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error fetching transport detail: {exc!s}"
+        ) from exc
+
+
+@router.post("/{transport_id}/dispatch")
+def dispatch_transport(transport_id: str, payload: DispatchTransportRequest = None) -> dict:
+    """Farmer dispatches produce from farm gate: updates status to 'In Transit' and locks crate barcodes in transit."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        with get_db_connection() as conn:
+            row = conn.execute("SELECT id, status FROM transports WHERE id = ?", (transport_id,)).fetchone()
+            if not row:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Transport '{transport_id}' not found.")
+
+            conn.execute(
+                """
+                UPDATE transports
+                SET status = 'In Transit', dispatched_at = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (now_iso, now_iso, transport_id)
+            )
+
+            conn.execute(
+                """
+                UPDATE barcode_stickers
+                SET status = 'in_transit', updated_at = ?
+                WHERE assigned_transport_id = ?
+                """,
+                (now_iso, transport_id)
+            )
+
+            conn.execute(
+                """
+                UPDATE transport_items
+                SET item_status = 'In Transit'
+                WHERE transport_id = ?
+                """,
+                (transport_id,)
+            )
+
+            conn.commit()
+
+        return {
+            "status": "success",
+            "transport_id": transport_id,
+            "new_status": "In Transit",
+            "dispatched_at": now_iso,
+            "message": "Produce successfully marked as Dispatched & In Transit to destination collection centre."
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error dispatching transport: {exc!s}"
+        ) from exc
+
+
+@router.post("/{transport_id}/receive")
+def receive_transport_at_collection_center(transport_id: str, payload: ReceiveTransportRequest) -> dict:
+    """Collection Centre Quality Control receives, weighs, and inspects the transport batch.
+    Updates status to 'Delivered' and partitions fresh produce vs bioeconomy cull feedstock.
+    """
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        with get_db_connection() as conn:
+            t_row = conn.execute("SELECT * FROM transports WHERE id = ?", (transport_id,)).fetchone()
+            if not t_row:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Transport '{transport_id}' not found.")
+
+            t_dict = dict(t_row)
+            gross_kg = float(t_dict["total_kg"])
+            actual_kg = float(payload.actual_received_kg) if payload.actual_received_kg is not None else gross_kg
+
+            # If fresh kg not explicitly set, calculate based on average predicted waste
+            item_rows = conn.execute(
+                "SELECT predicted_waste_pct FROM transport_items WHERE transport_id = ?",
+                (transport_id,)
+            ).fetchall()
+            avg_waste_pct = 20.0
+            if item_rows:
+                pcts = [r["predicted_waste_pct"] for r in item_rows if r["predicted_waste_pct"] is not None]
+                if pcts:
+                    avg_waste_pct = sum(pcts) / len(pcts)
+
+            if payload.accepted_fresh_kg is not None:
+                fresh_kg = float(payload.accepted_fresh_kg)
+            else:
+                fresh_kg = round(actual_kg * (1.0 - avg_waste_pct / 100.0), 2)
+
+            if payload.cull_waste_kg is not None:
+                cull_kg = float(payload.cull_waste_kg)
+            else:
+                cull_kg = round(actual_kg - fresh_kg, 2)
+
+            bio_action = payload.bioeconomy_action or (
+                "Anaerobic Biogas Diversion" if avg_waste_pct > 25.0 else "SLSI 1246:2003 Aerobic Composting"
+            )
+
+            conn.execute(
+                """
+                UPDATE transports
+                SET status = 'Delivered', received_at = ?, actual_received_kg = ?,
+                    accepted_fresh_kg = ?, cull_waste_kg = ?, inspector_name = ?,
+                    receiving_notes = ?, quality_grade = ?, bioeconomy_action = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    now_iso, actual_kg, fresh_kg, cull_kg, payload.inspector_name,
+                    payload.receiving_notes, payload.quality_grade, bio_action, now_iso, transport_id
+                )
+            )
+
+            conn.execute(
+                """
+                UPDATE barcode_stickers
+                SET status = 'delivered', updated_at = ?
+                WHERE assigned_transport_id = ?
+                """,
+                (now_iso, transport_id)
+            )
+
+            conn.execute(
+                """
+                UPDATE transport_items
+                SET item_status = 'Delivered', actual_received_kg = ?, accepted_fresh_kg = ?, cull_waste_kg = ?
+                WHERE transport_id = ?
+                """,
+                (actual_kg, fresh_kg, cull_kg, transport_id)
+            )
+
+            conn.commit()
+
+        return {
+            "status": "success",
+            "transport_id": transport_id,
+            "new_status": "Delivered",
+            "received_at": now_iso,
+            "actual_received_kg": actual_kg,
+            "accepted_fresh_kg": fresh_kg,
+            "cull_waste_kg": cull_kg,
+            "quality_grade": payload.quality_grade,
+            "inspector_name": payload.inspector_name,
+            "bioeconomy_action": bio_action,
+            "message": f"Transport batch verified at collection centre. Fresh retail: {fresh_kg} kg | Cull diverted to {bio_action}: {cull_kg} kg."
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error receiving transport: {exc!s}"
         ) from exc
 
 

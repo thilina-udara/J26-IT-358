@@ -55,6 +55,10 @@ class TransportLotItem(BaseModel):
     stream_1_fresh_kg: Optional[float] = None
     stream_2_waste_kg: Optional[float] = None
     bioeconomy_destination: Optional[str] = None
+    actual_received_kg: Optional[float] = None
+    accepted_fresh_kg: Optional[float] = None
+    cull_waste_kg: Optional[float] = None
+    item_status: Optional[str] = "Ready"
     advice: Optional[List[str]] = None
     created_at: Optional[str] = None
 
@@ -89,3 +93,61 @@ class ConfirmTransportResponse(BaseModel):
     overall_risk_level: str
     confirmed_at: str
     message: str
+
+
+class DispatchTransportRequest(BaseModel):
+    driver_name: Optional[str] = None
+    vehicle_no: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ReceiveTransportRequest(BaseModel):
+    inspector_name: str = Field(..., description="Receiving Quality Inspector Name")
+    receiving_notes: Optional[str] = "Inspected and accepted at receiving dock."
+    quality_grade: Optional[str] = "Grade A - Good Condition"
+    actual_received_kg: Optional[float] = None
+    accepted_fresh_kg: Optional[float] = None
+    cull_waste_kg: Optional[float] = None
+    bioeconomy_action: Optional[str] = "Diverted to Dambulla Bio-Hub for SLSI 1246:2003 Aerobic Composting"
+
+
+class TimelineEvent(BaseModel):
+    step: int
+    title: str
+    status: str  # 'completed', 'current', 'pending'
+    timestamp: Optional[str] = None
+    description: str
+
+
+class TransportTrackingDetailResponse(BaseModel):
+    id: str
+    farmer_id: str
+    status: str
+    destination_center: str
+    total_kg: float
+    created_at: str
+    updated_at: str
+    dispatched_at: Optional[str] = None
+    received_at: Optional[str] = None
+    actual_received_kg: Optional[float] = None
+    accepted_fresh_kg: Optional[float] = None
+    cull_waste_kg: Optional[float] = None
+    inspector_name: Optional[str] = None
+    receiving_notes: Optional[str] = None
+    quality_grade: Optional[str] = None
+    bioeconomy_action: Optional[str] = None
+    items: List[TransportLotItem] = []
+    timeline: List[TimelineEvent] = []
+
+
+class FarmerTransportHistoryResponse(BaseModel):
+    farmer_id: str
+    total_shipments: int
+    active_shipments_count: int
+    delivered_shipments_count: int
+    total_produce_kg: float
+    total_fresh_delivered_kg: float
+    total_cull_recovered_kg: float
+    active_transports: List[TransportTrackingDetailResponse]
+    completed_transports: List[TransportTrackingDetailResponse]
+

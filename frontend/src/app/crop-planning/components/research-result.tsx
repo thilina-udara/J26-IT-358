@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertCircle, CheckCircle2, Sprout } from "lucide-react";
+import { CheckCircle2, Sprout } from "lucide-react";
 import type { HistoricalScenarioResponse } from "../lib/contracts";
 
 export function ResearchResult({
@@ -241,26 +241,6 @@ export function ResearchResult({
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Research Validity Statement Blue Banner */}
-      <div
-        style={{
-          background: "#f0f9ff",
-          border: "1px solid #bae6fd",
-          borderRadius: "14px",
-          padding: "14px 18px",
-          display: "flex",
-          alignItems: "flex-start",
-          gap: "12px",
-        }}
-      >
-        <AlertCircle size={18} style={{ color: "#0284c7", flexShrink: 0, marginTop: "2px" }} />
-        <p style={{ fontSize: "12.5px", color: "#0369a1", margin: 0, lineHeight: 1.5 }}>
-          <strong>Research Validity Statement:</strong> RESEARCH DEMO PROXY: This result is a retrospective research proxy
-          derived from frozen historical labels (2020-2026). It does not represent an independently verified market
-          oversupply, price drop, or live farmer risk claim. Current operational risk remains strictly unvalidated.
-        </p>
       </div>
 
       {diagnosticAlternatives.length > 0 && (

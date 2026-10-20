@@ -1,0 +1,120 @@
+{
+  "pipeline_name": "Phase 1 Leakage-Free Crop Phenological Feature Extraction",
+  "study_crops": [
+    "Maize",
+    "Chilli",
+    "Green Gram"
+  ],
+  "total_observations": 3256,
+  "train_observations_2001_2020": 2574,
+  "test_observations_2021_2025": 682,
+  "eligible_anomaly_training_records": 2280,
+  "eligible_anomaly_test_records": 677,
+  "excluded_warmup_records_total": 299,
+  "baseline_strategy": {
+    "formula": "Mean of preceding eligible yields in [crop_year - 3, crop_year - 1]",
+    "zero_leakage_guarantee": "Current crop_year and all future crop_years are strictly excluded.",
+    "eligibility_threshold": "Requires at least 2 preceding years in [t-3, t-1] (is_eligible_for_anomaly_training == 1).",
+    "status_types": {
+      "VALID_3YR_ROLLING": "Full 3 preceding years available in [t-3, t-1]. Eligible for training.",
+      "VALID_2YR_ROLLING": "2 preceding years available in [t-3, t-1]. Eligible for training.",
+      "WARMUP_1YR_LAG": "1 preceding year available. Target yield_anomaly_pct set to NaN. Excluded from anomaly training.",
+      "INSUFFICIENT_HISTORY": "0 preceding years available (e.g. 2001). Target yield_anomaly_pct set to NaN. Excluded from anomaly training."
+    }
+  },
+  "pre_season_features": [
+    "pre_season_rainfall_30d_mm",
+    "pre_season_rainfall_15d_prep_mm",
+    "pre_season_temp_mean_c",
+    "pre_season_temp_max_peak_c",
+    "pre_season_dry_spell_max_days",
+    "pre_season_spi3",
+    "pre_season_spi1",
+    "pre_season_sm_topsoil_layer1_m3_m3",
+    "pre_season_sm_root_zone_approx_m3_m3"
+  ],
+  "mid_season_features": [
+    "mid_season_rainfall_cum_mm",
+    "mid_season_temp_mean_c",
+    "mid_season_temp_max_peak_c",
+    "mid_season_heat_days_ge_34c",
+    "mid_season_heat_days_ge_35c",
+    "mid_season_dry_spell_max_days",
+    "mid_season_heavy_rain_days_ge_50mm",
+    "mid_season_spi3",
+    "mid_season_spi1",
+    "mid_season_sm_topsoil_layer1_mean",
+    "mid_season_sm_topsoil_layer1_min",
+    "mid_season_sm_root_zone_approx_mean",
+    "mid_season_sm_root_zone_approx_min"
+  ],
+  "soil_moisture_specification": {
+    "source": "ECMWF ERA5-Land monthly reanalysis via Copernicus Climate Data Store",
+    "topsoil_layer1": "Depth: 0 to 7 cm skin topsoil moisture (m3/m3). Reflects rapid surface drying.",
+    "root_zone_approx": "Thickness-weighted average of Layer 2 (7-28 cm, 21 cm) and Layer 3 (28-100 cm, 72 cm): (21*L2 + 72*L3) / 93.",
+    "scientific_limitation": "The root zone feature is an approximation from reanalysis modeling across 7-100 cm, not an in-situ probe measurement."
+  },
+  "crop_specific_prediction_cutoffs": {
+    "Maize": {
+      "Maha": {
+        "pre_season": "October 01 (Y-1)",
+        "mid_season": "December 15 (Y-1)",
+        "monitoring_days": 76
+      },
+      "Yala": {
+        "pre_season": "April 01 (Y)",
+        "mid_season": "June 15 (Y)",
+        "monitoring_days": 76
+      },
+      "growth_stage_at_mid_season": "Flowering / Tasseling & Silking (~Day 50-60). Pre-harvest (grain harvest Jan W3 / Jul W2).",
+      "sowing_calendar_evidence": "DOA/AFACI (2013) Maize: Sowing Oct W2-Nov W2 / Apr W1-Apr W4; total life cycle 110-120 days."
+    },
+    "Chilli": {
+      "Maha": {
+        "pre_season": "October 01 (Y-1)",
+        "mid_season": "December 15 (Y-1)",
+        "monitoring_days": 76
+      },
+      "Yala": {
+        "pre_season": "April 01 (Y)",
+        "mid_season": "June 15 (Y)",
+        "monitoring_days": 76
+      },
+      "growth_stage_at_mid_season": "Flowering / Early fruit development. Pre-harvest for major picking.",
+      "sowing_calendar_evidence": "DOA/AFACI (2013) Chilli: Transplanting Oct W3-Nov W3 / Apr W2-May W2; total life cycle 150-180 days."
+    },
+    "Green Gram": {
+      "Maha": {
+        "pre_season": "October 01 (Y-1)",
+        "mid_season": "November 15 (Y-1)",
+        "monitoring_days": 46
+      },
+      "Yala": {
+        "pre_season": "April 01 (Y)",
+        "mid_season": "May 15 (Y)",
+        "monitoring_days": 45
+      },
+      "growth_stage_at_mid_season": "Flowering / Pod setting (~Day 30-35). Pre-harvest lead time: capped 3-4 weeks prior to first harvest.",
+      "sowing_calendar_evidence": "DOA/AFACI (2013) Green Gram: Sowing Oct W3-Nov W3 / Apr W2-May W2; harvesting Dec W4-Jan W4 / Jun W2-Jul W3; total life cycle 65-75 days.",
+      "sowing_variability_caveat": "Exact flowering timing varies by 1-2 weeks depending on rainfall onset and farmer planting decisions."
+    }
+  },
+  "operational_data_availability_latency": {
+    "real_time_usable_at_cutoff": [
+      "All pre-season and mid-season daily weather aggregations (rainfall, temp, heat days, dry spells)",
+      "Mid-season SPI and Soil Moisture (uses prior closed month: Nov for Dec 15; Oct for Nov 15; May for Jun 15; Apr for May 15, published 8-12 days before cutoff)"
+    ],
+    "operational_latency_caution_at_cutoff": [
+      "Pre-season SPI-1/SPI-3 (uses Sep for Oct 01 / Mar for Apr 01; requires 1-3 days post month-end for Met Dept calculation)",
+      "Pre-season ERA5-Land monthly soil moisture (official CDS release has 5-7 days latency; real-time operational deployment on Oct 01 / Apr 01 requires preliminary ERA5T data or station probe proxies)"
+    ]
+  },
+  "macro_shock_control": {
+    "flag": "is_fertilizer_crisis_year",
+    "affected_years": [
+      2021,
+      2022
+    ],
+    "rationale": "Statistical control for nationwide chemical fertilizer import ban (April 2021). Not a causal proof or fertilizer advisory tool."
+  }
+}

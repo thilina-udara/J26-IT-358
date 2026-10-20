@@ -1,0 +1,5 @@
+commodity,category,previous_loss_pct,conventional_loss_pct,conventional_loss_std,improved_loss_pct,improved_loss_std
+Papaya,Fruit,46.0,19.58,2.13,11.4,0.72
+Guava,Fruit,35.0,20.37,0.98,6.47,0.81
+Banana,Fruit,32.5,26.54,3.04,18.65,1.31
+Mango,Fruit,41.0,15.15,1.03,5.96,0.26

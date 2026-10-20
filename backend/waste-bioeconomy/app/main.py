@@ -1,36 +1,65 @@
-"""
-Component 3: Algorithmic Optimization of Circular Bioeconomy Networks (Waste Management & Organic Fertilizer)
-Owner: WMK Lakruwan (IT23330382)
-Project: J26-IT-358
-"""
+"""FastAPI application for waste-bioeconomy service."""
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.transport_db import init_transport_db
+from app.routes.compost import router as compost_router
+from app.routes.fertilizer import router as fertilizer_router
+from app.routes.risk import router as risk_router
+from app.routes.transport import router as transport_router
+
+# Initialize SQLite database for barcode stickers and transports
+init_transport_db()
+
 app = FastAPI(
     title="Algorithmic Optimization of Circular Bioeconomy Networks",
-    description="Microservice for post-harvest spoilage risk scoring, MILP C:N compost ratio optimization, and NPK redistribution.",
-    version="1.0.0"
+    description=(
+        "Research microservice for pre-arrival post-harvest spoilage risk scoring (XGBoost), "
+        "dual-stream commercial/bioeconomy mass partitioning, Mixed-Integer Linear Programming (MILP) "
+        "compost C:N & moisture recipe optimization (PuLP/HiGHS), SLSI 1246:2003 quality certification audits, "
+        "automated anaerobic biogas fallback routing, and closed-loop NPK fertilizer demand matching with CVRP routing."
+    ),
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
+# CORS Configuration for Frontend Integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
-def root():
+# Register Subsystem Routers
+app.include_router(risk_router)
+app.include_router(compost_router)
+app.include_router(fertilizer_router)
+app.include_router(transport_router)
+
+
+@app.get("/", tags=["System Information"])
+def root() -> dict[str, str | int]:
     return {
         "service": "Algorithmic Optimization of Circular Bioeconomy Networks",
         "component": "Component 03",
-        "owner": "WMK Lakruwan",
+        "project": "J26-IT-358",
         "status": "online",
-        "port": 8003
+        "port": 8003,
+        "docs": "/docs",
+        "health": "/health",
     }
 
-@app.get("/health")
-def health_check():
-    return {"status": "healthy", "service": "waste-bioeconomy-service"}
+
+@app.get("/health", tags=["System Information"])
+def health_check() -> dict[str, str]:
+    return {
+        "status": "healthy",
+        "service": "waste-bioeconomy-service",
+        "component": "Component 03",
+        "ml_engine": "XGBoost v3.4.1",
+        "optimizer_engine": "PuLP MILP + HiGHS / SciPy Simplex",
+    }

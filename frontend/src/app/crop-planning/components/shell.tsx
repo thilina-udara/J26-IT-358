@@ -20,6 +20,8 @@ import {
   User,
   Bell,
   FlaskConical,
+  Truck,
+  Recycle,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -34,6 +36,8 @@ const icons: Record<string, LucideIcon> = {
   analysis: BarChart3,
   crops: Sprout,
   planning: CalendarDays,
+  waste: Recycle,
+  transport: Truck,
   research: FlaskConical,
   profile: User,
 };
@@ -434,15 +438,17 @@ export function CropShell({ children }: { children: React.ReactNode }) {
             <strong style={{ color: "#0f172a", fontWeight: 600 }}>
               {pathname.includes("/research-demo")
                 ? "Research Lab (2025-2026)"
-                : pathname.includes("risk-analysis")
-                  ? "Risk Analysis"
-                  : pathname.includes("suggested-crops")
-                    ? "Suggested Crops"
-                    : pathname.includes("cultivation-methods") || pathname.includes("cultivation-plan")
-                      ? "Cultivation Planning"
-                      : pathname.includes("plans")
-                        ? "My Farm Plans"
-                        : "Dashboard"}
+                : pathname.includes("waste-management") || pathname.includes("transport-tracking")
+                  ? "Waste Management & Transport Tracking"
+                  : pathname.includes("risk-analysis")
+                    ? "Risk Analysis"
+                    : pathname.includes("suggested-crops")
+                      ? "Suggested Crops"
+                      : pathname.includes("cultivation-methods") || pathname.includes("cultivation-plan")
+                        ? "Cultivation Planning"
+                        : pathname.includes("plans")
+                          ? "My Farm Plans"
+                          : "Dashboard"}
             </strong>
           </div>
 

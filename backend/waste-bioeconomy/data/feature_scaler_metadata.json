@@ -1,0 +1,60 @@
+{
+  "scaler_type": "StandardScaler",
+  "fitted_on": "train_spoilage_data.csv (N=5601)",
+  "features": [
+    "quantity_kg",
+    "distance_km",
+    "transit_hours",
+    "transit_speed_kmh",
+    "ambient_temperature_c",
+    "effective_temperature_c",
+    "ambient_humidity_pct",
+    "mechanical_vibration_index",
+    "thermal_stress_index",
+    "q10_respiration_factor",
+    "crop_moisture_pct",
+    "crop_c_n_ratio"
+  ],
+  "mean": {
+    "quantity_kg": 427.8709159078736,
+    "distance_km": 114.67755757900375,
+    "transit_hours": 5.237279057311194,
+    "transit_speed_kmh": 22.551506873772542,
+    "ambient_temperature_c": 29.737386181039096,
+    "effective_temperature_c": 35.06868059275129,
+    "ambient_humidity_pct": 74.03658275307981,
+    "mechanical_vibration_index": 169.5423281556865,
+    "thermal_stress_index": 137.4358364577754,
+    "q10_respiration_factor": 9.493832708444922,
+    "crop_moisture_pct": 87.56191751472952,
+    "crop_c_n_ratio": 27.438011069451882
+  },
+  "scale": {
+    "quantity_kg": 211.02056348425424,
+    "distance_km": 17.388067152650034,
+    "transit_hours": 1.0823341744951165,
+    "transit_speed_kmh": 4.442308203509313,
+    "ambient_temperature_c": 2.917842816405309,
+    "effective_temperature_c": 12.909472241315338,
+    "ambient_humidity_pct": 9.536006565088341,
+    "mechanical_vibration_index": 47.26553453757242,
+    "thermal_stress_index": 87.28627291732401,
+    "q10_respiration_factor": 9.028733116087201,
+    "crop_moisture_pct": 6.291375127972689,
+    "crop_c_n_ratio": 14.662771374780883
+  },
+  "var": {
+    "quantity_kg": 44529.67821321217,
+    "distance_km": 302.3448793050671,
+    "transit_hours": 1.1714472652800254,
+    "transit_speed_kmh": 19.734102174966143,
+    "ambient_temperature_c": 8.513806701248065,
+    "effective_temperature_c": 166.65447354929125,
+    "ambient_humidity_pct": 90.93542120940795,
+    "mechanical_vibration_index": 2234.0307551224514,
+    "thermal_stress_index": 7618.893439797572,
+    "q10_respiration_factor": 81.51802168152969,
+    "crop_moisture_pct": 39.58140100087337,
+    "crop_c_n_ratio": 214.99686438909367
+  }
+}

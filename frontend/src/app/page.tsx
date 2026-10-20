@@ -103,32 +103,32 @@ export default function HomePage() {
       title:
         "Barcode-Based Produce Tracking, Waste Management & Organic Fertilizer Management",
       shortTitle: "Produce Traceability & Circular Waste Recovery",
-      category: "Component 03",
-      badgeText: "Traceability & Waste",
+      category: "Component 03 • Core Bioeconomy & Tracking (Live)",
+      badgeText: "Traceability & Waste (Live)",
       image: "/images/component3_waste.jpg",
-      tagColor: "#b45309",
-      tagBg: "#fef3c7",
+      tagColor: "#15803d",
+      tagBg: "#dcfce7",
       description:
-        "Farm-to-market QR/barcode traceability, cold-chain monitoring, spoilage detection, and circular economy recovery into organic bio-fertilizer and biogas.",
+        "Farm-to-market crate barcode traceability (BC-000001+), real-time XGBoost spoilage risk scoring, and circular economy recovery into organic bio-fertilizer and biogas.",
       gapAddressed:
         "Produce collection and transport are fragmented and manual. Rejected, damaged, or unsold produce is dumped in landfills rather than recovered as low-cost organic fertilizer.",
       inputs: [
-        "Farmer ID, crop variety, harvest date, and crate batch QR code",
+        "Farmer ID, crop variety, harvest date, and crate batch barcode (BC-000001+)",
         "Collection centre receipts and transit monitoring logs",
         "Rejected, damaged, or unsold produce records",
         "Regional organic fertilizer demand from farmers and home gardeners",
       ],
       process:
-        "Products registered via barcode/QR codes after harvest. The system tracks collection, transport, and stock movement. Identifies damaged produce and recommends redistribution, discounted sales, composting, organic fertilizer production, or biogas generation.",
+        "Produce lots registered via crate barcode stickers. The system tracks collection, transport, and stock movement. Evaluates spoilage risk with XGBoost, partitions fresh vs cull waste streams, and optimizes composting recipe allocation.",
       outputs: [
         "End-to-end produce traceability records and transit status",
-        "Wholesale inventory & supply chain visibility",
-        "Produce waste risk classification score",
+        "Quantitative in-transit spoilage risk prediction (ŷ loss %)",
+        "Produce waste risk classification score (Low / Medium / High)",
         "Organic compost yield estimates and fertilizer distribution plans",
       ],
-      href: "/crop-planning/plans",
-      actionText: "Explore Traceability & Recovery",
-      isLive: false,
+      href: "/waste-management",
+      actionText: "Launch Transport Tracking & Waste Module",
+      isLive: true,
     },
     {
       id: 4,
@@ -201,12 +201,13 @@ export default function HomePage() {
           {/* Navigation Links */}
           <nav className="portal-nav-links">
             <a href="#hero" style={{ color: "#15803d" }}>Home</a>
+            <Link href="/waste-management" style={{ fontWeight: 700, color: "#15803d" }}>
+              Waste & Transport Tracking
+            </Link>
+            <a href="#services">Our Services</a>
             <a href="#about">About Us</a>
             <a href="#features">Key Features</a>
-            <a href="#how-it-works">How It Works</a>
-            <a href="#services">Our Services</a>
             <a href="#sdgs">SDGs</a>
-            <a href="#testimonials">Testimonials</a>
           </nav>
 
           {/* Action Buttons */}

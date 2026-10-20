@@ -18,6 +18,9 @@ import {
   Plus,
   PlusCircle,
   Sprout,
+  Truck,
+  QrCode,
+  Recycle,
 } from "lucide-react";
 import { useSession } from "../components/session";
 import { useLoad } from "../components/ui";
@@ -617,6 +620,106 @@ export default function DashboardPage() {
               <small style={{ fontSize: "11px", color: "#64748b" }}>Register seasonal intention</small>
             </div>
           </Link>
+
+          {/* Action 5: Waste Management (Component 3) */}
+          <Link
+            href="/waste-management"
+            style={{
+              background: "#ecfdf5",
+              borderRadius: "18px",
+              padding: "20px",
+              border: "1px solid #a7f3d0",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              textDecoration: "none",
+              transition: "all 0.2s",
+            }}
+            className="hover-lift"
+          >
+            <div
+              style={{
+                width: "44px",
+                height: "44px",
+                borderRadius: "12px",
+                background: "#059669",
+                color: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Recycle size={22} />
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <strong style={{ fontSize: "14px", color: "#0f172a", display: "block" }}>
+                  Waste Management
+                </strong>
+                <span style={{ fontSize: "9px", fontWeight: 800, background: "#d1fae5", color: "#065f46", padding: "1px 5px", borderRadius: "4px" }}>LIVE</span>
+              </div>
+              <small style={{ fontSize: "11px", color: "#64748b" }}>Traceability & bioeconomy</small>
+            </div>
+          </Link>
+        </div>
+      </section>
+
+      {/* --------------------------------------------------------------------------
+          3B. PRODUCE TRANSPORT & SPOILAGE RISK (Component 3 Banner)
+          -------------------------------------------------------------------------- */}
+      <section style={{ marginBottom: "28px" }}>
+        <div
+          style={{
+            background: "linear-gradient(135deg, #064e3b 0%, #065f46 60%, #047857 100%)",
+            borderRadius: "22px",
+            padding: "24px 28px",
+            color: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "20px",
+            boxShadow: "0 6px 20px rgba(6, 78, 59, 0.18)",
+          }}
+        >
+          <div style={{ maxWidth: "680px" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(255, 255, 255, 0.15)", padding: "3px 10px", borderRadius: "9999px", fontSize: "11.5px", fontWeight: 700, marginBottom: "8px" }}>
+              <Truck size={13} />
+              Component 03 • Pre-Departure Produce Traceability & Spoilage Optimization
+            </div>
+            <h3 style={{ fontSize: "20px", fontWeight: 800, margin: "0 0 6px 0", letterSpacing: "-0.3px" }}>
+              Farmer Transport Tracking & Spoilage Risk Prediction
+            </h3>
+            <p style={{ fontSize: "13px", opacity: 0.9, lineHeight: 1.5, margin: 0 }}>
+              Register produce lots with pre-issued crate stickers (<code>BC-000001+</code>), predict transit spoilage loss % with trained XGBoost models, and allocate cull waste to organic compost.
+            </p>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+            <Link
+              href="/waste-management"
+              style={{
+                background: "#ffffff",
+                color: "#065f46",
+                borderRadius: "12px",
+                padding: "12px 22px",
+                fontSize: "13.5px",
+                fontWeight: 800,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                transition: "all 0.15s",
+              }}
+            >
+              <QrCode size={17} />
+              <span>Launch Waste Management Module</span>
+              <ArrowRight size={15} />
+            </Link>
+          </div>
         </div>
       </section>
 

@@ -1,0 +1,13 @@
+commodity,category,previous_loss_pct,conventional_loss_pct,conventional_loss_std,improved_loss_pct,improved_loss_std
+Snap Bean,Vegetable,40.0,23.84,0.12,6.32,0.19
+Okra,Vegetable,40.0,28.24,0.41,7.17,0.26
+Brinjal,Vegetable,30.0,20.31,3.11,7.45,1.22
+Cabbage,Vegetable,43.0,20.43,0.55,7.91,0.61
+Carrot,Vegetable,30.0,22.46,0.65,6.51,0.24
+Capsicum,Vegetable,35.0,25.74,0.95,8.29,0.62
+Long Bean,Vegetable,40.0,20.36,2.16,9.38,1.07
+Potato,Vegetable,,14.46,0.28,5.01,0.3
+Mukunuwenna,Vegetable,,12.46,0.59,6.84,0.35
+Green chilli,Vegetable,35.0,19.62,1.04,4.97,0.23
+Bitter gourd,Vegetable,25.0,24.71,2.25,9.46,1.03
+Tomato,Vegetable,29.0,15.93,0.84,7.31,0.71

@@ -7,7 +7,10 @@ from urllib.parse import urlsplit
 def allowed_origins():
     message = 'CULTIVATION_CORS_ORIGINS must be a JSON array of explicit HTTP(S) origins without paths or wildcards'
     try:
-        values = json.loads(os.getenv('CULTIVATION_CORS_ORIGINS', '[]'))
+        raw = os.getenv('CULTIVATION_CORS_ORIGINS', '["http://localhost:3000", "http://127.0.0.1:3000"]')
+        values = json.loads(raw)
+        if not values:
+            values = ["http://localhost:3000", "http://127.0.0.1:3000"]
         if not isinstance(values, list):
             raise ValueError(message)
         origins = []

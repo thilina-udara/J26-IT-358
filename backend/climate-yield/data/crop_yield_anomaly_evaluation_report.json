@@ -1,0 +1,2219 @@
+{
+  "experiment": "Phase 2 Crop Yield Anomaly Model Training and Evaluation",
+  "approved_crops": [
+    "Maize",
+    "Chilli",
+    "Green Gram"
+  ],
+  "eligible_train_records": 2280,
+  "eligible_test_records": 677,
+  "horizons": [
+    "Pre-Season (Operational 5-Feat)",
+    "Pre-Season (Full Research 9-Feat)",
+    "Mid-Season (In-Season 13-Feat)"
+  ],
+  "results_by_crop_and_horizon": {
+    "Maize": {
+      "Pre-Season (Operational 5-Feat)": {
+        "selected_winning_model": "Zero-Anomaly Baseline",
+        "selection_reason": "Crop-decoupled fallback: no candidate achieved >= 3.0% validation RMSE reduction and >= 7/10 fold wins.",
+        "features_used": [
+          "pre_season_rainfall_30d_mm",
+          "pre_season_rainfall_15d_prep_mm",
+          "pre_season_temp_mean_c",
+          "pre_season_temp_max_peak_c",
+          "pre_season_dry_spell_max_days"
+        ],
+        "validation_summary_10_folds": {
+          "Zero-Anomaly Baseline": {
+            "mean_val_rmse_pp": 88.36,
+            "std_val_rmse_pp": 61.41,
+            "mean_val_mae_pp": 43.34,
+            "mean_val_yield_rmse_mtha": 1.988,
+            "mean_val_direction_acc_pct": 19.6,
+            "rel_rmse_improvement_pct": 0.0,
+            "fold_wins_out_of_10": 0,
+            "passes_acceptance_gates": false
+          },
+          "Huber Regressor": {
+            "mean_val_rmse_pp": 87.11,
+            "std_val_rmse_pp": 60.98,
+            "mean_val_mae_pp": 44.98,
+            "mean_val_yield_rmse_mtha": 2.035,
+            "mean_val_direction_acc_pct": 46.6,
+            "rel_rmse_improvement_pct": 1.41,
+            "fold_wins_out_of_10": 8,
+            "passes_acceptance_gates": false
+          },
+          "Ridge Regression": {
+            "mean_val_rmse_pp": 88.19,
+            "std_val_rmse_pp": 58.68,
+            "mean_val_mae_pp": 49.84,
+            "mean_val_yield_rmse_mtha": 2.189,
+            "mean_val_direction_acc_pct": 46.3,
+            "rel_rmse_improvement_pct": 0.19,
+            "fold_wins_out_of_10": 5,
+            "passes_acceptance_gates": false
+          },
+          "ElasticNet": {
+            "mean_val_rmse_pp": 88.03,
+            "std_val_rmse_pp": 58.67,
+            "mean_val_mae_pp": 49.68,
+            "mean_val_yield_rmse_mtha": 2.182,
+            "mean_val_direction_acc_pct": 45.9,
+            "rel_rmse_improvement_pct": 0.37,
+            "fold_wins_out_of_10": 5,
+            "passes_acceptance_gates": false
+          },
+          "Shallow HistGradientBoosting": {
+            "mean_val_rmse_pp": 91.02,
+            "std_val_rmse_pp": 56.44,
+            "mean_val_mae_pp": 51.35,
+            "mean_val_yield_rmse_mtha": 2.343,
+            "mean_val_direction_acc_pct": 44.6,
+            "rel_rmse_improvement_pct": -3.01,
+            "fold_wins_out_of_10": 5,
+            "passes_acceptance_gates": false
+          }
+        },
+        "held_out_test_evaluation": {
+          "Zero-Anomaly Baseline": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 23.29,
+              "anomaly_rmse_pp": 44.69,
+              "anomaly_medae_pp": 13.99,
+              "anomaly_r2": -0.0036,
+              "yield_mae_mtha": 0.783,
+              "yield_rmse_mtha": 1.392,
+              "yield_r2": 0.1668,
+              "direction_accuracy_pct": 28.2
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 21.39,
+              "anomaly_rmse_pp": 30.61,
+              "anomaly_medae_pp": 14.52,
+              "anomaly_r2": -0.0001,
+              "yield_mae_mtha": 0.807,
+              "yield_rmse_mtha": 1.409,
+              "yield_r2": 0.1202,
+              "direction_accuracy_pct": 27.4
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 24.53,
+              "anomaly_rmse_pp": 51.84,
+              "anomaly_medae_pp": 13.46,
+              "anomaly_r2": -0.0083,
+              "yield_mae_mtha": 0.768,
+              "yield_rmse_mtha": 1.381,
+              "yield_r2": 0.1954,
+              "direction_accuracy_pct": 28.7
+            }
+          },
+          "Huber Regressor": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 24.73,
+              "anomaly_rmse_pp": 45.11,
+              "anomaly_medae_pp": 14.09,
+              "anomaly_r2": -0.0226,
+              "yield_mae_mtha": 0.839,
+              "yield_rmse_mtha": 1.469,
+              "yield_r2": 0.0725,
+              "direction_accuracy_pct": 49.8
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 23.12,
+              "anomaly_rmse_pp": 31.54,
+              "anomaly_medae_pp": 16.52,
+              "anomaly_r2": -0.0617,
+              "yield_mae_mtha": 0.878,
+              "yield_rmse_mtha": 1.517,
+              "yield_r2": -0.0186,
+              "direction_accuracy_pct": 46.4
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 25.78,
+              "anomaly_rmse_pp": 52.08,
+              "anomaly_medae_pp": 12.74,
+              "anomaly_r2": -0.0175,
+              "yield_mae_mtha": 0.813,
+              "yield_rmse_mtha": 1.437,
+              "yield_r2": 0.1285,
+              "direction_accuracy_pct": 51.9
+            }
+          },
+          "Ridge Regression": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 35.61,
+              "anomaly_rmse_pp": 51.63,
+              "anomaly_medae_pp": 25.9,
+              "anomaly_r2": -0.3395,
+              "yield_mae_mtha": 1.212,
+              "yield_rmse_mtha": 1.859,
+              "yield_r2": -0.486,
+              "direction_accuracy_pct": 35.2
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 33.45,
+              "anomaly_rmse_pp": 40.9,
+              "anomaly_medae_pp": 30.17,
+              "anomaly_r2": -0.785,
+              "yield_mae_mtha": 1.254,
+              "yield_rmse_mtha": 1.949,
+              "yield_r2": -0.6822,
+              "direction_accuracy_pct": 33.3
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 37.01,
+              "anomaly_rmse_pp": 57.55,
+              "anomaly_medae_pp": 23.53,
+              "anomaly_r2": -0.2425,
+              "yield_mae_mtha": 1.185,
+              "yield_rmse_mtha": 1.798,
+              "yield_r2": -0.3649,
+              "direction_accuracy_pct": 36.4
+            }
+          },
+          "ElasticNet": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 35.59,
+              "anomaly_rmse_pp": 51.47,
+              "anomaly_medae_pp": 26.13,
+              "anomaly_r2": -0.3311,
+              "yield_mae_mtha": 1.212,
+              "yield_rmse_mtha": 1.854,
+              "yield_r2": -0.478,
+              "direction_accuracy_pct": 35.2
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 33.65,
+              "anomaly_rmse_pp": 41.0,
+              "anomaly_medae_pp": 30.55,
+              "anomaly_r2": -0.7934,
+              "yield_mae_mtha": 1.261,
+              "yield_rmse_mtha": 1.95,
+              "yield_r2": -0.6833,
+              "direction_accuracy_pct": 33.3
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 36.84,
+              "anomaly_rmse_pp": 57.27,
+              "anomaly_medae_pp": 23.52,
+              "anomaly_r2": -0.2303,
+              "yield_mae_mtha": 1.18,
+              "yield_rmse_mtha": 1.789,
+              "yield_r2": -0.3513,
+              "direction_accuracy_pct": 36.4
+            }
+          },
+          "Shallow HistGradientBoosting": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 39.17,
+              "anomaly_rmse_pp": 57.71,
+              "anomaly_medae_pp": 27.08,
+              "anomaly_r2": -0.6736,
+              "yield_mae_mtha": 1.363,
+              "yield_rmse_mtha": 2.232,
+              "yield_r2": -1.142,
+              "direction_accuracy_pct": 39.0
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 39.0,
+              "anomaly_rmse_pp": 50.9,
+              "anomaly_medae_pp": 28.68,
+              "anomaly_r2": -1.7641,
+              "yield_mae_mtha": 1.459,
+              "yield_rmse_mtha": 2.353,
+              "yield_r2": -1.4523,
+              "direction_accuracy_pct": 38.1
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 39.28,
+              "anomaly_rmse_pp": 61.74,
+              "anomaly_medae_pp": 24.48,
+              "anomaly_r2": -0.4303,
+              "yield_mae_mtha": 1.3,
+              "yield_rmse_mtha": 2.149,
+              "yield_r2": -0.9504,
+              "direction_accuracy_pct": 39.5
+            }
+          }
+        }
+      },
+      "Pre-Season (Full Research 9-Feat)": {
+        "selected_winning_model": "Zero-Anomaly Baseline",
+        "selection_reason": "Crop-decoupled fallback: no candidate achieved >= 3.0% validation RMSE reduction and >= 7/10 fold wins.",
+        "features_used": [
+          "pre_season_rainfall_30d_mm",
+          "pre_season_rainfall_15d_prep_mm",
+          "pre_season_temp_mean_c",
+          "pre_season_temp_max_peak_c",
+          "pre_season_dry_spell_max_days",
+          "pre_season_spi3",
+          "pre_season_spi1",
+          "pre_season_sm_topsoil_layer1_m3_m3",
+          "pre_season_sm_root_zone_approx_m3_m3"
+        ],
+        "validation_summary_10_folds": {
+          "Zero-Anomaly Baseline": {
+            "mean_val_rmse_pp": 88.36,
+            "std_val_rmse_pp": 61.41,
+            "mean_val_mae_pp": 43.34,
+            "mean_val_yield_rmse_mtha": 1.988,
+            "mean_val_direction_acc_pct": 19.6,
+            "rel_rmse_improvement_pct": 0.0,
+            "fold_wins_out_of_10": 0,
+            "passes_acceptance_gates": false
+          },
+          "Huber Regressor": {
+            "mean_val_rmse_pp": 88.25,
+            "std_val_rmse_pp": 60.01,
+            "mean_val_mae_pp": 46.1,
+            "mean_val_yield_rmse_mtha": 2.064,
+            "mean_val_direction_acc_pct": 45.4,
+            "rel_rmse_improvement_pct": 0.13,
+            "fold_wins_out_of_10": 7,
+            "passes_acceptance_gates": false
+          },
+          "Ridge Regression": {
+            "mean_val_rmse_pp": 89.72,
+            "std_val_rmse_pp": 57.53,
+            "mean_val_mae_pp": 51.65,
+            "mean_val_yield_rmse_mtha": 2.237,
+            "mean_val_direction_acc_pct": 45.4,
+            "rel_rmse_improvement_pct": -1.54,
+            "fold_wins_out_of_10": 6,
+            "passes_acceptance_gates": false
+          },
+          "ElasticNet": {
+            "mean_val_rmse_pp": 89.29,
+            "std_val_rmse_pp": 57.71,
+            "mean_val_mae_pp": 51.2,
+            "mean_val_yield_rmse_mtha": 2.225,
+            "mean_val_direction_acc_pct": 45.1,
+            "rel_rmse_improvement_pct": -1.05,
+            "fold_wins_out_of_10": 6,
+            "passes_acceptance_gates": false
+          },
+          "Shallow HistGradientBoosting": {
+            "mean_val_rmse_pp": 91.53,
+            "std_val_rmse_pp": 57.09,
+            "mean_val_mae_pp": 51.91,
+            "mean_val_yield_rmse_mtha": 2.335,
+            "mean_val_direction_acc_pct": 46.1,
+            "rel_rmse_improvement_pct": -3.58,
+            "fold_wins_out_of_10": 6,
+            "passes_acceptance_gates": false
+          }
+        },
+        "held_out_test_evaluation": {
+          "Zero-Anomaly Baseline": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 23.29,
+              "anomaly_rmse_pp": 44.69,
+              "anomaly_medae_pp": 13.99,
+              "anomaly_r2": -0.0036,
+              "yield_mae_mtha": 0.783,
+              "yield_rmse_mtha": 1.392,
+              "yield_r2": 0.1668,
+              "direction_accuracy_pct": 28.2
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 21.39,
+              "anomaly_rmse_pp": 30.61,
+              "anomaly_medae_pp": 14.52,
+              "anomaly_r2": -0.0001,
+              "yield_mae_mtha": 0.807,
+              "yield_rmse_mtha": 1.409,
+              "yield_r2": 0.1202,
+              "direction_accuracy_pct": 27.4
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 24.53,
+              "anomaly_rmse_pp": 51.84,
+              "anomaly_medae_pp": 13.46,
+              "anomaly_r2": -0.0083,
+              "yield_mae_mtha": 0.768,
+              "yield_rmse_mtha": 1.381,
+              "yield_r2": 0.1954,
+              "direction_accuracy_pct": 28.7
+            }
+          },
+          "Huber Regressor": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 25.21,
+              "anomaly_rmse_pp": 45.09,
+              "anomaly_medae_pp": 13.86,
+              "anomaly_r2": -0.0218,
+              "yield_mae_mtha": 0.854,
+              "yield_rmse_mtha": 1.469,
+              "yield_r2": 0.0722,
+              "direction_accuracy_pct": 42.7
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 23.66,
+              "anomaly_rmse_pp": 31.58,
+              "anomaly_medae_pp": 16.48,
+              "anomaly_r2": -0.0641,
+              "yield_mae_mtha": 0.895,
+              "yield_rmse_mtha": 1.511,
+              "yield_r2": -0.0106,
+              "direction_accuracy_pct": 39.3
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 26.22,
+              "anomaly_rmse_pp": 52.04,
+              "anomaly_medae_pp": 12.56,
+              "anomaly_r2": -0.016,
+              "yield_mae_mtha": 0.828,
+              "yield_rmse_mtha": 1.441,
+              "yield_r2": 0.1231,
+              "direction_accuracy_pct": 45.0
+            }
+          },
+          "Ridge Regression": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 33.04,
+              "anomaly_rmse_pp": 49.64,
+              "anomaly_medae_pp": 23.48,
+              "anomaly_r2": -0.2383,
+              "yield_mae_mtha": 1.119,
+              "yield_rmse_mtha": 1.757,
+              "yield_r2": -0.3269,
+              "direction_accuracy_pct": 38.0
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 30.94,
+              "anomaly_rmse_pp": 38.29,
+              "anomaly_medae_pp": 26.0,
+              "anomaly_r2": -0.5644,
+              "yield_mae_mtha": 1.141,
+              "yield_rmse_mtha": 1.779,
+              "yield_r2": -0.4022,
+              "direction_accuracy_pct": 36.9
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 34.4,
+              "anomaly_rmse_pp": 55.81,
+              "anomaly_medae_pp": 21.79,
+              "anomaly_r2": -0.1684,
+              "yield_mae_mtha": 1.106,
+              "yield_rmse_mtha": 1.742,
+              "yield_r2": -0.2808,
+              "direction_accuracy_pct": 38.8
+            }
+          },
+          "ElasticNet": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 33.41,
+              "anomaly_rmse_pp": 49.78,
+              "anomaly_medae_pp": 24.27,
+              "anomaly_r2": -0.2451,
+              "yield_mae_mtha": 1.134,
+              "yield_rmse_mtha": 1.773,
+              "yield_r2": -0.3517,
+              "direction_accuracy_pct": 36.6
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 31.45,
+              "anomaly_rmse_pp": 38.78,
+              "anomaly_medae_pp": 26.42,
+              "anomaly_r2": -0.6052,
+              "yield_mae_mtha": 1.163,
+              "yield_rmse_mtha": 1.81,
+              "yield_r2": -0.4507,
+              "direction_accuracy_pct": 35.7
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 34.69,
+              "anomaly_rmse_pp": 55.78,
+              "anomaly_medae_pp": 22.57,
+              "anomaly_r2": -0.1673,
+              "yield_mae_mtha": 1.116,
+              "yield_rmse_mtha": 1.749,
+              "yield_r2": -0.291,
+              "direction_accuracy_pct": 37.2
+            }
+          },
+          "Shallow HistGradientBoosting": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 33.4,
+              "anomaly_rmse_pp": 50.53,
+              "anomaly_medae_pp": 23.54,
+              "anomaly_r2": -0.283,
+              "yield_mae_mtha": 1.161,
+              "yield_rmse_mtha": 1.965,
+              "yield_r2": -0.661,
+              "direction_accuracy_pct": 36.6
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 30.95,
+              "anomaly_rmse_pp": 40.48,
+              "anomaly_medae_pp": 21.88,
+              "anomaly_r2": -0.7488,
+              "yield_mae_mtha": 1.198,
+              "yield_rmse_mtha": 2.182,
+              "yield_r2": -1.1089,
+              "direction_accuracy_pct": 35.7
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 34.99,
+              "anomaly_rmse_pp": 56.11,
+              "anomaly_medae_pp": 24.17,
+              "anomaly_r2": -0.1812,
+              "yield_mae_mtha": 1.137,
+              "yield_rmse_mtha": 1.81,
+              "yield_r2": -0.3837,
+              "direction_accuracy_pct": 37.2
+            }
+          }
+        }
+      },
+      "Mid-Season (In-Season 13-Feat)": {
+        "selected_winning_model": "Zero-Anomaly Baseline",
+        "selection_reason": "Crop-decoupled fallback: no candidate achieved >= 3.0% validation RMSE reduction and >= 7/10 fold wins.",
+        "features_used": [
+          "mid_season_rainfall_cum_mm",
+          "mid_season_temp_mean_c",
+          "mid_season_temp_max_peak_c",
+          "mid_season_heat_days_ge_34c",
+          "mid_season_heat_days_ge_35c",
+          "mid_season_dry_spell_max_days",
+          "mid_season_heavy_rain_days_ge_50mm",
+          "mid_season_spi3",
+          "mid_season_spi1",
+          "mid_season_sm_topsoil_layer1_mean",
+          "mid_season_sm_topsoil_layer1_min",
+          "mid_season_sm_root_zone_approx_mean",
+          "mid_season_sm_root_zone_approx_min"
+        ],
+        "validation_summary_10_folds": {
+          "Zero-Anomaly Baseline": {
+            "mean_val_rmse_pp": 88.36,
+            "std_val_rmse_pp": 61.41,
+            "mean_val_mae_pp": 43.34,
+            "mean_val_yield_rmse_mtha": 1.988,
+            "mean_val_direction_acc_pct": 19.6,
+            "rel_rmse_improvement_pct": 0.0,
+            "fold_wins_out_of_10": 0,
+            "passes_acceptance_gates": false
+          },
+          "Huber Regressor": {
+            "mean_val_rmse_pp": 88.11,
+            "std_val_rmse_pp": 60.93,
+            "mean_val_mae_pp": 44.85,
+            "mean_val_yield_rmse_mtha": 2.042,
+            "mean_val_direction_acc_pct": 50.8,
+            "rel_rmse_improvement_pct": 0.28,
+            "fold_wins_out_of_10": 7,
+            "passes_acceptance_gates": false
+          },
+          "Ridge Regression": {
+            "mean_val_rmse_pp": 89.4,
+            "std_val_rmse_pp": 57.62,
+            "mean_val_mae_pp": 49.82,
+            "mean_val_yield_rmse_mtha": 2.203,
+            "mean_val_direction_acc_pct": 48.5,
+            "rel_rmse_improvement_pct": -1.18,
+            "fold_wins_out_of_10": 6,
+            "passes_acceptance_gates": false
+          },
+          "ElasticNet": {
+            "mean_val_rmse_pp": 89.15,
+            "std_val_rmse_pp": 57.59,
+            "mean_val_mae_pp": 49.72,
+            "mean_val_yield_rmse_mtha": 2.197,
+            "mean_val_direction_acc_pct": 47.9,
+            "rel_rmse_improvement_pct": -0.89,
+            "fold_wins_out_of_10": 6,
+            "passes_acceptance_gates": false
+          },
+          "Shallow HistGradientBoosting": {
+            "mean_val_rmse_pp": 92.83,
+            "std_val_rmse_pp": 58.26,
+            "mean_val_mae_pp": 51.89,
+            "mean_val_yield_rmse_mtha": 2.349,
+            "mean_val_direction_acc_pct": 46.4,
+            "rel_rmse_improvement_pct": -5.06,
+            "fold_wins_out_of_10": 4,
+            "passes_acceptance_gates": false
+          }
+        },
+        "held_out_test_evaluation": {
+          "Zero-Anomaly Baseline": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 23.29,
+              "anomaly_rmse_pp": 44.69,
+              "anomaly_medae_pp": 13.99,
+              "anomaly_r2": -0.0036,
+              "yield_mae_mtha": 0.783,
+              "yield_rmse_mtha": 1.392,
+              "yield_r2": 0.1668,
+              "direction_accuracy_pct": 28.2
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 21.39,
+              "anomaly_rmse_pp": 30.61,
+              "anomaly_medae_pp": 14.52,
+              "anomaly_r2": -0.0001,
+              "yield_mae_mtha": 0.807,
+              "yield_rmse_mtha": 1.409,
+              "yield_r2": 0.1202,
+              "direction_accuracy_pct": 27.4
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 24.53,
+              "anomaly_rmse_pp": 51.84,
+              "anomaly_medae_pp": 13.46,
+              "anomaly_r2": -0.0083,
+              "yield_mae_mtha": 0.768,
+              "yield_rmse_mtha": 1.381,
+              "yield_r2": 0.1954,
+              "direction_accuracy_pct": 28.7
+            }
+          },
+          "Huber Regressor": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 24.46,
+              "anomaly_rmse_pp": 44.66,
+              "anomaly_medae_pp": 14.35,
+              "anomaly_r2": -0.0023,
+              "yield_mae_mtha": 0.828,
+              "yield_rmse_mtha": 1.427,
+              "yield_r2": 0.1249,
+              "direction_accuracy_pct": 53.1
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 23.15,
+              "anomaly_rmse_pp": 31.26,
+              "anomaly_medae_pp": 16.92,
+              "anomaly_r2": -0.0424,
+              "yield_mae_mtha": 0.876,
+              "yield_rmse_mtha": 1.468,
+              "yield_r2": 0.0454,
+              "direction_accuracy_pct": 50.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 25.3,
+              "anomaly_rmse_pp": 51.55,
+              "anomaly_medae_pp": 12.66,
+              "anomaly_r2": 0.0031,
+              "yield_mae_mtha": 0.797,
+              "yield_rmse_mtha": 1.399,
+              "yield_r2": 0.1737,
+              "direction_accuracy_pct": 55.0
+            }
+          },
+          "Ridge Regression": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 36.39,
+              "anomaly_rmse_pp": 51.68,
+              "anomaly_medae_pp": 29.58,
+              "anomaly_r2": -0.3421,
+              "yield_mae_mtha": 1.233,
+              "yield_rmse_mtha": 1.856,
+              "yield_r2": -0.4806,
+              "direction_accuracy_pct": 38.0
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 35.34,
+              "anomaly_rmse_pp": 42.05,
+              "anomaly_medae_pp": 33.67,
+              "anomaly_r2": -0.8864,
+              "yield_mae_mtha": 1.303,
+              "yield_rmse_mtha": 1.908,
+              "yield_r2": -0.6118,
+              "direction_accuracy_pct": 33.3
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 37.08,
+              "anomaly_rmse_pp": 57.09,
+              "anomaly_medae_pp": 26.08,
+              "anomaly_r2": -0.2226,
+              "yield_mae_mtha": 1.187,
+              "yield_rmse_mtha": 1.821,
+              "yield_r2": -0.3998,
+              "direction_accuracy_pct": 41.1
+            }
+          },
+          "ElasticNet": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 36.22,
+              "anomaly_rmse_pp": 51.36,
+              "anomaly_medae_pp": 29.42,
+              "anomaly_r2": -0.3257,
+              "yield_mae_mtha": 1.229,
+              "yield_rmse_mtha": 1.857,
+              "yield_r2": -0.4824,
+              "direction_accuracy_pct": 37.1
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 35.51,
+              "anomaly_rmse_pp": 41.92,
+              "anomaly_medae_pp": 34.14,
+              "anomaly_r2": -0.8754,
+              "yield_mae_mtha": 1.311,
+              "yield_rmse_mtha": 1.918,
+              "yield_r2": -0.6291,
+              "direction_accuracy_pct": 33.3
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 36.68,
+              "anomaly_rmse_pp": 56.67,
+              "anomaly_medae_pp": 25.95,
+              "anomaly_r2": -0.2049,
+              "yield_mae_mtha": 1.176,
+              "yield_rmse_mtha": 1.816,
+              "yield_r2": -0.392,
+              "direction_accuracy_pct": 39.5
+            }
+          },
+          "Shallow HistGradientBoosting": {
+            "full_period_2021_2025": {
+              "n_records": 213,
+              "anomaly_mae_pp": 38.33,
+              "anomaly_rmse_pp": 55.47,
+              "anomaly_medae_pp": 25.88,
+              "anomaly_r2": -0.546,
+              "yield_mae_mtha": 1.279,
+              "yield_rmse_mtha": 1.89,
+              "yield_r2": -0.536,
+              "direction_accuracy_pct": 38.5
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 84,
+              "anomaly_mae_pp": 36.13,
+              "anomaly_rmse_pp": 44.19,
+              "anomaly_medae_pp": 30.13,
+              "anomaly_r2": -1.0842,
+              "yield_mae_mtha": 1.316,
+              "yield_rmse_mtha": 1.876,
+              "yield_r2": -0.5592,
+              "direction_accuracy_pct": 38.1
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 39.77,
+              "anomaly_rmse_pp": 61.71,
+              "anomaly_medae_pp": 24.06,
+              "anomaly_r2": -0.4286,
+              "yield_mae_mtha": 1.255,
+              "yield_rmse_mtha": 1.899,
+              "yield_r2": -0.5224,
+              "direction_accuracy_pct": 38.8
+            }
+          }
+        }
+      }
+    },
+    "Chilli": {
+      "Pre-Season (Operational 5-Feat)": {
+        "selected_winning_model": "Zero-Anomaly Baseline",
+        "selection_reason": "Crop-decoupled fallback: no candidate achieved >= 3.0% validation RMSE reduction and >= 7/10 fold wins.",
+        "features_used": [
+          "pre_season_rainfall_30d_mm",
+          "pre_season_rainfall_15d_prep_mm",
+          "pre_season_temp_mean_c",
+          "pre_season_temp_max_peak_c",
+          "pre_season_dry_spell_max_days"
+        ],
+        "validation_summary_10_folds": {
+          "Zero-Anomaly Baseline": {
+            "mean_val_rmse_pp": 79.72,
+            "std_val_rmse_pp": 46.26,
+            "mean_val_mae_pp": 38.64,
+            "mean_val_yield_rmse_mtha": 2.267,
+            "mean_val_direction_acc_pct": 21.9,
+            "rel_rmse_improvement_pct": 0.0,
+            "fold_wins_out_of_10": 0,
+            "passes_acceptance_gates": false
+          },
+          "Huber Regressor": {
+            "mean_val_rmse_pp": 79.02,
+            "std_val_rmse_pp": 46.26,
+            "mean_val_mae_pp": 38.53,
+            "mean_val_yield_rmse_mtha": 2.255,
+            "mean_val_direction_acc_pct": 62.8,
+            "rel_rmse_improvement_pct": 0.87,
+            "fold_wins_out_of_10": 9,
+            "passes_acceptance_gates": false
+          },
+          "Ridge Regression": {
+            "mean_val_rmse_pp": 77.96,
+            "std_val_rmse_pp": 45.67,
+            "mean_val_mae_pp": 40.31,
+            "mean_val_yield_rmse_mtha": 2.316,
+            "mean_val_direction_acc_pct": 46.0,
+            "rel_rmse_improvement_pct": 2.2,
+            "fold_wins_out_of_10": 8,
+            "passes_acceptance_gates": false
+          },
+          "ElasticNet": {
+            "mean_val_rmse_pp": 77.98,
+            "std_val_rmse_pp": 45.66,
+            "mean_val_mae_pp": 40.27,
+            "mean_val_yield_rmse_mtha": 2.315,
+            "mean_val_direction_acc_pct": 45.8,
+            "rel_rmse_improvement_pct": 2.18,
+            "fold_wins_out_of_10": 9,
+            "passes_acceptance_gates": false
+          },
+          "Shallow HistGradientBoosting": {
+            "mean_val_rmse_pp": 79.48,
+            "std_val_rmse_pp": 45.34,
+            "mean_val_mae_pp": 42.52,
+            "mean_val_yield_rmse_mtha": 2.394,
+            "mean_val_direction_acc_pct": 47.8,
+            "rel_rmse_improvement_pct": 0.29,
+            "fold_wins_out_of_10": 8,
+            "passes_acceptance_gates": false
+          }
+        },
+        "held_out_test_evaluation": {
+          "Zero-Anomaly Baseline": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 23.44,
+              "anomaly_rmse_pp": 44.04,
+              "anomaly_medae_pp": 12.49,
+              "anomaly_r2": -0.0186,
+              "yield_mae_mtha": 1.339,
+              "yield_rmse_mtha": 3.375,
+              "yield_r2": 0.0124,
+              "direction_accuracy_pct": 26.4
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 28.09,
+              "anomaly_rmse_pp": 55.87,
+              "anomaly_medae_pp": 14.48,
+              "anomaly_r2": -0.0398,
+              "yield_mae_mtha": 1.707,
+              "yield_rmse_mtha": 4.664,
+              "yield_r2": -0.081,
+              "direction_accuracy_pct": 23.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 20.34,
+              "anomaly_rmse_pp": 33.93,
+              "anomaly_medae_pp": 10.65,
+              "anomaly_r2": -0.006,
+              "yield_mae_mtha": 1.094,
+              "yield_rmse_mtha": 2.116,
+              "yield_r2": 0.2239,
+              "direction_accuracy_pct": 28.7
+            }
+          },
+          "Huber Regressor": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 24.35,
+              "anomaly_rmse_pp": 43.65,
+              "anomaly_medae_pp": 13.34,
+              "anomaly_r2": -0.0005,
+              "yield_mae_mtha": 1.4,
+              "yield_rmse_mtha": 3.419,
+              "yield_r2": -0.0135,
+              "direction_accuracy_pct": 53.6
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 28.29,
+              "anomaly_rmse_pp": 55.0,
+              "anomaly_medae_pp": 14.36,
+              "anomaly_r2": -0.0075,
+              "yield_mae_mtha": 1.734,
+              "yield_rmse_mtha": 4.688,
+              "yield_r2": -0.092,
+              "direction_accuracy_pct": 60.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 21.72,
+              "anomaly_rmse_pp": 34.04,
+              "anomaly_medae_pp": 12.88,
+              "anomaly_r2": -0.0123,
+              "yield_mae_mtha": 1.177,
+              "yield_rmse_mtha": 2.197,
+              "yield_r2": 0.1636,
+              "direction_accuracy_pct": 49.3
+            }
+          },
+          "Ridge Regression": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 29.1,
+              "anomaly_rmse_pp": 44.63,
+              "anomaly_medae_pp": 21.44,
+              "anomaly_r2": -0.0458,
+              "yield_mae_mtha": 1.694,
+              "yield_rmse_mtha": 3.677,
+              "yield_r2": -0.1727,
+              "direction_accuracy_pct": 36.0
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 30.47,
+              "anomaly_rmse_pp": 53.99,
+              "anomaly_medae_pp": 19.2,
+              "anomaly_r2": 0.029,
+              "yield_mae_mtha": 1.899,
+              "yield_rmse_mtha": 4.866,
+              "yield_r2": -0.1763,
+              "direction_accuracy_pct": 43.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 28.18,
+              "anomaly_rmse_pp": 37.09,
+              "anomaly_medae_pp": 23.4,
+              "anomaly_r2": -0.2017,
+              "yield_mae_mtha": 1.558,
+              "yield_rmse_mtha": 2.599,
+              "yield_r2": -0.1709,
+              "direction_accuracy_pct": 31.3
+            }
+          },
+          "ElasticNet": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 29.05,
+              "anomaly_rmse_pp": 44.62,
+              "anomaly_medae_pp": 21.29,
+              "anomaly_r2": -0.0457,
+              "yield_mae_mtha": 1.693,
+              "yield_rmse_mtha": 3.679,
+              "yield_r2": -0.1736,
+              "direction_accuracy_pct": 36.0
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 30.63,
+              "anomaly_rmse_pp": 54.15,
+              "anomaly_medae_pp": 19.22,
+              "anomaly_r2": 0.0234,
+              "yield_mae_mtha": 1.907,
+              "yield_rmse_mtha": 4.874,
+              "yield_r2": -0.1803,
+              "direction_accuracy_pct": 43.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 27.99,
+              "anomaly_rmse_pp": 36.93,
+              "anomaly_medae_pp": 22.55,
+              "anomaly_r2": -0.1918,
+              "yield_mae_mtha": 1.551,
+              "yield_rmse_mtha": 2.592,
+              "yield_r2": -0.1645,
+              "direction_accuracy_pct": 31.3
+            }
+          },
+          "Shallow HistGradientBoosting": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 32.16,
+              "anomaly_rmse_pp": 47.74,
+              "anomaly_medae_pp": 23.93,
+              "anomaly_r2": -0.197,
+              "yield_mae_mtha": 1.933,
+              "yield_rmse_mtha": 3.99,
+              "yield_r2": -0.3805,
+              "direction_accuracy_pct": 34.8
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 33.01,
+              "anomaly_rmse_pp": 55.96,
+              "anomaly_medae_pp": 24.71,
+              "anomaly_r2": -0.0432,
+              "yield_mae_mtha": 2.045,
+              "yield_rmse_mtha": 4.878,
+              "yield_r2": -0.1821,
+              "direction_accuracy_pct": 42.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 31.59,
+              "anomaly_rmse_pp": 41.37,
+              "anomaly_medae_pp": 23.03,
+              "anomaly_r2": -0.4949,
+              "yield_mae_mtha": 1.859,
+              "yield_rmse_mtha": 3.267,
+              "yield_r2": -0.8498,
+              "direction_accuracy_pct": 30.0
+            }
+          }
+        }
+      },
+      "Pre-Season (Full Research 9-Feat)": {
+        "selected_winning_model": "Zero-Anomaly Baseline",
+        "selection_reason": "Crop-decoupled fallback: no candidate achieved >= 3.0% validation RMSE reduction and >= 7/10 fold wins.",
+        "features_used": [
+          "pre_season_rainfall_30d_mm",
+          "pre_season_rainfall_15d_prep_mm",
+          "pre_season_temp_mean_c",
+          "pre_season_temp_max_peak_c",
+          "pre_season_dry_spell_max_days",
+          "pre_season_spi3",
+          "pre_season_spi1",
+          "pre_season_sm_topsoil_layer1_m3_m3",
+          "pre_season_sm_root_zone_approx_m3_m3"
+        ],
+        "validation_summary_10_folds": {
+          "Zero-Anomaly Baseline": {
+            "mean_val_rmse_pp": 79.72,
+            "std_val_rmse_pp": 46.26,
+            "mean_val_mae_pp": 38.64,
+            "mean_val_yield_rmse_mtha": 2.267,
+            "mean_val_direction_acc_pct": 21.9,
+            "rel_rmse_improvement_pct": 0.0,
+            "fold_wins_out_of_10": 0,
+            "passes_acceptance_gates": false
+          },
+          "Huber Regressor": {
+            "mean_val_rmse_pp": 79.09,
+            "std_val_rmse_pp": 46.38,
+            "mean_val_mae_pp": 38.64,
+            "mean_val_yield_rmse_mtha": 2.259,
+            "mean_val_direction_acc_pct": 61.6,
+            "rel_rmse_improvement_pct": 0.79,
+            "fold_wins_out_of_10": 10,
+            "passes_acceptance_gates": false
+          },
+          "Ridge Regression": {
+            "mean_val_rmse_pp": 78.59,
+            "std_val_rmse_pp": 45.18,
+            "mean_val_mae_pp": 41.18,
+            "mean_val_yield_rmse_mtha": 2.349,
+            "mean_val_direction_acc_pct": 47.6,
+            "rel_rmse_improvement_pct": 1.41,
+            "fold_wins_out_of_10": 8,
+            "passes_acceptance_gates": false
+          },
+          "ElasticNet": {
+            "mean_val_rmse_pp": 78.4,
+            "std_val_rmse_pp": 45.35,
+            "mean_val_mae_pp": 40.81,
+            "mean_val_yield_rmse_mtha": 2.335,
+            "mean_val_direction_acc_pct": 47.8,
+            "rel_rmse_improvement_pct": 1.65,
+            "fold_wins_out_of_10": 8,
+            "passes_acceptance_gates": false
+          },
+          "Shallow HistGradientBoosting": {
+            "mean_val_rmse_pp": 80.52,
+            "std_val_rmse_pp": 44.73,
+            "mean_val_mae_pp": 42.83,
+            "mean_val_yield_rmse_mtha": 2.35,
+            "mean_val_direction_acc_pct": 48.2,
+            "rel_rmse_improvement_pct": -1.0,
+            "fold_wins_out_of_10": 6,
+            "passes_acceptance_gates": false
+          }
+        },
+        "held_out_test_evaluation": {
+          "Zero-Anomaly Baseline": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 23.44,
+              "anomaly_rmse_pp": 44.04,
+              "anomaly_medae_pp": 12.49,
+              "anomaly_r2": -0.0186,
+              "yield_mae_mtha": 1.339,
+              "yield_rmse_mtha": 3.375,
+              "yield_r2": 0.0124,
+              "direction_accuracy_pct": 26.4
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 28.09,
+              "anomaly_rmse_pp": 55.87,
+              "anomaly_medae_pp": 14.48,
+              "anomaly_r2": -0.0398,
+              "yield_mae_mtha": 1.707,
+              "yield_rmse_mtha": 4.664,
+              "yield_r2": -0.081,
+              "direction_accuracy_pct": 23.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 20.34,
+              "anomaly_rmse_pp": 33.93,
+              "anomaly_medae_pp": 10.65,
+              "anomaly_r2": -0.006,
+              "yield_mae_mtha": 1.094,
+              "yield_rmse_mtha": 2.116,
+              "yield_r2": 0.2239,
+              "direction_accuracy_pct": 28.7
+            }
+          },
+          "Huber Regressor": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 24.25,
+              "anomaly_rmse_pp": 44.11,
+              "anomaly_medae_pp": 13.34,
+              "anomaly_r2": -0.0216,
+              "yield_mae_mtha": 1.387,
+              "yield_rmse_mtha": 3.411,
+              "yield_r2": -0.0092,
+              "direction_accuracy_pct": 55.6
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 28.15,
+              "anomaly_rmse_pp": 55.68,
+              "anomaly_medae_pp": 15.9,
+              "anomaly_r2": -0.0327,
+              "yield_mae_mtha": 1.72,
+              "yield_rmse_mtha": 4.694,
+              "yield_r2": -0.0947,
+              "direction_accuracy_pct": 63.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 21.65,
+              "anomaly_rmse_pp": 34.28,
+              "anomaly_medae_pp": 12.95,
+              "anomaly_r2": -0.0268,
+              "yield_mae_mtha": 1.165,
+              "yield_rmse_mtha": 2.17,
+              "yield_r2": 0.184,
+              "direction_accuracy_pct": 50.7
+            }
+          },
+          "Ridge Regression": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 27.83,
+              "anomaly_rmse_pp": 44.3,
+              "anomaly_medae_pp": 20.23,
+              "anomaly_r2": -0.0307,
+              "yield_mae_mtha": 1.638,
+              "yield_rmse_mtha": 3.646,
+              "yield_r2": -0.1528,
+              "direction_accuracy_pct": 38.0
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 30.34,
+              "anomaly_rmse_pp": 54.13,
+              "anomaly_medae_pp": 19.81,
+              "anomaly_r2": 0.0242,
+              "yield_mae_mtha": 1.885,
+              "yield_rmse_mtha": 4.809,
+              "yield_r2": -0.1491,
+              "direction_accuracy_pct": 45.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 26.17,
+              "anomaly_rmse_pp": 36.31,
+              "anomaly_medae_pp": 20.23,
+              "anomaly_r2": -0.1517,
+              "yield_mae_mtha": 1.474,
+              "yield_rmse_mtha": 2.596,
+              "yield_r2": -0.168,
+              "direction_accuracy_pct": 33.3
+            }
+          },
+          "ElasticNet": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 28.01,
+              "anomaly_rmse_pp": 44.32,
+              "anomaly_medae_pp": 20.35,
+              "anomaly_r2": -0.0316,
+              "yield_mae_mtha": 1.645,
+              "yield_rmse_mtha": 3.65,
+              "yield_r2": -0.1554,
+              "direction_accuracy_pct": 36.0
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 30.34,
+              "anomaly_rmse_pp": 54.15,
+              "anomaly_medae_pp": 18.85,
+              "anomaly_r2": 0.0235,
+              "yield_mae_mtha": 1.887,
+              "yield_rmse_mtha": 4.83,
+              "yield_r2": -0.159,
+              "direction_accuracy_pct": 43.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 26.46,
+              "anomaly_rmse_pp": 36.33,
+              "anomaly_medae_pp": 20.76,
+              "anomaly_r2": -0.1529,
+              "yield_mae_mtha": 1.484,
+              "yield_rmse_mtha": 2.579,
+              "yield_r2": -0.1533,
+              "direction_accuracy_pct": 31.3
+            }
+          },
+          "Shallow HistGradientBoosting": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 27.74,
+              "anomaly_rmse_pp": 45.33,
+              "anomaly_medae_pp": 19.23,
+              "anomaly_r2": -0.079,
+              "yield_mae_mtha": 1.646,
+              "yield_rmse_mtha": 3.637,
+              "yield_r2": -0.1474,
+              "direction_accuracy_pct": 44.0
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 31.4,
+              "anomaly_rmse_pp": 55.65,
+              "anomaly_medae_pp": 21.38,
+              "anomaly_r2": -0.0315,
+              "yield_mae_mtha": 1.931,
+              "yield_rmse_mtha": 4.722,
+              "yield_r2": -0.1077,
+              "direction_accuracy_pct": 44.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 25.3,
+              "anomaly_rmse_pp": 36.88,
+              "anomaly_medae_pp": 17.01,
+              "anomaly_r2": -0.1881,
+              "yield_mae_mtha": 1.456,
+              "yield_rmse_mtha": 2.681,
+              "yield_r2": -0.2461,
+              "direction_accuracy_pct": 44.0
+            }
+          }
+        }
+      },
+      "Mid-Season (In-Season 13-Feat)": {
+        "selected_winning_model": "Zero-Anomaly Baseline",
+        "selection_reason": "Crop-decoupled fallback: no candidate achieved >= 3.0% validation RMSE reduction and >= 7/10 fold wins.",
+        "features_used": [
+          "mid_season_rainfall_cum_mm",
+          "mid_season_temp_mean_c",
+          "mid_season_temp_max_peak_c",
+          "mid_season_heat_days_ge_34c",
+          "mid_season_heat_days_ge_35c",
+          "mid_season_dry_spell_max_days",
+          "mid_season_heavy_rain_days_ge_50mm",
+          "mid_season_spi3",
+          "mid_season_spi1",
+          "mid_season_sm_topsoil_layer1_mean",
+          "mid_season_sm_topsoil_layer1_min",
+          "mid_season_sm_root_zone_approx_mean",
+          "mid_season_sm_root_zone_approx_min"
+        ],
+        "validation_summary_10_folds": {
+          "Zero-Anomaly Baseline": {
+            "mean_val_rmse_pp": 79.72,
+            "std_val_rmse_pp": 46.26,
+            "mean_val_mae_pp": 38.64,
+            "mean_val_yield_rmse_mtha": 2.267,
+            "mean_val_direction_acc_pct": 21.9,
+            "rel_rmse_improvement_pct": 0.0,
+            "fold_wins_out_of_10": 0,
+            "passes_acceptance_gates": false
+          },
+          "Huber Regressor": {
+            "mean_val_rmse_pp": 79.66,
+            "std_val_rmse_pp": 46.41,
+            "mean_val_mae_pp": 38.82,
+            "mean_val_yield_rmse_mtha": 2.269,
+            "mean_val_direction_acc_pct": 59.0,
+            "rel_rmse_improvement_pct": 0.07,
+            "fold_wins_out_of_10": 6,
+            "passes_acceptance_gates": false
+          },
+          "Ridge Regression": {
+            "mean_val_rmse_pp": 79.23,
+            "std_val_rmse_pp": 45.8,
+            "mean_val_mae_pp": 41.84,
+            "mean_val_yield_rmse_mtha": 2.327,
+            "mean_val_direction_acc_pct": 47.4,
+            "rel_rmse_improvement_pct": 0.61,
+            "fold_wins_out_of_10": 7,
+            "passes_acceptance_gates": false
+          },
+          "ElasticNet": {
+            "mean_val_rmse_pp": 79.03,
+            "std_val_rmse_pp": 45.83,
+            "mean_val_mae_pp": 41.54,
+            "mean_val_yield_rmse_mtha": 2.319,
+            "mean_val_direction_acc_pct": 47.1,
+            "rel_rmse_improvement_pct": 0.86,
+            "fold_wins_out_of_10": 7,
+            "passes_acceptance_gates": false
+          },
+          "Shallow HistGradientBoosting": {
+            "mean_val_rmse_pp": 79.14,
+            "std_val_rmse_pp": 45.24,
+            "mean_val_mae_pp": 42.95,
+            "mean_val_yield_rmse_mtha": 2.371,
+            "mean_val_direction_acc_pct": 52.8,
+            "rel_rmse_improvement_pct": 0.72,
+            "fold_wins_out_of_10": 7,
+            "passes_acceptance_gates": false
+          }
+        },
+        "held_out_test_evaluation": {
+          "Zero-Anomaly Baseline": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 23.44,
+              "anomaly_rmse_pp": 44.04,
+              "anomaly_medae_pp": 12.49,
+              "anomaly_r2": -0.0186,
+              "yield_mae_mtha": 1.339,
+              "yield_rmse_mtha": 3.375,
+              "yield_r2": 0.0124,
+              "direction_accuracy_pct": 26.4
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 28.09,
+              "anomaly_rmse_pp": 55.87,
+              "anomaly_medae_pp": 14.48,
+              "anomaly_r2": -0.0398,
+              "yield_mae_mtha": 1.707,
+              "yield_rmse_mtha": 4.664,
+              "yield_r2": -0.081,
+              "direction_accuracy_pct": 23.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 20.34,
+              "anomaly_rmse_pp": 33.93,
+              "anomaly_medae_pp": 10.65,
+              "anomaly_r2": -0.006,
+              "yield_mae_mtha": 1.094,
+              "yield_rmse_mtha": 2.116,
+              "yield_r2": 0.2239,
+              "direction_accuracy_pct": 28.7
+            }
+          },
+          "Huber Regressor": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 24.42,
+              "anomaly_rmse_pp": 44.07,
+              "anomaly_medae_pp": 14.66,
+              "anomaly_r2": -0.02,
+              "yield_mae_mtha": 1.397,
+              "yield_rmse_mtha": 3.418,
+              "yield_r2": -0.0128,
+              "direction_accuracy_pct": 52.0
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 28.33,
+              "anomaly_rmse_pp": 55.6,
+              "anomaly_medae_pp": 15.05,
+              "anomaly_r2": -0.0298,
+              "yield_mae_mtha": 1.726,
+              "yield_rmse_mtha": 4.677,
+              "yield_r2": -0.087,
+              "direction_accuracy_pct": 59.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 21.82,
+              "anomaly_rmse_pp": 34.3,
+              "anomaly_medae_pp": 14.4,
+              "anomaly_r2": -0.0276,
+              "yield_mae_mtha": 1.178,
+              "yield_rmse_mtha": 2.209,
+              "yield_r2": 0.154,
+              "direction_accuracy_pct": 47.3
+            }
+          },
+          "Ridge Regression": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 29.65,
+              "anomaly_rmse_pp": 45.55,
+              "anomaly_medae_pp": 20.77,
+              "anomaly_r2": -0.0897,
+              "yield_mae_mtha": 1.728,
+              "yield_rmse_mtha": 3.733,
+              "yield_r2": -0.2081,
+              "direction_accuracy_pct": 36.0
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 32.28,
+              "anomaly_rmse_pp": 55.67,
+              "anomaly_medae_pp": 20.52,
+              "anomaly_r2": -0.0324,
+              "yield_mae_mtha": 1.995,
+              "yield_rmse_mtha": 4.949,
+              "yield_r2": -0.2169,
+              "direction_accuracy_pct": 43.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 27.9,
+              "anomaly_rmse_pp": 37.31,
+              "anomaly_medae_pp": 20.89,
+              "anomaly_r2": -0.2163,
+              "yield_mae_mtha": 1.55,
+              "yield_rmse_mtha": 2.625,
+              "yield_r2": -0.1945,
+              "direction_accuracy_pct": 31.3
+            }
+          },
+          "ElasticNet": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 29.68,
+              "anomaly_rmse_pp": 45.4,
+              "anomaly_medae_pp": 21.37,
+              "anomaly_r2": -0.0823,
+              "yield_mae_mtha": 1.725,
+              "yield_rmse_mtha": 3.717,
+              "yield_r2": -0.1978,
+              "direction_accuracy_pct": 36.0
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 32.51,
+              "anomaly_rmse_pp": 55.47,
+              "anomaly_medae_pp": 23.11,
+              "anomaly_r2": -0.025,
+              "yield_mae_mtha": 2.007,
+              "yield_rmse_mtha": 4.944,
+              "yield_r2": -0.2143,
+              "direction_accuracy_pct": 43.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 27.8,
+              "anomaly_rmse_pp": 37.19,
+              "anomaly_medae_pp": 21.09,
+              "anomaly_r2": -0.2086,
+              "yield_mae_mtha": 1.537,
+              "yield_rmse_mtha": 2.594,
+              "yield_r2": -0.1662,
+              "direction_accuracy_pct": 31.3
+            }
+          },
+          "Shallow HistGradientBoosting": {
+            "full_period_2021_2025": {
+              "n_records": 250,
+              "anomaly_mae_pp": 32.78,
+              "anomaly_rmse_pp": 49.46,
+              "anomaly_medae_pp": 22.81,
+              "anomaly_r2": -0.2845,
+              "yield_mae_mtha": 1.933,
+              "yield_rmse_mtha": 3.832,
+              "yield_r2": -0.2736,
+              "direction_accuracy_pct": 40.8
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 100,
+              "anomaly_mae_pp": 34.47,
+              "anomaly_rmse_pp": 58.12,
+              "anomaly_medae_pp": 24.18,
+              "anomaly_r2": -0.1251,
+              "yield_mae_mtha": 2.076,
+              "yield_rmse_mtha": 4.864,
+              "yield_r2": -0.1755,
+              "direction_accuracy_pct": 48.0
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 150,
+              "anomaly_mae_pp": 31.65,
+              "anomaly_rmse_pp": 42.72,
+              "anomaly_medae_pp": 22.12,
+              "anomaly_r2": -0.5942,
+              "yield_mae_mtha": 1.838,
+              "yield_rmse_mtha": 2.95,
+              "yield_r2": -0.5091,
+              "direction_accuracy_pct": 36.0
+            }
+          }
+        }
+      }
+    },
+    "Green Gram": {
+      "Pre-Season (Operational 5-Feat)": {
+        "selected_winning_model": "Zero-Anomaly Baseline",
+        "selection_reason": "Crop-decoupled fallback: no candidate achieved >= 3.0% validation RMSE reduction and >= 7/10 fold wins.",
+        "features_used": [
+          "pre_season_rainfall_30d_mm",
+          "pre_season_rainfall_15d_prep_mm",
+          "pre_season_temp_mean_c",
+          "pre_season_temp_max_peak_c",
+          "pre_season_dry_spell_max_days"
+        ],
+        "validation_summary_10_folds": {
+          "Zero-Anomaly Baseline": {
+            "mean_val_rmse_pp": 63.06,
+            "std_val_rmse_pp": 38.49,
+            "mean_val_mae_pp": 33.68,
+            "mean_val_yield_rmse_mtha": 0.899,
+            "mean_val_direction_acc_pct": 23.5,
+            "rel_rmse_improvement_pct": 0.0,
+            "fold_wins_out_of_10": 0,
+            "passes_acceptance_gates": false
+          },
+          "Huber Regressor": {
+            "mean_val_rmse_pp": 62.66,
+            "std_val_rmse_pp": 38.33,
+            "mean_val_mae_pp": 34.29,
+            "mean_val_yield_rmse_mtha": 0.904,
+            "mean_val_direction_acc_pct": 55.0,
+            "rel_rmse_improvement_pct": 0.62,
+            "fold_wins_out_of_10": 7,
+            "passes_acceptance_gates": false
+          },
+          "Ridge Regression": {
+            "mean_val_rmse_pp": 63.0,
+            "std_val_rmse_pp": 37.54,
+            "mean_val_mae_pp": 36.93,
+            "mean_val_yield_rmse_mtha": 0.948,
+            "mean_val_direction_acc_pct": 36.6,
+            "rel_rmse_improvement_pct": 0.1,
+            "fold_wins_out_of_10": 6,
+            "passes_acceptance_gates": false
+          },
+          "ElasticNet": {
+            "mean_val_rmse_pp": 62.98,
+            "std_val_rmse_pp": 37.55,
+            "mean_val_mae_pp": 36.9,
+            "mean_val_yield_rmse_mtha": 0.948,
+            "mean_val_direction_acc_pct": 36.4,
+            "rel_rmse_improvement_pct": 0.13,
+            "fold_wins_out_of_10": 6,
+            "passes_acceptance_gates": false
+          },
+          "Shallow HistGradientBoosting": {
+            "mean_val_rmse_pp": 64.22,
+            "std_val_rmse_pp": 37.66,
+            "mean_val_mae_pp": 38.42,
+            "mean_val_yield_rmse_mtha": 0.961,
+            "mean_val_direction_acc_pct": 41.9,
+            "rel_rmse_improvement_pct": -1.84,
+            "fold_wins_out_of_10": 2,
+            "passes_acceptance_gates": false
+          }
+        },
+        "held_out_test_evaluation": {
+          "Zero-Anomaly Baseline": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 21.1,
+              "anomaly_rmse_pp": 45.86,
+              "anomaly_medae_pp": 11.05,
+              "anomaly_r2": -0.0002,
+              "yield_mae_mtha": 0.3,
+              "yield_rmse_mtha": 0.615,
+              "yield_r2": 0.427,
+              "direction_accuracy_pct": 29.4
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 21.32,
+              "anomaly_rmse_pp": 29.3,
+              "anomaly_medae_pp": 14.09,
+              "anomaly_r2": -0.056,
+              "yield_mae_mtha": 0.378,
+              "yield_rmse_mtha": 0.724,
+              "yield_r2": -0.184,
+              "direction_accuracy_pct": 15.3
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 20.97,
+              "anomaly_rmse_pp": 54.07,
+              "anomaly_medae_pp": 6.95,
+              "anomaly_r2": -0.004,
+              "yield_mae_mtha": 0.249,
+              "yield_rmse_mtha": 0.531,
+              "yield_r2": 0.6482,
+              "direction_accuracy_pct": 38.8
+            }
+          },
+          "Huber Regressor": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 21.54,
+              "anomaly_rmse_pp": 46.06,
+              "anomaly_medae_pp": 10.13,
+              "anomaly_r2": -0.0086,
+              "yield_mae_mtha": 0.305,
+              "yield_rmse_mtha": 0.617,
+              "yield_r2": 0.4235,
+              "direction_accuracy_pct": 62.1
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 21.39,
+              "anomaly_rmse_pp": 29.53,
+              "anomaly_medae_pp": 13.94,
+              "anomaly_r2": -0.0723,
+              "yield_mae_mtha": 0.381,
+              "yield_rmse_mtha": 0.728,
+              "yield_r2": -0.197,
+              "direction_accuracy_pct": 62.4
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 21.64,
+              "anomaly_rmse_pp": 54.26,
+              "anomaly_medae_pp": 8.72,
+              "anomaly_r2": -0.0112,
+              "yield_mae_mtha": 0.255,
+              "yield_rmse_mtha": 0.531,
+              "yield_r2": 0.6482,
+              "direction_accuracy_pct": 62.0
+            }
+          },
+          "Ridge Regression": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 25.45,
+              "anomaly_rmse_pp": 47.12,
+              "anomaly_medae_pp": 15.79,
+              "anomaly_r2": -0.0559,
+              "yield_mae_mtha": 0.363,
+              "yield_rmse_mtha": 0.678,
+              "yield_r2": 0.3034,
+              "direction_accuracy_pct": 30.4
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 24.36,
+              "anomaly_rmse_pp": 32.81,
+              "anomaly_medae_pp": 17.52,
+              "anomaly_r2": -0.3237,
+              "yield_mae_mtha": 0.437,
+              "yield_rmse_mtha": 0.826,
+              "yield_r2": -0.5416,
+              "direction_accuracy_pct": 36.5
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 26.17,
+              "anomaly_rmse_pp": 54.54,
+              "anomaly_medae_pp": 15.31,
+              "anomaly_r2": -0.0215,
+              "yield_mae_mtha": 0.314,
+              "yield_rmse_mtha": 0.56,
+              "yield_r2": 0.6096,
+              "direction_accuracy_pct": 26.4
+            }
+          },
+          "ElasticNet": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 25.48,
+              "anomaly_rmse_pp": 47.12,
+              "anomaly_medae_pp": 15.84,
+              "anomaly_r2": -0.0559,
+              "yield_mae_mtha": 0.363,
+              "yield_rmse_mtha": 0.679,
+              "yield_r2": 0.3022,
+              "direction_accuracy_pct": 27.6
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 24.48,
+              "anomaly_rmse_pp": 32.89,
+              "anomaly_medae_pp": 18.21,
+              "anomaly_r2": -0.3302,
+              "yield_mae_mtha": 0.439,
+              "yield_rmse_mtha": 0.828,
+              "yield_r2": -0.5472,
+              "direction_accuracy_pct": 35.3
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 26.13,
+              "anomaly_rmse_pp": 54.51,
+              "anomaly_medae_pp": 15.39,
+              "anomaly_r2": -0.0203,
+              "yield_mae_mtha": 0.313,
+              "yield_rmse_mtha": 0.559,
+              "yield_r2": 0.61,
+              "direction_accuracy_pct": 22.5
+            }
+          },
+          "Shallow HistGradientBoosting": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 27.28,
+              "anomaly_rmse_pp": 48.5,
+              "anomaly_medae_pp": 17.14,
+              "anomaly_r2": -0.1184,
+              "yield_mae_mtha": 0.387,
+              "yield_rmse_mtha": 0.694,
+              "yield_r2": 0.2704,
+              "direction_accuracy_pct": 38.3
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 27.89,
+              "anomaly_rmse_pp": 35.9,
+              "anomaly_medae_pp": 19.16,
+              "anomaly_r2": -0.5849,
+              "yield_mae_mtha": 0.47,
+              "yield_rmse_mtha": 0.833,
+              "yield_r2": -0.5657,
+              "direction_accuracy_pct": 37.6
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 26.88,
+              "anomaly_rmse_pp": 55.25,
+              "anomaly_medae_pp": 16.05,
+              "anomaly_r2": -0.0483,
+              "yield_mae_mtha": 0.332,
+              "yield_rmse_mtha": 0.585,
+              "yield_r2": 0.5733,
+              "direction_accuracy_pct": 38.8
+            }
+          }
+        }
+      },
+      "Pre-Season (Full Research 9-Feat)": {
+        "selected_winning_model": "Zero-Anomaly Baseline",
+        "selection_reason": "Crop-decoupled fallback: no candidate achieved >= 3.0% validation RMSE reduction and >= 7/10 fold wins.",
+        "features_used": [
+          "pre_season_rainfall_30d_mm",
+          "pre_season_rainfall_15d_prep_mm",
+          "pre_season_temp_mean_c",
+          "pre_season_temp_max_peak_c",
+          "pre_season_dry_spell_max_days",
+          "pre_season_spi3",
+          "pre_season_spi1",
+          "pre_season_sm_topsoil_layer1_m3_m3",
+          "pre_season_sm_root_zone_approx_m3_m3"
+        ],
+        "validation_summary_10_folds": {
+          "Zero-Anomaly Baseline": {
+            "mean_val_rmse_pp": 63.06,
+            "std_val_rmse_pp": 38.49,
+            "mean_val_mae_pp": 33.68,
+            "mean_val_yield_rmse_mtha": 0.899,
+            "mean_val_direction_acc_pct": 23.5,
+            "rel_rmse_improvement_pct": 0.0,
+            "fold_wins_out_of_10": 0,
+            "passes_acceptance_gates": false
+          },
+          "Huber Regressor": {
+            "mean_val_rmse_pp": 62.77,
+            "std_val_rmse_pp": 38.51,
+            "mean_val_mae_pp": 34.65,
+            "mean_val_yield_rmse_mtha": 0.907,
+            "mean_val_direction_acc_pct": 53.3,
+            "rel_rmse_improvement_pct": 0.46,
+            "fold_wins_out_of_10": 5,
+            "passes_acceptance_gates": false
+          },
+          "Ridge Regression": {
+            "mean_val_rmse_pp": 63.3,
+            "std_val_rmse_pp": 37.76,
+            "mean_val_mae_pp": 37.18,
+            "mean_val_yield_rmse_mtha": 0.955,
+            "mean_val_direction_acc_pct": 40.0,
+            "rel_rmse_improvement_pct": -0.38,
+            "fold_wins_out_of_10": 5,
+            "passes_acceptance_gates": false
+          },
+          "ElasticNet": {
+            "mean_val_rmse_pp": 63.21,
+            "std_val_rmse_pp": 37.69,
+            "mean_val_mae_pp": 37.08,
+            "mean_val_yield_rmse_mtha": 0.955,
+            "mean_val_direction_acc_pct": 40.2,
+            "rel_rmse_improvement_pct": -0.24,
+            "fold_wins_out_of_10": 5,
+            "passes_acceptance_gates": false
+          },
+          "Shallow HistGradientBoosting": {
+            "mean_val_rmse_pp": 63.64,
+            "std_val_rmse_pp": 37.65,
+            "mean_val_mae_pp": 37.1,
+            "mean_val_yield_rmse_mtha": 0.933,
+            "mean_val_direction_acc_pct": 43.1,
+            "rel_rmse_improvement_pct": -0.92,
+            "fold_wins_out_of_10": 4,
+            "passes_acceptance_gates": false
+          }
+        },
+        "held_out_test_evaluation": {
+          "Zero-Anomaly Baseline": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 21.1,
+              "anomaly_rmse_pp": 45.86,
+              "anomaly_medae_pp": 11.05,
+              "anomaly_r2": -0.0002,
+              "yield_mae_mtha": 0.3,
+              "yield_rmse_mtha": 0.615,
+              "yield_r2": 0.427,
+              "direction_accuracy_pct": 29.4
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 21.32,
+              "anomaly_rmse_pp": 29.3,
+              "anomaly_medae_pp": 14.09,
+              "anomaly_r2": -0.056,
+              "yield_mae_mtha": 0.378,
+              "yield_rmse_mtha": 0.724,
+              "yield_r2": -0.184,
+              "direction_accuracy_pct": 15.3
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 20.97,
+              "anomaly_rmse_pp": 54.07,
+              "anomaly_medae_pp": 6.95,
+              "anomaly_r2": -0.004,
+              "yield_mae_mtha": 0.249,
+              "yield_rmse_mtha": 0.531,
+              "yield_r2": 0.6482,
+              "direction_accuracy_pct": 38.8
+            }
+          },
+          "Huber Regressor": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 22.08,
+              "anomaly_rmse_pp": 45.97,
+              "anomaly_medae_pp": 10.66,
+              "anomaly_r2": -0.0047,
+              "yield_mae_mtha": 0.314,
+              "yield_rmse_mtha": 0.621,
+              "yield_r2": 0.4151,
+              "direction_accuracy_pct": 54.7
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 21.89,
+              "anomaly_rmse_pp": 30.03,
+              "anomaly_medae_pp": 15.15,
+              "anomaly_r2": -0.109,
+              "yield_mae_mtha": 0.39,
+              "yield_rmse_mtha": 0.738,
+              "yield_r2": -0.2313,
+              "direction_accuracy_pct": 48.2
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 22.2,
+              "anomaly_rmse_pp": 53.95,
+              "anomaly_medae_pp": 9.67,
+              "anomaly_r2": 0.0003,
+              "yield_mae_mtha": 0.263,
+              "yield_rmse_mtha": 0.53,
+              "yield_r2": 0.6492,
+              "direction_accuracy_pct": 58.9
+            }
+          },
+          "Ridge Regression": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 25.64,
+              "anomaly_rmse_pp": 47.69,
+              "anomaly_medae_pp": 16.07,
+              "anomaly_r2": -0.0816,
+              "yield_mae_mtha": 0.367,
+              "yield_rmse_mtha": 0.692,
+              "yield_r2": 0.2739,
+              "direction_accuracy_pct": 34.6
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 24.43,
+              "anomaly_rmse_pp": 33.42,
+              "anomaly_medae_pp": 17.91,
+              "anomaly_r2": -0.3737,
+              "yield_mae_mtha": 0.441,
+              "yield_rmse_mtha": 0.844,
+              "yield_r2": -0.6087,
+              "direction_accuracy_pct": 38.8
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 26.43,
+              "anomaly_rmse_pp": 55.11,
+              "anomaly_medae_pp": 15.26,
+              "anomaly_r2": -0.0431,
+              "yield_mae_mtha": 0.319,
+              "yield_rmse_mtha": 0.571,
+              "yield_r2": 0.5937,
+              "direction_accuracy_pct": 31.8
+            }
+          },
+          "ElasticNet": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 25.67,
+              "anomaly_rmse_pp": 47.65,
+              "anomaly_medae_pp": 16.47,
+              "anomaly_r2": -0.0797,
+              "yield_mae_mtha": 0.368,
+              "yield_rmse_mtha": 0.692,
+              "yield_r2": 0.2744,
+              "direction_accuracy_pct": 32.7
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 24.49,
+              "anomaly_rmse_pp": 33.44,
+              "anomaly_medae_pp": 18.16,
+              "anomaly_r2": -0.3757,
+              "yield_mae_mtha": 0.441,
+              "yield_rmse_mtha": 0.844,
+              "yield_r2": -0.6073,
+              "direction_accuracy_pct": 37.6
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 26.46,
+              "anomaly_rmse_pp": 55.04,
+              "anomaly_medae_pp": 15.02,
+              "anomaly_r2": -0.0405,
+              "yield_mae_mtha": 0.32,
+              "yield_rmse_mtha": 0.571,
+              "yield_r2": 0.5939,
+              "direction_accuracy_pct": 29.5
+            }
+          },
+          "Shallow HistGradientBoosting": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 26.28,
+              "anomaly_rmse_pp": 48.04,
+              "anomaly_medae_pp": 15.36,
+              "anomaly_r2": -0.0974,
+              "yield_mae_mtha": 0.383,
+              "yield_rmse_mtha": 0.722,
+              "yield_r2": 0.2106,
+              "direction_accuracy_pct": 44.4
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 23.89,
+              "anomaly_rmse_pp": 33.86,
+              "anomaly_medae_pp": 13.39,
+              "anomaly_r2": -0.4097,
+              "yield_mae_mtha": 0.427,
+              "yield_rmse_mtha": 0.853,
+              "yield_r2": -0.6444,
+              "direction_accuracy_pct": 54.1
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 27.86,
+              "anomaly_rmse_pp": 55.44,
+              "anomaly_medae_pp": 16.35,
+              "anomaly_r2": -0.0554,
+              "yield_mae_mtha": 0.353,
+              "yield_rmse_mtha": 0.62,
+              "yield_r2": 0.5203,
+              "direction_accuracy_pct": 38.0
+            }
+          }
+        }
+      },
+      "Mid-Season (In-Season 13-Feat)": {
+        "selected_winning_model": "Zero-Anomaly Baseline",
+        "selection_reason": "Crop-decoupled fallback: no candidate achieved >= 3.0% validation RMSE reduction and >= 7/10 fold wins.",
+        "features_used": [
+          "mid_season_rainfall_cum_mm",
+          "mid_season_temp_mean_c",
+          "mid_season_temp_max_peak_c",
+          "mid_season_heat_days_ge_34c",
+          "mid_season_heat_days_ge_35c",
+          "mid_season_dry_spell_max_days",
+          "mid_season_heavy_rain_days_ge_50mm",
+          "mid_season_spi3",
+          "mid_season_spi1",
+          "mid_season_sm_topsoil_layer1_mean",
+          "mid_season_sm_topsoil_layer1_min",
+          "mid_season_sm_root_zone_approx_mean",
+          "mid_season_sm_root_zone_approx_min"
+        ],
+        "validation_summary_10_folds": {
+          "Zero-Anomaly Baseline": {
+            "mean_val_rmse_pp": 63.06,
+            "std_val_rmse_pp": 38.49,
+            "mean_val_mae_pp": 33.68,
+            "mean_val_yield_rmse_mtha": 0.899,
+            "mean_val_direction_acc_pct": 23.5,
+            "rel_rmse_improvement_pct": 0.0,
+            "fold_wins_out_of_10": 0,
+            "passes_acceptance_gates": false
+          },
+          "Huber Regressor": {
+            "mean_val_rmse_pp": 62.95,
+            "std_val_rmse_pp": 38.24,
+            "mean_val_mae_pp": 34.64,
+            "mean_val_yield_rmse_mtha": 0.911,
+            "mean_val_direction_acc_pct": 50.5,
+            "rel_rmse_improvement_pct": 0.17,
+            "fold_wins_out_of_10": 8,
+            "passes_acceptance_gates": false
+          },
+          "Ridge Regression": {
+            "mean_val_rmse_pp": 63.67,
+            "std_val_rmse_pp": 37.41,
+            "mean_val_mae_pp": 37.49,
+            "mean_val_yield_rmse_mtha": 0.962,
+            "mean_val_direction_acc_pct": 41.9,
+            "rel_rmse_improvement_pct": -0.98,
+            "fold_wins_out_of_10": 5,
+            "passes_acceptance_gates": false
+          },
+          "ElasticNet": {
+            "mean_val_rmse_pp": 63.49,
+            "std_val_rmse_pp": 37.53,
+            "mean_val_mae_pp": 37.32,
+            "mean_val_yield_rmse_mtha": 0.959,
+            "mean_val_direction_acc_pct": 41.1,
+            "rel_rmse_improvement_pct": -0.69,
+            "fold_wins_out_of_10": 4,
+            "passes_acceptance_gates": false
+          },
+          "Shallow HistGradientBoosting": {
+            "mean_val_rmse_pp": 65.47,
+            "std_val_rmse_pp": 36.88,
+            "mean_val_mae_pp": 38.92,
+            "mean_val_yield_rmse_mtha": 0.996,
+            "mean_val_direction_acc_pct": 39.5,
+            "rel_rmse_improvement_pct": -3.82,
+            "fold_wins_out_of_10": 3,
+            "passes_acceptance_gates": false
+          }
+        },
+        "held_out_test_evaluation": {
+          "Zero-Anomaly Baseline": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 21.1,
+              "anomaly_rmse_pp": 45.86,
+              "anomaly_medae_pp": 11.05,
+              "anomaly_r2": -0.0002,
+              "yield_mae_mtha": 0.3,
+              "yield_rmse_mtha": 0.615,
+              "yield_r2": 0.427,
+              "direction_accuracy_pct": 29.4
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 21.32,
+              "anomaly_rmse_pp": 29.3,
+              "anomaly_medae_pp": 14.09,
+              "anomaly_r2": -0.056,
+              "yield_mae_mtha": 0.378,
+              "yield_rmse_mtha": 0.724,
+              "yield_r2": -0.184,
+              "direction_accuracy_pct": 15.3
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 20.97,
+              "anomaly_rmse_pp": 54.07,
+              "anomaly_medae_pp": 6.95,
+              "anomaly_r2": -0.004,
+              "yield_mae_mtha": 0.249,
+              "yield_rmse_mtha": 0.531,
+              "yield_r2": 0.6482,
+              "direction_accuracy_pct": 38.8
+            }
+          },
+          "Huber Regressor": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 21.63,
+              "anomaly_rmse_pp": 46.1,
+              "anomaly_medae_pp": 10.69,
+              "anomaly_r2": -0.0106,
+              "yield_mae_mtha": 0.309,
+              "yield_rmse_mtha": 0.628,
+              "yield_r2": 0.4031,
+              "direction_accuracy_pct": 55.6
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 21.98,
+              "anomaly_rmse_pp": 29.98,
+              "anomaly_medae_pp": 15.76,
+              "anomaly_r2": -0.1054,
+              "yield_mae_mtha": 0.391,
+              "yield_rmse_mtha": 0.746,
+              "yield_r2": -0.2579,
+              "direction_accuracy_pct": 45.9
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 21.41,
+              "anomaly_rmse_pp": 54.16,
+              "anomaly_medae_pp": 8.55,
+              "anomaly_r2": -0.0074,
+              "yield_mae_mtha": 0.255,
+              "yield_rmse_mtha": 0.535,
+              "yield_r2": 0.6426,
+              "direction_accuracy_pct": 62.0
+            }
+          },
+          "Ridge Regression": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 27.14,
+              "anomaly_rmse_pp": 47.35,
+              "anomaly_medae_pp": 18.34,
+              "anomaly_r2": -0.0662,
+              "yield_mae_mtha": 0.389,
+              "yield_rmse_mtha": 0.712,
+              "yield_r2": 0.232,
+              "direction_accuracy_pct": 31.8
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 25.5,
+              "anomaly_rmse_pp": 34.04,
+              "anomaly_medae_pp": 19.02,
+              "anomaly_r2": -0.425,
+              "yield_mae_mtha": 0.452,
+              "yield_rmse_mtha": 0.866,
+              "yield_r2": -0.6926,
+              "direction_accuracy_pct": 38.8
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 28.22,
+              "anomaly_rmse_pp": 54.37,
+              "anomaly_medae_pp": 17.58,
+              "anomaly_r2": -0.0153,
+              "yield_mae_mtha": 0.347,
+              "yield_rmse_mtha": 0.589,
+              "yield_r2": 0.5671,
+              "direction_accuracy_pct": 27.1
+            }
+          },
+          "ElasticNet": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 26.69,
+              "anomaly_rmse_pp": 47.23,
+              "anomaly_medae_pp": 17.63,
+              "anomaly_r2": -0.0607,
+              "yield_mae_mtha": 0.381,
+              "yield_rmse_mtha": 0.703,
+              "yield_r2": 0.2505,
+              "direction_accuracy_pct": 31.3
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 25.42,
+              "anomaly_rmse_pp": 33.86,
+              "anomaly_medae_pp": 19.03,
+              "anomaly_r2": -0.4101,
+              "yield_mae_mtha": 0.451,
+              "yield_rmse_mtha": 0.858,
+              "yield_r2": -0.6616,
+              "direction_accuracy_pct": 37.6
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 27.52,
+              "anomaly_rmse_pp": 54.27,
+              "anomaly_medae_pp": 17.53,
+              "anomaly_r2": -0.0114,
+              "yield_mae_mtha": 0.336,
+              "yield_rmse_mtha": 0.58,
+              "yield_r2": 0.581,
+              "direction_accuracy_pct": 27.1
+            }
+          },
+          "Shallow HistGradientBoosting": {
+            "full_period_2021_2025": {
+              "n_records": 214,
+              "anomaly_mae_pp": 28.18,
+              "anomaly_rmse_pp": 48.7,
+              "anomaly_medae_pp": 19.26,
+              "anomaly_r2": -0.1277,
+              "yield_mae_mtha": 0.416,
+              "yield_rmse_mtha": 0.792,
+              "yield_r2": 0.0497,
+              "direction_accuracy_pct": 37.4
+            },
+            "macro_shock_subperiod_2021_2022": {
+              "n_records": 85,
+              "anomaly_mae_pp": 26.94,
+              "anomaly_rmse_pp": 36.8,
+              "anomaly_medae_pp": 19.62,
+              "anomaly_r2": -0.6653,
+              "yield_mae_mtha": 0.475,
+              "yield_rmse_mtha": 0.972,
+              "yield_r2": -1.1357,
+              "direction_accuracy_pct": 42.4
+            },
+            "post_shock_subperiod_2023_2025": {
+              "n_records": 129,
+              "anomaly_mae_pp": 29.0,
+              "anomaly_rmse_pp": 55.15,
+              "anomaly_medae_pp": 18.76,
+              "anomaly_r2": -0.0447,
+              "yield_mae_mtha": 0.377,
+              "yield_rmse_mtha": 0.646,
+              "yield_r2": 0.4793,
+              "direction_accuracy_pct": 34.1
+            }
+          }
+        }
+      }
+    }
+  }
+}

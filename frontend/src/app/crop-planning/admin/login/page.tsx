@@ -21,8 +21,8 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const { login } = useAdminSession();
 
-  const [username, setUsername] = useState("local.admin");
-  const [password, setPassword] = useState("AdminPass@2026!");
+  const [username, setUsername] = useState("agriofficer");
+  const [password, setPassword] = useState("AgriOfficer@2026");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,7 +159,7 @@ export default function AdminLoginPage() {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="e.g. local.admin"
+                    placeholder="e.g. agriofficer"
                     autoCapitalize="none"
                     spellCheck={false}
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white text-sm transition"
@@ -211,8 +211,8 @@ export default function AdminLoginPage() {
 
             <div className="mt-6 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500">
               <span className="font-semibold text-slate-700">Development Credentials:</span>{" "}
-              User: <code className="text-emerald-700 font-bold">local.admin</code> | Pass:{" "}
-              <code className="text-emerald-700 font-bold">AdminPass@2026!</code>
+              User: <code className="text-emerald-700 font-bold">agriofficer</code> | Pass:{" "}
+              <code className="text-emerald-700 font-bold">AgriOfficer@2026</code>
             </div>
           </div>
         </div>

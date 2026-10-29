@@ -34,7 +34,7 @@ export function AdminSessionProvider({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const baseUrl = process.env.NEXT_PUBLIC_CULTIVATION_API_URL || "http://127.0.0.1:8000";
+  const baseUrl = process.env.NEXT_PUBLIC_CULTIVATION_API_URL || "http://127.0.0.1:8001";
 
   useEffect(() => {
     try {

@@ -36,8 +36,8 @@ export default function LoginPage() {
   const [farmerError, setFarmerError] = useState<string | null>(null);
 
   // Admin form state
-  const [adminId, setAdminId] = useState("local.admin");
-  const [adminPass, setAdminPass] = useState("AdminPass@2026!");
+  const [adminId, setAdminId] = useState("agriofficer");
+  const [adminPass, setAdminPass] = useState("AgriOfficer@2026");
   const [showAdminPass, setShowAdminPass] = useState(false);
   const [adminBusy, setAdminBusy] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
@@ -331,7 +331,7 @@ export default function LoginPage() {
                         required
                         value={adminId}
                         onChange={(e) => setAdminId(e.target.value)}
-                        placeholder="local.admin"
+                        placeholder="agriofficer"
                         autoCapitalize="none"
                         spellCheck={false}
                         className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition"
@@ -350,7 +350,7 @@ export default function LoginPage() {
                         required
                         value={adminPass}
                         onChange={(e) => setAdminPass(e.target.value)}
-                        placeholder="AdminPass@2026!"
+                        placeholder="AgriOfficer@2026"
                         className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition"
                       />
                       <button
@@ -383,8 +383,8 @@ export default function LoginPage() {
                 {/* Default dev credentials */}
                 <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-xs text-slate-600">
                   <span className="font-semibold text-slate-800">Officer Credentials:</span> User:{" "}
-                  <code className="text-emerald-700 font-bold">local.admin</code> | Pass:{" "}
-                  <code className="text-emerald-700 font-bold">AdminPass@2026!</code>
+                  <code className="text-emerald-700 font-bold">agriofficer</code> | Pass:{" "}
+                  <code className="text-emerald-700 font-bold">AgriOfficer@2026</code>
                 </div>
               </div>
             )}

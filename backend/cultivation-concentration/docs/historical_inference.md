@@ -1,3 +1,5 @@
+> PP1 working copy: use the isolated launcher and URLs in [PP1_RUN.md](../../../PP1_RUN.md).
+
 # Optional historical inference provisioning
 
 The existing `HistoricalPredictor` and farmer workflow are reused. No historical
@@ -100,7 +102,7 @@ validated market loss or a regional harvest-window prediction.
 Use the existing tested environment and an authorized private bundle:
 
 ```powershell
-Set-Location D:\Research\Rese\J26-IT-358\backend\cultivation-concentration
+Set-Location D:\meeting\J26-IT-358\backend\cultivation-concentration
 # On first setup, use Python 3.12.0 and the existing lock file:
 py -3.12 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.lock.txt
@@ -111,7 +113,7 @@ $env:CULTIVATION_HISTORICAL_MODEL = 'selected_xgboost_2024'
 $env:CULTIVATION_HISTORICAL_EVIDENCE = 'D:\authorized-private-handoff\historical-availability.json'
 $env:CULTIVATION_HISTORICAL_EVIDENCE_SHA256 = '<independently recorded SHA-256>'
 .venv\Scripts\python.exe -B -m app.migrations
-.venv\Scripts\python.exe -B -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.venv\Scripts\python.exe -B -m uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
 These commands configure provisioning, **not successful inference with the current

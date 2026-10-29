@@ -34,7 +34,7 @@ import {
 import { useSession } from "../components/session";
 import { useLoad } from "../components/ui";
 import { formatDate } from "../lib/dates";
-import type { Plan, Workflow } from "../lib/contracts";
+import type { Plan, ProductionConcentrationIndicator, Workflow } from "../lib/contracts";
 
 export default function RiskAnalysisPage() {
   const { api, session } = useSession();
@@ -43,6 +43,7 @@ export default function RiskAnalysisPage() {
   const [analyzing, setAnalyzing] = useState<boolean>(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [workflowReport, setWorkflowReport] = useState<Workflow | null>(null);
+  const [productionIndicator, setProductionIndicator] = useState<ProductionConcentrationIndicator | null>(null);
 
   // Fetch farmer's saved plans from the live backend
   const plansResult = useLoad(
@@ -108,6 +109,7 @@ export default function RiskAnalysisPage() {
   useEffect(() => {
     if (!activePlan) {
       setWorkflowReport(null);
+      setProductionIndicator(null);
       return;
     }
     let cancelled = false;
@@ -138,6 +140,53 @@ export default function RiskAnalysisPage() {
     };
   }, [activePlan, api]);
 
+  useEffect(() => {
+    if (!activePlan) {
+      setProductionIndicator(null);
+      return;
+    }
+    let cancelled = false;
+    api.productionConcentrationIndicator(activePlan.plan_id)
+      .then((result) => {
+        if (!cancelled) setProductionIndicator(result);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          const status = err?.status;
+          const reason = status === 404
+            ? "This cultivation plan was not found or is not owned by the logged-in farmer."
+            : status === 401
+              ? "Your farmer session is not authorized to view this plan."
+              : err?.message || "Historical production indicator could not be loaded.";
+          setProductionIndicator({
+            status: "Insufficient Data",
+            reason,
+            plan_id: activePlan.plan_id,
+            plan_season: activePlan.farmer_declared_season,
+            crop: activePlan.crop,
+            district: activePlan.district,
+            season: activePlan.farmer_declared_season,
+            forecast_year: 2026,
+            forecast_2026_kg: null,
+            selected_forecast_method: null,
+            historical_reference_kg: null,
+            reference_years: [],
+            deviation_percent: null,
+            lower_threshold_percent: null,
+            upper_threshold_percent: null,
+            category: null,
+            calibration_sample_count: 0,
+            calibration_years: [],
+            method_description: "",
+            limitations: [],
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activePlan, api]);
+
   // Crop image selector based on crop
   const cropImage = useMemo(() => {
     if (!activePlan) return "/images/component2_planning.jpg";
@@ -152,13 +201,8 @@ export default function RiskAnalysisPage() {
   }, [activePlan]);
 
   const assessment = workflowReport?.assessment;
-  const riskLevel = assessment?.risk_level ?? null;
-  const isUnvalidated =
-    !assessment ||
-    riskLevel === null ||
-    riskLevel === undefined ||
-    assessment.status === "insufficient_evidence" ||
-    assessment.status === "risk_level_unvalidated";
+  const riskLevel = productionIndicator?.category ?? null;
+  const isUnvalidated = productionIndicator?.status !== "available" || !riskLevel;
 
   // Colours / icons driven by the actual risk level returned by the backend.
   const riskStyle = {
@@ -537,7 +581,7 @@ export default function RiskAnalysisPage() {
                 </div>
               )}
 
-              {/* Status Display Card */}
+              {/* Historical production-based concentration assessment */}
               {isUnvalidated ? (
                 <div
                   style={{
@@ -567,16 +611,16 @@ export default function RiskAnalysisPage() {
 
                     <div>
                       <strong style={{ fontSize: "17px", fontWeight: 800, color: "#b45309", display: "block" }}>
-                        Current risk level not yet validated
+                        Historical Production-Based Concentration Assessment
                       </strong>
                       <span style={{ fontSize: "11px", fontWeight: 700, color: "#92400e" }}>
-                        Operational Status: Risk Classification Unvalidated
+                        Risk Level: Not Available
                       </span>
                     </div>
                   </div>
 
                   <p style={{ fontSize: "13px", color: "#451a03", margin: "10px 0 14px 0", lineHeight: 1.6 }}>
-                    Peer counts and concentration values are protected. An unvalidated classification does not establish whether peers exist in {activePlan.district} for this harvest window. Under established research protocol, an absence of registered peers represents <strong>insufficient evidence</strong>, not a validated Low Risk level or arbitrary numeric score.
+                    Reason: {productionIndicator?.reason || "No matching historical production data is available for this crop, district, and season."}
                   </p>
 
                   <div
@@ -590,7 +634,7 @@ export default function RiskAnalysisPage() {
                       lineHeight: 1.5,
                     }}
                   >
-                    <strong>Scientific Note:</strong> Descriptive concentration does not establish a validated risk category. Applicable reference evidence and representative coverage remain required; protected values cannot establish zero peers.
+                    <strong>Scientific Note:</strong> This analysis uses the plan&apos;s declared season and historical district-level production; it does not infer a season from planting month or use registered farmer counts.
                   </div>
                 </div>
               ) : (
@@ -607,7 +651,7 @@ export default function RiskAnalysisPage() {
                     {currentRiskStyle?.icon}
                     <div>
                       <strong style={{ fontSize: "18px", fontWeight: 800, color: currentRiskStyle?.titleColor ?? "#15803d", display: "block" }}>
-                        Risk Level:
+                        Historical Production-Based Concentration Assessment:
                         <span
                           style={{
                             display: "inline-block",
@@ -623,14 +667,28 @@ export default function RiskAnalysisPage() {
                         </span>
                       </strong>
                       <span style={{ fontSize: "11px", fontWeight: 600, color: currentRiskStyle?.textColor, opacity: 0.8 }}>
-                        {assessment?.status === "risk_level_validated"
-                          ? "Operationally Validated"
-                          : "Model-Estimated · Pending Prospective Validation"}
+                        Forecast year: {productionIndicator.forecast_year} · Historical calibration
                       </span>
                     </div>
                   </div>
                   <p style={{ fontSize: "13px", color: currentRiskStyle?.textColor ?? "#14532d", margin: "6px 0 0 0", lineHeight: 1.6 }}>
-                    {assessment?.interpretation ?? "Regional concentration assessment completed."}
+                    Your crop&apos;s predicted production is {productionIndicator.deviation_percent! >= 0 ? "+" : ""}{productionIndicator.deviation_percent!.toFixed(2)}% {productionIndicator.deviation_percent! >= 0 ? "above" : "below"} its historical reference. Based on historical thresholds, its relative cultivation concentration level is {riskLevel}.
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: "10px", marginTop: "14px" }}>
+                    {[
+                      ["Crop / district / season", `${productionIndicator.crop} · ${productionIndicator.district} · ${productionIndicator.season}`],
+                      ["Forecast production", `${productionIndicator.forecast_2026_kg!.toLocaleString("en-US")} kg`],
+                      ["Historical reference", `${productionIndicator.historical_reference_kg!.toLocaleString("en-US")} kg`],
+                      ["Historical thresholds", `${productionIndicator.lower_threshold_percent!.toFixed(2)}% to ${productionIndicator.upper_threshold_percent!.toFixed(2)}%`],
+                    ].map(([label, value]) => (
+                      <div key={label} style={{ background: "#ffffff", borderRadius: "10px", padding: "10px 12px", border: "1px solid #e2e8f0" }}>
+                        <div style={{ fontSize: "11px", color: "#64748b" }}>{label}</div>
+                        <strong style={{ fontSize: "13px", color: "#0f172a" }}>{value}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: "12px", color: currentRiskStyle?.textColor ?? "#14532d", margin: "14px 0 0 0", lineHeight: 1.6 }}>
+                    This is a historical production concentration indicator, not a confirmed market oversupply or financial-loss prediction.
                   </p>
                 </div>
               )}

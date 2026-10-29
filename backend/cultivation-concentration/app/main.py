@@ -349,6 +349,15 @@ def create_app(database_path=None, farmer_tokens=None, analysis_tokens=None, alt
         return farmer_view(assess(repository,cutoff,plan['district'],plan['region'],plan['crop'],season,
                                  date.fromisoformat(plan['expected_harvest_date'])))
 
+    @application.get('/api/cultivation-plans/{plan_id}/production-concentration-indicator',
+                     responses=error_responses(401,404,503))
+    def owned_production_concentration_indicator(
+            plan_id: str, identity=Depends(farmer), repository=Depends(store)):
+        from app.services.production_concentration_indicator import report_for_plan
+        with repository.connection() as db:
+            plan = repository.get(db, plan_id, identity)
+        return report_for_plan(plan)
+
     @application.get('/api/cultivation-analysis/risk-indicators',responses=error_responses(403,422,503))
     def risk_indicators(district: Literal['Matara','Hambantota'],
                         region: str = Query(min_length=1,max_length=100),

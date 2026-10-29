@@ -49,7 +49,9 @@ def router() -> APIRouter:
             "supported_crops": ["Bandakka", "Brinjal", "Pumpkin", "Corn", "Mung Beans", "Chillies"],
             "supported_models": ["XGBoost", "CatBoost", "Random Forest", "LinearSVC", "RBF SVC"],
             "benchmark_overview": BENCHMARKS,
-            "isolated_database": "storage/research_demo.sqlite3",
+            "isolated_database": Path(
+                os.getenv("CULTIVATION_RESEARCH_DEMO_DB", ISOLATED_DEMO_DB)
+            ).resolve().relative_to(Path(__file__).resolve().parents[1]).as_posix(),
         }
 
     @routes.post(

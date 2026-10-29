@@ -1,3 +1,5 @@
+> PP1 working copy: use the isolated launcher and URLs in [PP1_RUN.md](../../../PP1_RUN.md).
+
 # Frontend API integration
 
 The frontend uses existing Component 02 endpoints and bearer sessions. No research
@@ -83,7 +85,7 @@ the frontend origin has been allowed by deployment configuration. Keep the retur
 credential in memory; do not put it in URLs, source control or analytics.
 
 ```javascript
-const baseUrl = "http://127.0.0.1:8000";
+const baseUrl = "http://127.0.0.1:8001";
 let accessToken;
 
 async function api(path, { method = "GET", body } = {}) {
@@ -231,11 +233,11 @@ Readiness never creates databases, applies migrations, loads model binaries or
 trains models. Initialize before starting traffic:
 
 ```powershell
-Set-Location D:\Research\Rese\J26-IT-358\backend\cultivation-concentration
-$env:CULTIVATION_PLAN_DB = 'storage/cultivation_plans.sqlite3'
+Set-Location D:\meeting\J26-IT-358\backend\cultivation-concentration
+$env:CULTIVATION_PLAN_DB = 'storage/pp1/cultivation_plans.sqlite3'
 $env:CULTIVATION_CORS_ORIGINS = '["http://localhost:5173"]'
 .venv\Scripts\python.exe -B -m app.migrations
-.venv\Scripts\python.exe -B -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.venv\Scripts\python.exe -B -m uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
 The migration CLI reuses existing plan initialization, including owner-listing

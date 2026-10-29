@@ -1,3 +1,5 @@
+> PP1 working copy: use the isolated launcher and URLs in [PP1_RUN.md](../../../PP1_RUN.md).
+
 # Registered farmer workflow
 
 All examples use fictional accounts. Adjust future dates when necessary. See
@@ -7,21 +9,21 @@ All examples use fictional accounts. Adjust future dates when necessary. See
 ## Run and verify locally (PowerShell)
 
 ```powershell
-Set-Location D:\Research\Rese\J26-IT-358\backend\cultivation-concentration
+Set-Location D:\meeting\J26-IT-358\backend\cultivation-concentration
 # First setup only, if .venv does not already exist:
 py -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 $env:CULTIVATION_PLAN_DB = "$PWD\storage\cultivation_plans.sqlite3"
 $env:CULTIVATION_CORS_ORIGINS = '["http://localhost:5173"]'
 .venv\Scripts\python.exe -B -m app.migrations
-.venv\Scripts\python.exe -B -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.venv\Scripts\python.exe -B -m uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
 In another terminal at the same directory:
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8000/health
-Invoke-RestMethod http://127.0.0.1:8000/ready
+Invoke-RestMethod http://127.0.0.1:8001/health
+Invoke-RestMethod http://127.0.0.1:8001/ready
 .venv\Scripts\python.exe -B -m pytest -q -p no:cacheprovider tests/test_farmer_workflow_e2e.py
 .venv\Scripts\python.exe -B -m pytest -q -p no:cacheprovider
 ```

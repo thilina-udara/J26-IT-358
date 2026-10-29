@@ -1,7 +1,7 @@
 import type {
   Comparison, Credentials, Farmer, HistoricalScenarioRequest, HistoricalScenarioResponse,
   Personalized, Plan, PlanFields, PlanPage, PlanningRequest, ResearchDemoStatus,
-  SavedPlanning, Session, Submission, Workflow,
+  ProductionConcentrationIndicator, SavedPlanning, Session, Submission, Workflow,
 } from "./contracts";
 
 export class ApiError extends Error {
@@ -51,6 +51,7 @@ export function createApi(baseUrl: string, token: () => string | null, onUnautho
     logout: () => request<void>("/auth/logout", "POST"),
     list: (params: URLSearchParams, signal?: AbortSignal) => request<PlanPage>(`/api/cultivation-plans?${params}`, "GET", undefined, true, signal),
     read: (planId: string, signal?: AbortSignal) => request<{ plan: Plan; personalized_plan: SavedPlanning | null }>(`/api/farmer-workflow/plans/${id(planId)}`, "GET", undefined, true, signal),
+    productionConcentrationIndicator: (planId: string, signal?: AbortSignal) => request<ProductionConcentrationIndicator>(`/api/cultivation-plans/${id(planId)}/production-concentration-indicator`, "GET", undefined, true, signal),
     create: ({ farmer_declared_season, ...fields }: PlanFields) => request<Submission>("/api/farmer-workflow/plans", "POST", { ...fields, season: farmer_declared_season }),
     update: (planId: string, fields: PlanFields) => request<{ plan: Plan }>(`/api/cultivation-plans/${id(planId)}`, "PUT", fields),
     cancel: (planId: string) => request<{ plan: Plan }>(`/api/cultivation-plans/${id(planId)}`, "DELETE"),

@@ -68,6 +68,22 @@ def test_registered_farmer_complete_journey(tmp_path):
     assert client.post('/api/farmer-workflow/analyze',headers=h,json=dict(plan_id=identifier)).status_code==401
 
 
+def test_farmer_production_concentration_indicator_is_plan_owned(tmp_path):
+    client=client_for(tmp_path/'indicator.sqlite3')
+    _,session=account(client); h=headers(session['access_token'])
+    _,other_session=account(client, 'fictional-bob'); peer=headers(other_session['access_token'])
+    created=client.post('/api/farmer-workflow/plans',headers=h,json=dict(plan(),season='Maha'))
+    assert created.status_code==201, created.text
+    identifier=created.json()['plan']['plan_id']; base='/api/cultivation-plans/'+identifier
+    concentration=client.get(base+'/production-concentration-indicator',headers=h)
+    assert concentration.status_code==200, concentration.text
+    payload=concentration.json()
+    assert payload['plan_id']==identifier
+    assert payload['crop']=='Corn' and payload['district']=='Matara' and payload['season']=='Maha'
+    assert payload['status'] in ('available','Insufficient Data')
+    assert client.get(base+'/production-concentration-indicator',headers=peer).status_code==404
+
+
 @pytest.mark.parametrize('malformed',[False,True])
 def test_analysis_failure_preserves_discoverable_plan_and_retry(tmp_path,monkeypatch,malformed):
     path=tmp_path/'recovery.sqlite3'; client=client_for(path)

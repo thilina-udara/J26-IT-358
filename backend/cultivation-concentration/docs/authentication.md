@@ -1,3 +1,5 @@
+> PP1 working copy: use the isolated launcher and URLs in [PP1_RUN.md](../../../PP1_RUN.md).
+
 # Farmer accounts and authentication
 
 Farmer accounts extend the existing Component 02 application. They use the same
@@ -93,12 +95,12 @@ Malformed or ambiguous research role configuration continues to fail closed with
 From the repository root, run:
 
 ```powershell
-Set-Location D:\Research\Rese\J26-IT-358\backend\cultivation-concentration
-$env:CULTIVATION_PLAN_DB = 'storage/cultivation_plans.sqlite3'
+Set-Location D:\meeting\J26-IT-358\backend\cultivation-concentration
+$env:CULTIVATION_PLAN_DB = 'storage/pp1/cultivation_plans.sqlite3'
 $env:CULTIVATION_SESSION_TTL_SECONDS = '3600'
 $env:CULTIVATION_LEGACY_FARMER_TOKENS_ENABLED = 'false'
 .venv\Scripts\python.exe -B -m app.migrations
-.venv\Scripts\python.exe -B -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.venv\Scripts\python.exe -B -m uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
 To select a database explicitly: `python -B -m app.migrations --database <path>`.

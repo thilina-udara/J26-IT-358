@@ -31,9 +31,56 @@ def router(database_path: str, security, historical_predictor=None, production_e
             raise unauthorized_admin()
         return admin_store().authenticate(token)
 
+    @routes.get('/analytics/historical-trend/options')
+    def historical_trend_options(officer=Depends(require_officer_or_admin)):
+        from app.services.historical_trend import options
+        return {'series': options()}
+
+    @routes.get('/analytics/historical-trend')
+    def historical_trend(
+        district: Literal['Matara', 'Hambantota'] = 'Hambantota',
+        crop: Literal['Mung Beans', 'Corn', 'Bandakka', 'Brinjal', 'Pumpkin', 'Chillies'] = 'Bandakka',
+        season: Literal['Maha', 'Yala'] = 'Maha',
+        evaluation_year: int | None = Query(None, ge=1900, le=2200),
+        officer=Depends(require_officer_or_admin),
+    ):
+        from app.services.historical_trend import report
+        return report(district, crop, season, evaluation_year)
+
     @routes.post("/auth/login")
     def admin_login(body: AdminLoginRequest, store=Depends(admin_store)):
         return store.login(body.login_identifier, body.password)
+
+    @routes.get('/analytics/production-forecast/options')
+    def production_forecast_options(officer=Depends(require_officer_or_admin)):
+        from app.services.production_forecast import options
+        return {'series': options(), 'forecast_year': 2026}
+
+    @routes.get('/analytics/production-forecast')
+    def production_forecast(
+        district: Literal['Matara', 'Hambantota'] = 'Hambantota',
+        crop: Literal['Mung Beans', 'Corn', 'Bandakka', 'Brinjal', 'Pumpkin', 'Chillies'] = 'Bandakka',
+        season: Literal['Maha', 'Yala'] = 'Maha',
+        forecast_year: int = Query(2026, ge=2026, le=2026),
+        officer=Depends(require_officer_or_admin),
+    ):
+        from app.services.production_forecast import report
+        return report(district, crop, season)
+
+    @routes.get('/analytics/production-concentration-indicator/options')
+    def production_concentration_indicator_options(officer=Depends(require_officer_or_admin)):
+        from app.services.production_concentration_indicator import options
+        return {'series': options(), 'forecast_year': 2026}
+
+    @routes.get('/analytics/production-concentration-indicator')
+    def production_concentration_indicator(
+        district: Literal['Matara', 'Hambantota'] = 'Hambantota',
+        crop: Literal['Mung Beans', 'Corn', 'Bandakka', 'Brinjal', 'Pumpkin', 'Chillies'] = 'Bandakka',
+        season: Literal['Maha', 'Yala'] = 'Maha',
+        officer=Depends(require_officer_or_admin),
+    ):
+        from app.services.production_concentration_indicator import report
+        return report(district, crop, season)
 
     @routes.get("/auth/me")
     def admin_me(profile=Depends(require_officer_or_admin)):

@@ -22,7 +22,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       try { window.sessionStorage.removeItem("agfarm_session"); } catch { }
     }
   }, []);
-  const api = useMemo(() => createApi(process.env.NEXT_PUBLIC_CULTIVATION_API_URL || "http://127.0.0.1:8000", () => current.current?.access_token ?? null, () => clear("Your session has expired or was revoked. Please log in again.")), [clear]);
+  const api = useMemo(() => createApi(process.env.NEXT_PUBLIC_CULTIVATION_API_URL || "http://127.0.0.1:8001", () => current.current?.access_token ?? null, () => clear("Your session has expired or was revoked. Please log in again.")), [clear]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.sessionStorage) return;

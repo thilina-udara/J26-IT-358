@@ -14,6 +14,28 @@ export interface Plan extends PlanFields { plan_id: string; farmer_id: string; s
 export interface PlanPage { items: Plan[]; total: number; limit: number; offset: number; has_more: boolean; next_offset: number | null }
 export interface Evidence { status: string; disclosure_status?: string | null; approval_status?: string | null; reason_codes?: string[]; missing_evidence?: string[] }
 export interface Assessment extends Evidence { risk_level?: string | null; indicators?: { status: string }; interpretation?: string }
+export interface ProductionConcentrationIndicator {
+  status: "available" | "Insufficient Data";
+  reason: string | null;
+  plan_id: string;
+  plan_season: Season | null;
+  crop: Crop;
+  district: District;
+  season: Season | null;
+  forecast_year: number;
+  forecast_2026_kg: number | null;
+  selected_forecast_method: string | null;
+  historical_reference_kg: number | null;
+  reference_years: number[];
+  deviation_percent: number | null;
+  lower_threshold_percent: number | null;
+  upper_threshold_percent: number | null;
+  category: "Low" | "Medium" | "High" | null;
+  calibration_sample_count: number;
+  calibration_years: number[];
+  method_description: string;
+  limitations: string[];
+}
 export interface Workflow extends Evidence {
   plan_id: string; analysis_status: string; assessment: Assessment;
   historical_prediction: Evidence & { scope?: string; reason?: string };

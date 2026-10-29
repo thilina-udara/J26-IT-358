@@ -31,6 +31,9 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useAdminSession } from "../../lib/admin-session";
+import HistoricalTrendAnalysis from "../../components/historical-trend-analysis";
+import CropProductionForecast from "../../components/production-forecast";
+import ProductionConcentrationIndicator from "../../components/production-concentration-indicator";
 
 interface PlanItem {
   plan_id: string;
@@ -191,8 +194,9 @@ export default function AdminDashboardPage() {
   const [mlLoading, setMlLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("2025_holdout");
   const [clusterMode, setClusterMode] = useState<"live" | "synthetic_demo">("live");
+  const [showAdditionalDetails, setShowAdditionalDetails] = useState(false);
 
-  const baseUrl = process.env.NEXT_PUBLIC_CULTIVATION_API_URL || "http://127.0.0.1:8000";
+  const baseUrl = process.env.NEXT_PUBLIC_CULTIVATION_API_URL || "http://127.0.0.1:8001";
 
   // Redirect if not logged in
   useEffect(() => {
@@ -740,19 +744,6 @@ export default function AdminDashboardPage() {
         {/* TAB 3: ML RESEARCH MONITORING (XGBoost & Clustering) */}
         {activeTab === "research" && (
           <div className="space-y-6">
-            {/* Research Disclaimer Banner */}
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3">
-              <Info size={20} className="shrink-0 text-amber-600 mt-0.5" />
-              <div>
-                <strong className="block font-bold mb-1 text-amber-900">
-                  RESEARCH PROXY GOVERNANCE BOUNDARY
-                </strong>
-                Concentration indices, DBSCAN/K-Means descriptive cultivation clusters, and XGBoost scenario scores are
-                academic research proxies developed to aid regional spatial planning. They are strictly distinguished
-                from validated operational yield guarantees.
-              </div>
-            </div>
-
             {mlLoading || !mlData ? (
               <div className="py-20 text-center text-slate-500">
                 <RefreshCw className="animate-spin inline mr-2 text-emerald-600" size={24} />
@@ -799,6 +790,20 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
+                <CropProductionForecast token={token} baseUrl={baseUrl} />
+                <HistoricalTrendAnalysis token={token} baseUrl={baseUrl} />
+                <ProductionConcentrationIndicator token={token} baseUrl={baseUrl} />
+                <button
+                  type="button"
+                  onClick={() => setShowAdditionalDetails((visible) => !visible)}
+                  aria-expanded={showAdditionalDetails}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-500 hover:text-emerald-800"
+                >
+                  {showAdditionalDetails ? "Hide Additional Details" : "Add More Details"}
+                </button>
+
+                {showAdditionalDetails && (
+                  <div className="space-y-6">
                 {/* PHASE 1: RESEARCH VALIDATION & CHRONOLOGICAL EVALUATION */}
                 {mlData.validation_metrics && (
                   <div className="space-y-6">
@@ -1438,6 +1443,8 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             )}
+                  </div>
+                )}
           </div>
         )}
       </main>

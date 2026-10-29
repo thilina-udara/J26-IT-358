@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Package,
   ShoppingBag,
+  Info,
 } from "lucide-react";
 
 import { WizardProgress } from "../../components/WizardProgress";
@@ -84,7 +85,7 @@ export default function SellingMarketPage() {
   const [guardTarget, setGuardTarget] = useState<string>("");
 
   // Step 3 state: market and price type
-  const [selectedMarketId, setSelectedMarketId] = useState<string>("");
+  const [selectedMarketId, setSelectedMarketId] = useState<string>("DEC_EMBILIPITIYA");
   const [selectedPriceType, setSelectedPriceType] = useState<PriceType | "">("");
   const [marketError, setMarketError] = useState<string | undefined>(undefined);
   const [priceTypeError, setPriceTypeError] = useState<string | undefined>(undefined);
@@ -115,24 +116,31 @@ export default function SellingMarketPage() {
     setStep1Data(s1);
     setStep2Data(s2);
 
-    // Restore Step 3 if previously selected
+    // Restore Step 3 state, automatically defaulting to Embilipitiya DEC for Matara & Hambantota
     const s3 = loadStep3FromStorage();
-    const market = s3.target_market_id || s3.selling_market_id || "";
-    if (market) {
-      setSelectedMarketId(market);
-    }
+    const market = "DEC_EMBILIPITIYA";
+    setSelectedMarketId(market);
+
     if (s3.price_type) {
       setSelectedPriceType(s3.price_type);
     }
-    if (isStep3Complete(s3)) {
+
+    // Automatically ensure Embilipitiya is saved as default selling market for this analysis
+    saveStep3ToStorage({
+      target_market_id: market,
+      selling_market_id: market,
+      price_type: s3.price_type || "",
+    });
+
+    if (s3.price_type === "wholesale" || s3.price_type === "retail") {
       setIsStep3Saved(true);
     }
 
     setGuardStatus("ready");
   }, [router]);
 
-  // Handle market selection
-  const handleMarketSelect = (marketId: string) => {
+  // Handle market selection (fixed to Embilipitiya DEC)
+  const handleMarketSelect = (marketId: string = "DEC_EMBILIPITIYA") => {
     clearAnalysisSnapshot();
     setSelectedMarketId(marketId);
     setMarketError(undefined);
@@ -155,8 +163,8 @@ export default function SellingMarketPage() {
 
     // Persist draft immediately so page refresh preserves choices
     saveStep3ToStorage({
-      target_market_id: selectedMarketId,
-      selling_market_id: selectedMarketId,
+      target_market_id: selectedMarketId || "DEC_EMBILIPITIYA",
+      selling_market_id: selectedMarketId || "DEC_EMBILIPITIYA",
       price_type: priceType,
     });
   };
@@ -180,9 +188,10 @@ export default function SellingMarketPage() {
       }
 
       // 2. Validate Step 3 inputs together
+      const marketToValidate = selectedMarketId || "DEC_EMBILIPITIYA";
       const validation = validateStep3({
-        target_market_id: selectedMarketId,
-        selling_market_id: selectedMarketId,
+        target_market_id: marketToValidate,
+        selling_market_id: marketToValidate,
         price_type: selectedPriceType,
       });
 
@@ -208,8 +217,8 @@ export default function SellingMarketPage() {
       setMarketError(undefined);
       setPriceTypeError(undefined);
       saveValidatedStep3ToStorage({
-        target_market_id: selectedMarketId,
-        selling_market_id: selectedMarketId,
+        target_market_id: marketToValidate,
+        selling_market_id: marketToValidate,
         price_type: selectedPriceType,
       });
       setIsStep3Saved(true);
@@ -410,10 +419,10 @@ export default function SellingMarketPage() {
               <span>Step 3.1 — Selling Market</span>
             </div>
             <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
-              Select Selling Market <span className="text-red-500">*</span>
+              Selling Market
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Select the Dedicated Economic Centre or terminal wholesale market where your harvest will be sold.
+              Designated reference Dedicated Economic Centre for your regional harvest analysis.
             </p>
           </div>
 
@@ -428,65 +437,54 @@ export default function SellingMarketPage() {
             </div>
           )}
 
-          {/* Markets Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            {STANDARD_MARKETS.map((market, idx) => {
-              const isSelected = selectedMarketId === market.id;
-
-              return (
-                <div
-                  key={market.id}
-                  ref={idx === 0 ? firstMarketCardRef : undefined}
-                  tabIndex={0}
-                  role="button"
-                  aria-pressed={isSelected}
-                  onClick={() => handleMarketSelect(market.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === " " || e.key === "Enter") {
-                      e.preventDefault();
-                      handleMarketSelect(market.id);
-                    }
-                  }}
-                  className={`relative rounded-2xl border-2 p-4 cursor-pointer transition-all shadow-2xs flex items-center justify-between gap-3 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/20 ${
-                    isSelected
-                      ? "border-[#15803d] bg-emerald-50/60 shadow-xs"
-                      : "border-slate-200/90 bg-white hover:border-emerald-300 hover:bg-slate-50/70"
-                  }`}
-                >
-                  <div className="space-y-1 min-w-0 pr-2">
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                          isSelected
-                            ? "bg-[#15803d] text-white"
-                            : "bg-[#E7F5EB] text-[#15803d]"
-                        }`}
-                      >
-                        <Store className="h-4 w-4" />
-                      </div>
-                      <h3 className="text-sm font-bold text-slate-900 tracking-tight leading-snug truncate">
-                        {market.name}
-                      </h3>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 pl-10.5">
-                      <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
-                      <span className="truncate">{market.region}</span>
-                    </div>
+          {/* Fixed Read-Only Selling Market Selection */}
+          <div className="space-y-3">
+            <div
+              ref={firstMarketCardRef}
+              tabIndex={0}
+              role="region"
+              aria-label="Selected Selling Market: Embilipitiya Dedicated Economic Centre"
+              className="relative rounded-2xl border-2 border-[#15803d] bg-emerald-50/60 p-4 sm:p-5 shadow-xs flex items-center justify-between gap-3 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/20"
+            >
+              <div className="space-y-1.5 min-w-0 pr-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 bg-[#15803d] text-white shadow-2xs">
+                    <Store className="h-5 w-5" />
                   </div>
-
-                  <div
-                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected
-                        ? "border-[#15803d] bg-[#15803d] text-white"
-                        : "border-slate-300 bg-white"
-                    }`}
-                  >
-                    {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-snug">
+                      Embilipitiya Dedicated Economic Centre
+                    </h3>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#E7F5EB] text-[#166534] border border-[#22A06B]/40">
+                      Primary Reference Market
+                    </span>
                   </div>
                 </div>
-              );
-            })}
+
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 pl-11.5">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <span>Southern / Sabaragamuwa Border (Primary Pilot Hub)</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="hidden sm:inline-block text-xs font-bold text-[#15803d]">
+                  Selected
+                </span>
+                <div className="h-6 w-6 rounded-full border-2 border-[#15803d] bg-[#15803d] text-white flex items-center justify-center shadow-2xs">
+                  <Check className="h-3.5 w-3.5 stroke-[3]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Regional Data Explanatory Note */}
+            <div className="rounded-xl border border-emerald-200/90 bg-[#F7F5ED]/70 p-3.5 text-xs text-slate-700 flex items-start gap-2.5 shadow-2xs">
+              <Info className="h-4 w-4 text-[#15803d] shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <span className="font-semibold text-slate-900">Regional Forecasting:</span>{" "}
+                Predictions are based on available regional historical data for Matara and Hambantota.
+              </div>
+            </div>
           </div>
         </section>
 
@@ -716,6 +714,12 @@ export default function SellingMarketPage() {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Regional Note */}
+            <div className="rounded-xl bg-white/90 border border-emerald-200 p-3 text-xs text-slate-700 flex items-center gap-2">
+              <Info className="h-4 w-4 text-[#15803d] shrink-0" />
+              <span>Predictions are based on available regional historical data for Matara and Hambantota.</span>
             </div>
           </section>
         )}

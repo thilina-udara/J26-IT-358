@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { MapPin, Building, Compass, ArrowRight, CheckCircle2 } from "lucide-react";
+import { MapPin, Building, Compass, ArrowRight } from "lucide-react";
 import { saveStep1ToStorage, loadStep1FromStorage, clearAnalysisSnapshot } from "../lib/wizard";
 
 export function PilotDistrictsCard() {
@@ -20,22 +20,18 @@ export function PilotDistrictsCard() {
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#166534]">
             <Compass className="h-4 w-4" />
-            <span>Regional Focus • Southern Province</span>
+            <span>Cultivation Areas</span>
           </div>
           <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">
-            Pilot Agricultural Districts
+            Supported Districts
           </h3>
           <p className="text-[15px] sm:text-base text-[#334155] mt-1.5 max-w-2xl leading-relaxed">
-            AgroDecision is currently active across Southern Sri Lanka to help local farmers evaluate market demand and prices before seasonal planting.
+            Select your district to quickly begin planning for your upcoming harvest.
           </p>
-        </div>
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#E7F5EB] text-[#166534] border border-[#22A06B]/30 w-fit self-start sm:self-auto shadow-2xs">
-          <CheckCircle2 className="h-3.5 w-3.5 text-[#22A06B]" />
-          <span>2 Active Pilot Districts</span>
         </div>
       </div>
 
-      {/* Pilot Districts Grid */}
+      {/* Supported Districts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
         {/* District 1: Matara */}
         <div className="rounded-2xl border border-[#22A06B]/25 bg-gradient-to-br from-[#F7F5ED]/90 via-white to-[#E7F5EB]/30 p-5 sm:p-6 hover:border-[#22A06B] hover:shadow-md transition-all flex flex-col justify-between group">
@@ -50,7 +46,7 @@ export function PilotDistrictsCard() {
                     Matara District
                   </h4>
                   <p className="text-xs sm:text-sm text-[#166534] font-bold">
-                    Southern Coastal Agricultural Belt
+                    Southern Coastal Belt
                   </p>
                 </div>
               </div>
@@ -59,7 +55,7 @@ export function PilotDistrictsCard() {
               </span>
             </div>
             <p className="text-sm sm:text-[14.5px] text-[#334155] leading-relaxed mb-5 font-normal">
-              High-rainfall coastal and mid-country belt with intensive vegetable and paddy farming. Farmers here can evaluate perishable crop timing and avoid seasonal market gluts.
+              High-rainfall coastal and mid-country belt with intensive vegetable farming. Evaluate crop timing and avoid selling during oversupplied weeks.
             </p>
           </div>
 
@@ -86,7 +82,7 @@ export function PilotDistrictsCard() {
                     Hambantota District
                   </h4>
                   <p className="text-xs sm:text-sm text-[#166534] font-bold">
-                    Southern Commercial Dry Zone
+                    Southern Dry Zone
                   </p>
                 </div>
               </div>
@@ -95,7 +91,7 @@ export function PilotDistrictsCard() {
               </span>
             </div>
             <p className="text-sm sm:text-[14.5px] text-[#334155] leading-relaxed mb-5 font-normal">
-              Commercial dry-zone farming region specializing in field crops, condiments, and grains. Helps growers compare wholesale market prices and calculate seasonal returns.
+              Commercial dry-zone farming region specializing in field crops, condiments, and grains. Compare wholesale prices and estimate your farming returns.
             </p>
           </div>
 
@@ -110,7 +106,7 @@ export function PilotDistrictsCard() {
         </div>
       </div>
 
-      {/* Primary Trading Hub */}
+      {/* Dedicated Economic Centre */}
       <div className="rounded-2xl border border-[#22A06B]/30 bg-gradient-to-br from-[#E7F5EB]/80 via-white to-[#F7F5ED]/80 p-5 sm:p-6 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
@@ -118,16 +114,11 @@ export function PilotDistrictsCard() {
               <Building className="h-6 w-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="text-base sm:text-lg font-extrabold text-[#166534]">
-                  Embilipitiya Dedicated Economic Centre
-                </h4>
-                <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-[#E7F5EB] text-[#166534] border border-[#22A06B]/30 uppercase tracking-wider">
-                  Primary Market Hub
-                </span>
-              </div>
-              <p className="text-sm sm:text-[14.5px] text-[#334155] mt-1.5 max-w-2xl leading-relaxed font-normal">
-                The central wholesale trading hub connecting southern farmers with islandwide distributors. Real-time wholesale prices at Embilipitiya DEC serve as the primary benchmark for southern market evaluations.
+              <h4 className="text-base sm:text-lg font-extrabold text-[#166534]">
+                Embilipitiya Dedicated Economic Centre
+              </h4>
+              <p className="text-sm sm:text-[14.5px] text-[#334155] mt-1 max-w-2xl leading-relaxed font-normal">
+                The central wholesale trading hub connecting southern farmers with regional distributors and wholesale buyers.
               </p>
             </div>
           </div>

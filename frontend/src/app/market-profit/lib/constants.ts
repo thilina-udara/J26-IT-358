@@ -281,6 +281,12 @@ export const STANDARD_MARKETS: MarketMetadata[] = [
   },
 ];
 
+// Component 1 Active Farmer-Facing Selling Market (Restricted to Embilipitiya DEC)
+export const SUPPORTED_FRONTEND_MARKETS: MarketMetadata[] = STANDARD_MARKETS.filter(
+  (m) => m.id === "DEC_EMBILIPITIYA"
+);
+export const DEFAULT_PILOT_MARKET_ID = "DEC_EMBILIPITIYA";
+
 // Price Tier Options
 export const PRICE_TYPES = [
   {

@@ -460,7 +460,7 @@ export default function HarvestDetailsPage() {
 
               <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
                 <span id="harvest_date_help">
-                  Today or any future calendar date is accepted.
+                  Today or any future date accepted. Recommended planning window: 8–16 weeks (approx. 2–4 months) ahead for optimal forecast accuracy.
                 </span>
                 {harvestDate && !dateError && (
                   <span className="sm:hidden font-semibold text-[#15803d]">
@@ -825,7 +825,7 @@ export default function HarvestDetailsPage() {
               <Info className="h-4 w-4 text-[#15803d] shrink-0 mt-0.5" />
               <div className="leading-relaxed">
                 <span className="font-bold text-[#166534]">Next Stage: Step 3 — Selling Market Selection.</span>{" "}
-                Select your intended wholesale terminal market (e.g. Meegoda, Embilipitiya, Colombo Manning Market) to evaluate local demand and seasonal price trends.
+                Confirm Embilipitiya Dedicated Economic Centre as your reference selling market to evaluate regional demand and seasonal price trends.
               </div>
             </div>
           </section>

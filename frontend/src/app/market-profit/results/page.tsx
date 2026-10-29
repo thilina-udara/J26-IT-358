@@ -16,7 +16,6 @@ import {
   Compass,
   Wallet,
   Receipt,
-  Sparkles,
   TrendingUp,
   Coins,
   ShieldCheck,
@@ -27,6 +26,8 @@ import {
   Edit3,
   RotateCcw,
   Loader2,
+  Printer,
+  Info,
 } from "lucide-react";
 
 import {
@@ -36,10 +37,9 @@ import {
   FrontendCropMetadata,
   DistrictMetadata,
   MarketMetadata,
-  DEFAULT_API_BASE_URL,
 } from "../lib/constants";
 import { formatDateDisplay, formatKg, formatLKR, formatPercent } from "../lib/formatters";
-import { MarketProfitApiClient, ApiError, classifyApiError, type ClassifiedApiError } from "../lib/api";
+import { MarketProfitApiClient, classifyApiError, type ClassifiedApiError } from "../lib/api";
 import type {
   DemandForecastRequest,
   DemandForecastResponse,
@@ -81,6 +81,29 @@ const CROP_IMAGE_MAP: Record<string, StaticImageData> = {
   CR_CHILLI: chilliImg,
 };
 
+function calculateHorizonWeeks(targetDateStr: string): {
+  weeks: number;
+  isSupportedRange: boolean;
+  days: number;
+} {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(targetDateStr);
+    target.setHours(0, 0, 0, 0);
+    const diffMs = target.getTime() - today.getTime();
+    const days = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    const weeks = Math.max(1, Math.round(days / 7));
+    return {
+      weeks,
+      isSupportedRange: weeks >= 1 && weeks <= 16,
+      days,
+    };
+  } catch {
+    return { weeks: 1, isSupportedRange: true, days: 0 };
+  }
+}
+
 export default function AnalysisResultsPage() {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<ValidatedAnalysisSnapshot | null>(null);
@@ -108,7 +131,7 @@ export default function AnalysisResultsPage() {
       setRedirectTarget(wizardValidation.redirectTarget || "/market-profit/new-analysis");
       setErrorMessage(
         wizardValidation.errorMessage ||
-          "Please complete all four wizard steps before viewing analysis results."
+          "Please complete your farm details before viewing analysis results."
       );
     }
   }, []);
@@ -160,14 +183,6 @@ export default function AnalysisResultsPage() {
           classifiedError: null,
           requestPayload: payload,
         });
-      } else if (isPredictionUnavailable(result)) {
-        setDemandState({
-          status: "unavailable",
-          response: result,
-          errorMessage: null,
-          classifiedError: null,
-          requestPayload: payload,
-        });
       } else {
         setDemandState({
           status: "unavailable",
@@ -181,7 +196,7 @@ export default function AnalysisResultsPage() {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      const classified = classifyApiError(err, "Market Demand Analysis");
+      const classified = classifyApiError(err, "Market Demand");
       setDemandState({
         status: "error",
         response: null,
@@ -223,7 +238,7 @@ export default function AnalysisResultsPage() {
     executeDemandForecast(snapshot, controller.signal);
   };
 
-  // Live Price Trend Forecast state (POST /api/v1/market-prices/forecast)
+  // Live Price Trend Forecast state
   const [priceState, setPriceState] = useState<{
     status: "idle" | "loading" | "available" | "unavailable" | "error";
     response: PriceForecastResponse | null;
@@ -270,14 +285,6 @@ export default function AnalysisResultsPage() {
           classifiedError: null,
           requestPayload: payload,
         });
-      } else if (isPricePredictionUnavailable(result)) {
-        setPriceState({
-          status: "unavailable",
-          response: result,
-          errorMessage: null,
-          classifiedError: null,
-          requestPayload: payload,
-        });
       } else {
         setPriceState({
           status: "unavailable",
@@ -291,7 +298,7 @@ export default function AnalysisResultsPage() {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      const classified = classifyApiError(err, "Price Trend Forecasting");
+      const classified = classifyApiError(err, "Price Forecast");
       setPriceState({
         status: "error",
         response: null,
@@ -333,7 +340,7 @@ export default function AnalysisResultsPage() {
     executePriceForecast(snapshot, controller.signal);
   };
 
-  // Live Profit & Risk Assessment state (POST /api/v1/profit-analyses/assess-risk)
+  // Live Profit Risk Assessment state
   const [profitState, setProfitState] = useState<{
     status: "idle" | "loading" | "available" | "unavailable" | "error";
     calculation: ProfitCalculationResult | null;
@@ -386,7 +393,7 @@ export default function AnalysisResultsPage() {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      const classified = classifyApiError(err, "Profit & Risk Assessment");
+      const classified = classifyApiError(err, "Profit Risk");
       setProfitState({
         status: "error",
         calculation: null,
@@ -403,7 +410,6 @@ export default function AnalysisResultsPage() {
   useEffect(() => {
     if (!snapshot) return;
 
-    // Prerequisite check: requires valid completed price forecast
     if (priceState.status === "loading") {
       setProfitState((prev) => (prev.status !== "idle" ? { ...prev, status: "idle" } : prev));
       return;
@@ -467,24 +473,29 @@ export default function AnalysisResultsPage() {
     executeProfitRiskAssessment(snapshot, priceVal, controller.signal);
   };
 
-  // Handler to start a new analysis
   const handleStartNewAnalysis = () => {
     clearAnalysisSnapshot();
     router.push("/market-profit/new-analysis");
   };
 
+  const handlePrint = () => {
+    if (typeof window !== "undefined") {
+      window.print();
+    }
+  };
+
   // 1. Loading State
   if (status === "loading") {
     return (
-      <div className="w-full max-w-5xl mx-auto py-16 text-center space-y-4">
+      <div className="w-full max-w-4xl mx-auto py-16 text-center space-y-4">
         <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-[#15803d] animate-pulse">
           <Sprout className="h-6 w-6" />
         </div>
         <h2 className="text-xl font-bold text-slate-900">
-          Loading Analysis Parameters...
+          Getting your results...
         </h2>
         <p className="text-xs text-slate-500">
-          Verifying farm inputs and session integrity.
+          Loading your farm inputs and calculations.
         </p>
       </div>
     );
@@ -499,7 +510,7 @@ export default function AnalysisResultsPage() {
         </div>
         <div className="space-y-1.5">
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Wizard Steps Incomplete
+            Please Complete Farm Details First
           </h2>
           <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
             {errorMessage}
@@ -510,7 +521,7 @@ export default function AnalysisResultsPage() {
             href={redirectTarget}
             className="inline-flex items-center gap-2 rounded-xl bg-[#15803d] px-6 py-3 text-sm font-bold text-white hover:bg-[#166534] shadow-sm transition-all"
           >
-            <span>Complete Required Step</span>
+            <span>Complete Farm Details</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
@@ -533,9 +544,8 @@ export default function AnalysisResultsPage() {
     STANDARD_MARKETS.find((m) => m.id === snapshot.target_market_id);
   const cropImage = CROP_IMAGE_MAP[snapshot.crop_id] || null;
 
-  const isPilotDistrict = Boolean(districtMeta?.is_pilot);
-  const isPilotMarket = Boolean(marketMeta?.is_pilot_recommended);
-  const isZeroCost = snapshot.metadata.is_zero_cultivation_cost;
+  // Calculate planning horizon details without silent clamping
+  const horizon = calculateHorizonWeeks(snapshot.harvest_date);
 
   // Active non-zero detailed expenses if detailed mode
   const activeDetailedItems =
@@ -547,1211 +557,801 @@ export default function AnalysisResultsPage() {
         })).filter((item) => Number(item.value) > 0)
       : [];
 
+  const netProfitValue = profitState.calculation ? Number(profitState.calculation.net_profit) : null;
+  const isLoss = netProfitValue !== null && netProfitValue < 0;
+  const isBreakEven = netProfitValue !== null && netProfitValue === 0;
+  const absLoss = netProfitValue !== null ? Math.abs(netProfitValue) : 0;
+
   return (
-    <div className="w-full max-w-5xl mx-auto pb-16 space-y-8 animate-in fade-in duration-300">
-      {/* Top Header & Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+    <div className="w-full max-w-4xl mx-auto pb-16 space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* Top Header & Fast Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 print:border-none">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-[#15803d] tracking-wide uppercase">
-            <span>AgroDecision</span>
-            <span>•</span>
-            <span>Analysis Overview</span>
-            <span>•</span>
-            <span>Handoff Stage</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
-            Analysis Results Overview
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Your Cultivation Results
           </h1>
-          <p className="text-sm text-slate-600 mt-1 max-w-2xl leading-relaxed">
-            Your cultivation plan has been verified across all 4 wizard steps. Below are your confirmed farm inputs and the status of upcoming machine learning analysis sections.
+          <p className="text-sm text-slate-600 mt-1">
+            Expected market demand, selling price, and profit for your planned harvest.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+        <div className="flex items-center gap-2.5 self-start sm:self-auto print:hidden">
           <Link
             href="/market-profit/new-analysis/cultivation-costs"
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 py-2.5 px-3.5 rounded-xl transition-all shadow-2xs"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 py-2.5 px-3.5 rounded-xl transition-all shadow-2xs"
           >
-            <Edit3 className="h-3.5 w-3.5 text-slate-500" />
-            <span>Edit Wizard Inputs</span>
+            <Edit3 className="h-4 w-4 text-slate-500" />
+            <span>Change inputs</span>
           </Link>
           <button
             type="button"
             onClick={handleStartNewAnalysis}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 py-2.5 px-3.5 rounded-xl transition-all cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 py-2.5 px-3.5 rounded-xl transition-all cursor-pointer shadow-2xs"
           >
-            <RotateCcw className="h-3.5 w-3.5 text-emerald-700" />
-            <span>Start Fresh</span>
+            <RotateCcw className="h-4 w-4 text-emerald-700" />
+            <span>Start new analysis</span>
           </button>
         </div>
       </div>
 
       {/* ===================================================================== */}
-      {/* SECTION 1: CONFIRMED FARMER INPUTS (All 8 verified parameters)       */}
+      {/* 1. TOP SUMMARY BAR: CROP PHOTOGRAPH BESIDE NAME & SUMMARY DETAILS     */}
       {/* ===================================================================== */}
-      <div className="rounded-3xl border border-emerald-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-[#15803d]">
-              <CheckCircle2 className="h-5 w-5 stroke-[2.3]" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                Confirmed Farm Parameters
-              </h2>
-              <p className="text-xs text-slate-500">
-                All 4 wizard steps validated and preserved in session storage
-              </p>
-            </div>
-          </div>
-
-          <span className="text-xs font-extrabold uppercase tracking-wide bg-emerald-100 text-[#166534] px-3 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">
-            4 of 4 Steps Complete
-          </span>
-        </div>
-
-        {/* 8 Farmer Inputs Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* 1. Crop */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                1. Candidate Crop
-              </span>
-              <Sprout className="h-4 w-4 text-[#15803d]" />
-            </div>
-            <div className="flex items-center gap-3">
-              {cropImage && (
-                <div className="relative h-11 w-11 rounded-xl overflow-hidden shrink-0 border border-emerald-200">
-                  <Image
-                    src={cropImage}
-                    alt={cropMeta?.name_en || snapshot.crop_id}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              )}
-              <div className="min-w-0">
-                <span className="text-sm font-bold text-slate-900 block truncate">
-                  {cropMeta?.name_en || snapshot.crop_id}
-                </span>
-                <span className="text-xs text-slate-500 block truncate">
-                  {cropMeta?.name_si} • {cropMeta?.category}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* 2. District */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                2. District
-              </span>
-              <MapPin className="h-4 w-4 text-[#15803d]" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-slate-900 truncate">
-                {districtMeta?.name || snapshot.cultivation_district_id}
-              </div>
-              <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
-                <span>{districtMeta?.zone}</span>
-                {isPilotDistrict && (
-                  <span className="text-[10px] font-bold bg-emerald-100 text-[#166534] px-1.5 py-0.2 rounded">
-                    Pilot
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Expected Harvest Date */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                3. Harvest Date
-              </span>
-              <Calendar className="h-4 w-4 text-[#15803d]" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-slate-900 truncate">
-                {formatDateDisplay(snapshot.harvest_date)}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                Date: {snapshot.harvest_date}
-              </div>
-            </div>
-          </div>
-
-          {/* 4. Land Extent */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                4. Cultivation Extent
-              </span>
-              <Compass className="h-4 w-4 text-[#15803d]" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-slate-900 truncate">
-                {snapshot.metadata.land_extent_acres_string} Acres
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                Farm area under cultivation
-              </div>
-            </div>
-          </div>
-
-          {/* 5. Expected Yield */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                5. Expected Yield
-              </span>
-              <Scale className="h-4 w-4 text-[#15803d]" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-slate-900 truncate">
-                {formatKg(snapshot.expected_yield_kg)}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                Total planned harvest volume
-              </div>
-            </div>
-          </div>
-
-          {/* 6. Selling Market */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                6. Selling Market
-              </span>
-              <Store className="h-4 w-4 text-[#15803d]" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-slate-900 truncate">
-                {marketMeta?.name || snapshot.target_market_id}
-              </div>
-              <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
-                <span>{marketMeta?.region || "Economic Centre"}</span>
-                {isPilotMarket && (
-                  <span className="text-[10px] font-bold bg-emerald-100 text-[#166534] px-1.5 py-0.2 rounded">
-                    Pilot Hub
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* 7. Price Type */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                7. Price Type
-              </span>
-              <Tag className="h-4 w-4 text-[#15803d]" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-slate-900 capitalize truncate">
-                {snapshot.price_type} Price
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                {snapshot.price_type === "retail" ? "Consumer Market" : "Trade / Bulk Market"}
-              </div>
-            </div>
-          </div>
-
-          {/* 8. Cultivation Budget */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                8. Cultivation Cost
-              </span>
-              {snapshot.metadata.budget_mode === "detailed" ? (
-                <Receipt className="h-4 w-4 text-[#15803d]" />
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div className="flex items-center gap-4">
+            {/* Dynamic Crop Photograph - Exactly 64px mobile, 80px desktop */}
+            <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-2xl overflow-hidden shrink-0 border-2 border-[#22A06B]/30 shadow-xs bg-slate-100">
+              {cropImage ? (
+                <Image
+                  src={cropImage}
+                  alt={cropMeta?.name_en || snapshot.crop_id}
+                  fill
+                  priority
+                  sizes="(max-width: 640px) 64px, 80px"
+                  className="object-cover"
+                />
               ) : (
-                <Wallet className="h-4 w-4 text-[#15803d]" />
+                <div className="h-full w-full flex items-center justify-center bg-emerald-50 text-[#166534]">
+                  <Sprout className="h-8 w-8" />
+                </div>
               )}
             </div>
+
             <div>
-              <div className="text-sm font-bold text-slate-900 truncate">
-                {formatLKR(snapshot.total_cultivation_cost)}
+              <div className="flex items-baseline gap-2.5">
+                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                  {cropMeta?.name_en || snapshot.crop_id}
+                </h2>
+                <span className="text-sm sm:text-base font-bold text-[#166534]">
+                  ({cropMeta?.name_si})
+                </span>
               </div>
-              <div className="text-xs text-slate-500 mt-0.5 capitalize">
-                {snapshot.metadata.budget_mode === "detailed" ? "Detailed Budget" : "Quick Budget"}
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs sm:text-sm text-slate-600 mt-1">
+                <span className="font-semibold text-slate-800">{districtMeta?.name} District</span>
+                <span>•</span>
+                <span>{marketMeta?.name || snapshot.target_market_id}</span>
+                <span>•</span>
+                <span className="capitalize font-medium text-slate-700">{snapshot.price_type} price</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Zero-Cost Advisory Warning */}
-        {isZeroCost && (
-          <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
-            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-            <div>
-              <span className="font-bold block">Advisory Note on Zero Cultivation Cost:</span>
-              <span>
-                Cultivation cost is recorded as Rs. 0. Return on investment (ROI) is mathematically undefined and feasibility risk assessment is classified as insufficient information.
+          <div className="flex sm:flex-col items-start sm:items-end justify-between border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100 text-xs sm:text-sm">
+            <span className="text-slate-500 font-medium">Expected Harvest</span>
+            <div className="flex items-center gap-1.5 font-bold text-slate-900 sm:mt-0.5">
+              <Calendar className="h-4 w-4 text-[#15803d]" />
+              <span>{formatDateDisplay(snapshot.harvest_date)}</span>
+            </div>
+            <span className="text-xs text-[#166534] font-semibold mt-0.5">
+              {horizon.weeks} {horizon.weeks === 1 ? "week" : "weeks"} ahead
+              {!horizon.isSupportedRange ? " (outside 1–16 week forecast window)" : ""}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================================================================== */}
+      {/* 2. THREE FULL-WIDTH PANELS STACKED VERTICALLY                         */}
+      {/* ===================================================================== */}
+      <div className="space-y-6">
+        {/* =================================================================== */}
+        {/* PANEL 1: MARKET DEMAND ANALYSIS                                     */}
+        {/* =================================================================== */}
+        <section className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-5">
+          {/* Section Header */}
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-[#E7F5EB] text-[#166534] flex items-center justify-center">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+                  Market Demand Analysis
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Projected wholesale buyer demand for your regional market.
+                </p>
+              </div>
+            </div>
+            {demandState.status === "available" && (
+              <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#E7F5EB] text-[#166534]">
+                Regional Forecast
               </span>
-            </div>
-          </div>
-        )}
-
-        {/* Detailed Cost Breakdown preview (if detailed mode and active categories exist) */}
-        {activeDetailedItems.length > 0 && (
-          <div className="pt-2 border-t border-slate-100">
-            <span className="text-xs font-bold text-slate-700 block mb-2">
-              Itemized Expenses Breakdown ({activeDetailedItems.length} categories):
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-              {activeDetailedItems.map((item) => (
-                <div
-                  key={item.key}
-                  className="p-2 rounded-xl bg-slate-50 border border-slate-200/60 text-[11px]"
-                >
-                  <span className="text-slate-500 block truncate">{item.label}</span>
-                  <span className="font-bold text-slate-900 block">{formatLKR(item.value)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ===================================================================== */}
-      {/* SECTION 2: TRANSPARENCY NOTICE (No fake data statement)              */}
-      {/* ===================================================================== */}
-      <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-slate-100/80 border border-slate-200 text-slate-700 text-xs leading-relaxed">
-        <Sparkles className="h-5 w-5 text-[#15803d] shrink-0 mt-0.5" />
-        <div>
-          <span className="font-bold text-slate-900 block text-sm mb-0.5">
-            Upcoming Machine Learning &amp; Risk Analytics Integration
-          </span>
-          <p className="text-slate-600">
-            All four wizard steps are now complete, validated, and stored in your session. In the next milestone, AgroDecision&apos;s machine learning models will connect to forecast seasonal demand volumes, predict economic centre market prices, and assess financial feasibility.
-            <strong className="text-slate-900 ml-1">
-              No mock, invented, or fabricated prediction data is displayed on this page.
-            </strong>
-          </p>
-        </div>
-      </div>
-
-      {/* ===================================================================== */}
-      {/* SECTION 3: MARKET DEMAND ANALYSIS (LIVE FASTAPI INTEGRATION)         */}
-      {/* ===================================================================== */}
-      <div className="space-y-4">
-        <div>
-          <span className="text-xs font-bold text-[#15803d] uppercase tracking-wider">
-            Analytical Pipeline 1 of 3
-          </span>
-          <h2 className="text-xl font-extrabold text-slate-900 tracking-tight mt-0.5">
-            Market Demand Analysis
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Live integration with FastAPI ML prediction pipeline (<code>POST /api/v1/market-demands/forecast</code>)
-          </p>
-        </div>
-
-        {/* Featured Market Demand Analysis Card */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs space-y-6">
-          {/* Card Header & Status Badge */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-[#15803d]">
-                <TrendingUp className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                  Harvest Arrival Demand Projection
-                </h3>
-                <span className="text-xs text-slate-500">
-                  Target Destination: {marketMeta?.name || snapshot.target_market_id}
-                </span>
-              </div>
-            </div>
-
-            {/* Live State Badge */}
-            <div>
-              {demandState.status === "loading" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-800 bg-sky-100/90 px-3 py-1.5 rounded-full border border-sky-200">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-600" />
-                  <span>Querying Model...</span>
-                </span>
-              )}
-              {demandState.status === "available" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-full border border-emerald-300">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
-                  <span>Prediction Available</span>
-                </span>
-              )}
-              {demandState.status === "unavailable" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-100/90 px-3 py-1.5 rounded-full border border-amber-300">
-                  <Clock className="h-3.5 w-3.5 text-amber-700" />
-                  <span>Model Offline / Training</span>
-                </span>
-              )}
-              {demandState.status === "error" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-800 bg-rose-100 px-3 py-1.5 rounded-full border border-rose-300">
-                  <AlertTriangle className="h-3.5 w-3.5 text-rose-700" />
-                  <span>{demandState.classifiedError?.badgeLabel || "Service Connection Error"}</span>
-                </span>
-              )}
-              {demandState.status === "idle" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
-                  <Clock className="h-3.5 w-3.5 text-slate-500" />
-                  <span>Initializing...</span>
-                </span>
-              )}
-            </div>
+            )}
           </div>
 
-          {/* 4 Confirmed Farm Input Parameters Required for Demand Analysis (Task 2) */}
-          <div className="space-y-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Forecasting Parameters
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Selected Crop</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
-                  {cropMeta?.name_en || snapshot.crop_id}
-                </span>
-                <span className="text-[11px] text-slate-500 block truncate">
-                  {cropMeta?.name_si}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Cultivation District</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
-                  {districtMeta?.name || snapshot.cultivation_district_id}
-                </span>
-                <span className="text-[11px] text-slate-500 block truncate">
-                  {districtMeta?.zone}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Expected Harvest Date</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
-                  {formatDateDisplay(snapshot.harvest_date)}
-                </span>
-                <span className="text-[11px] text-slate-500 block font-mono text-[10px]">
-                  {snapshot.harvest_date}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Target Selling Market</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
-                  {marketMeta?.short_name || marketMeta?.name || snapshot.target_market_id}
-                </span>
-                <span className="text-[11px] text-slate-500 block truncate">
-                  {marketMeta?.region || "Economic Centre"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Dynamic State Views */}
-          {/* State 1: Loading */}
+          {/* Loading State */}
           {demandState.status === "loading" && (
-            <div className="p-5 rounded-2xl bg-sky-50/70 border border-sky-200/80 flex items-start gap-4 animate-in fade-in duration-150">
-              <Loader2 className="h-5 w-5 text-sky-600 animate-spin shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <div className="text-sm font-bold text-sky-950">
-                  Querying Market Demand Analysis API...
-                </div>
-                <p className="text-xs text-sky-800 leading-relaxed">
-                  Connecting to <code>POST /api/v1/market-demands/forecast</code> for {cropMeta?.name_en || "your crop"} at {marketMeta?.name || "your target market"}. Evaluating arrival dates and regional demand pressure.
-                </p>
-              </div>
+            <div className="py-8 text-center space-y-3">
+              <Loader2 className="h-8 w-8 animate-spin text-[#166534] mx-auto" />
+              <p className="text-sm font-bold text-slate-700">Getting demand forecast...</p>
             </div>
           )}
 
-          {/* State 2: Prediction Available */}
+          {/* Available State: Prominent Demand Status Area */}
           {demandState.status === "available" && demandState.response && (
-            <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Demand Level Card */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Categorical Demand Level
-                  </span>
-                  <div>
-                    {demandState.response.projected_demand_level === "High" && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        High Demand
-                      </span>
-                    )}
-                    {demandState.response.projected_demand_level === "Medium" && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-300">
-                        Medium Demand
-                      </span>
-                    )}
-                    {demandState.response.projected_demand_level === "Low" && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
-                        Low Demand
-                      </span>
-                    )}
-                    {!demandState.response.projected_demand_level && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-200 text-slate-700">
-                        Not Classified
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
-                    {demandState.response.projected_demand_level === "High" &&
-                      "Strong buyer purchasing interest expected at market hub on harvest date."}
-                    {demandState.response.projected_demand_level === "Medium" &&
-                      "Balanced market demand and steady buyer activity anticipated."}
-                    {demandState.response.projected_demand_level === "Low" &&
-                      "Lower buyer demand pressure or potential market surplus projected."}
-                    {!demandState.response.projected_demand_level &&
-                      "Model did not return a categorical demand tier."}
-                  </p>
-                </div>
-
-                {/* Projected Demand Volume Card */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Projected Demand Volume (kg)
-                  </span>
-                  <div className="text-xl font-extrabold text-slate-900">
-                    {demandState.response.projected_demand_volume_kg !== null &&
-                    demandState.response.projected_demand_volume_kg !== undefined
-                      ? formatKg(demandState.response.projected_demand_volume_kg)
-                      : "Not specified by model"}
-                  </div>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Estimated total commodity volume absorbed by buyer arrivals at the destination market centre.
-                  </p>
-                </div>
-              </div>
-
-              {/* Model Provenance & Status Note */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 text-xs text-emerald-900">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0" />
-                  <span>
-                    Model Version:{" "}
-                    <strong>{demandState.response.model_version || "Default ML Pipeline"}</strong>
-                  </span>
-                </div>
-                <span className="text-emerald-700 text-[11px]">
-                  {demandState.response.status_message}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* State 3: Prediction Unavailable */}
-          {demandState.status === "unavailable" && (
-            <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
-                  <Clock className="h-4 w-4 text-amber-700" />
-                  <span>Machine Learning Demand Prediction Model is Currently Offline</span>
-                </div>
-                <p className="text-xs text-amber-900 leading-relaxed">
-                  {demandState.response?.status_message ||
-                    "Machine learning demand prediction model is currently offline or undergoing training."}
-                </p>
-                <p className="text-[11px] text-amber-800 leading-relaxed pt-1 border-t border-amber-200/60">
-                  Our machine learning pipeline will categorize buyer demand pressure (High, Medium, Low) and estimate demand volumes for {cropMeta?.name_en || "your crop"} at {marketMeta?.name || "the market"} once trained weights are deployed.
-                  <strong className="text-amber-950 ml-1">
-                    In accordance with our research integrity guidelines, no mock, synthetic, or estimated demand figures are displayed.
-                  </strong>
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Projected Demand Volume:</span>
-                  <span className="text-xs font-bold text-slate-400">Unavailable (Model Offline)</span>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Demand Category:</span>
-                  <span className="text-xs font-bold text-slate-400">Unavailable (Model Offline)</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* State 4: Request Failed (Error) */}
-          {demandState.status === "error" && (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 sm:p-5 space-y-3 animate-in fade-in duration-200">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <div className="text-sm font-bold text-rose-950">
-                    {demandState.classifiedError?.heading || "Unable to Connect to Demand Forecasting Service"}
-                  </div>
-                  <p className="text-xs text-rose-800 leading-relaxed">
-                    {demandState.errorMessage}
-                  </p>
-                  <p className="text-[11px] text-rose-700 pt-1">
-                    {demandState.classifiedError?.actionGuidance ||
-                      "Please verify that the FastAPI backend service is running on port 8001 (or configured via NEXT_PUBLIC_MARKET_PROFIT_API_URL)."}
-                  </p>
-                </div>
-              </div>
-              <div className="pt-2 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleRetryDemand}
-                  className="inline-flex items-center gap-2 rounded-xl bg-rose-700 hover:bg-rose-800 active:scale-95 text-white px-4 py-2 text-xs font-bold shadow-xs transition-all cursor-pointer"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  <span>Retry Demand Analysis</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ===================================================================== */}
-      {/* SECTION 4: PRICE TREND FORECAST (LIVE FASTAPI INTEGRATION)           */}
-      {/* ===================================================================== */}
-      <div className="space-y-4">
-        <div>
-          <span className="text-xs font-bold text-[#15803d] uppercase tracking-wider">
-            Analytical Pipeline 2 of 3
-          </span>
-          <h2 className="text-xl font-extrabold text-slate-900 tracking-tight mt-0.5">
-            Price Trend Forecast
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Live integration with FastAPI ML prediction pipeline (<code>POST /api/v1/market-prices/forecast</code>)
-          </p>
-        </div>
-
-        {/* Featured Price Trend Forecast Card */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs space-y-6">
-          {/* Card Header & Status Badge */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-                <Coins className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                  Harvest Price Trend Projection
-                </h3>
-                <span className="text-xs text-slate-500">
-                  Target Destination: {marketMeta?.name || snapshot.target_market_id} &bull; Valuation:{" "}
-                  {snapshot.price_type === "retail" ? "Retail Consumer Tier" : "Wholesale Trading Tier"}
-                </span>
-              </div>
-            </div>
-
-            {/* Live State Badge */}
-            <div>
-              {priceState.status === "loading" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-800 bg-sky-100/90 px-3 py-1.5 rounded-full border border-sky-200">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-600" />
-                  <span>Querying Model...</span>
-                </span>
-              )}
-              {priceState.status === "available" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-full border border-emerald-300">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
-                  <span>Prediction Available</span>
-                </span>
-              )}
-              {priceState.status === "unavailable" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-100/90 px-3 py-1.5 rounded-full border border-amber-300">
-                  <Clock className="h-3.5 w-3.5 text-amber-700" />
-                  <span>Model Offline / Training</span>
-                </span>
-              )}
-              {priceState.status === "error" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-800 bg-rose-100 px-3 py-1.5 rounded-full border border-rose-300">
-                  <AlertTriangle className="h-3.5 w-3.5 text-rose-700" />
-                  <span>{priceState.classifiedError?.badgeLabel || "Service Connection Error"}</span>
-                </span>
-              )}
-              {priceState.status === "idle" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
-                  <Clock className="h-3.5 w-3.5 text-slate-500" />
-                  <span>Initializing...</span>
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* 4 Confirmed Forecasting Parameters for Price Forecasting */}
-          <div className="space-y-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Forecasting Parameters
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Selected Crop</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
-                  {cropMeta?.name_en || snapshot.crop_id}
-                </span>
-                <span className="text-[11px] text-slate-500 block truncate">
-                  {cropMeta?.name_si}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Selling Market</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
-                  {marketMeta?.short_name || marketMeta?.name || snapshot.target_market_id}
-                </span>
-                <span className="text-[11px] text-slate-500 block truncate">
-                  {marketMeta?.region || "Economic Centre"}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Expected Harvest Date</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
-                  {formatDateDisplay(snapshot.harvest_date)}
-                </span>
-                <span className="text-[11px] text-slate-500 block font-mono text-[10px]">
-                  {snapshot.harvest_date}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Price Valuation Tier</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5 capitalize">
-                  {snapshot.price_type} Price
-                </span>
-                <span className="text-[11px] text-slate-500 block truncate">
-                  {snapshot.price_type === "retail" ? "Consumer Market Tier" : "Wholesale Trading Tier"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Dynamic State Views */}
-          {/* State 1: Loading */}
-          {priceState.status === "loading" && (
-            <div className="p-5 rounded-2xl bg-sky-50/70 border border-sky-200/80 flex items-start gap-4 animate-in fade-in duration-150">
-              <Loader2 className="h-5 w-5 text-sky-600 animate-spin shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <div className="text-sm font-bold text-sky-950">
-                  Querying Price Trend Forecasting API...
-                </div>
-                <p className="text-xs text-sky-800 leading-relaxed">
-                  Connecting to <code>POST /api/v1/market-prices/forecast</code> for {cropMeta?.name_en || "your crop"} at {marketMeta?.name || "your target market"}. Evaluating seasonal {snapshot.price_type} price fluctuations and arrival date trends.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* State 2: Prediction Available */}
-          {priceState.status === "available" && priceState.response && (
-            <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Predicted Price Card */}
-                <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
-                      AI Forecasted Selling Price
-                    </span>
-                    <span className="text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-300">
-                      {priceState.response.price_type || snapshot.price_type} Tier
-                    </span>
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-                      {formatLKR(Number(priceState.response.forecasted_price_lkr_per_kg))}
-                    </div>
-                    <span className="text-xs font-bold text-slate-500">per kg</span>
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
-                    Machine-learning projected {snapshot.price_type} selling price per kilogram for {cropMeta?.name_en || "the crop"} upon arrival at {marketMeta?.name || "the market"}.
-                  </p>
-                </div>
-
-                {/* Estimated Gross Harvest Valuation */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Estimated Gross Harvest Valuation
-                  </span>
-                  <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-                    {formatLKR(
-                      Number(priceState.response.forecasted_price_lkr_per_kg) * snapshot.expected_yield_kg
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Gross revenue projection based on your planned yield of {formatKg(snapshot.expected_yield_kg)} &times; {formatLKR(Number(priceState.response.forecasted_price_lkr_per_kg))}/kg.
-                  </p>
-                </div>
-              </div>
-
-              {/* Model Provenance & Status Note */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 text-xs text-emerald-900">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0" />
-                  <span>
-                    Model Version:{" "}
-                    <strong>{priceState.response.model_version || "Default ML Pipeline"}</strong>
-                  </span>
-                </div>
-                <span className="text-emerald-700 text-[11px]">
-                  {priceState.response.status_message}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* State 3: Prediction Unavailable */}
-          {priceState.status === "unavailable" && (
-            <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
-                  <Clock className="h-4 w-4 text-amber-700" />
-                  <span>Machine Learning Price Forecasting Model is Currently Offline</span>
-                </div>
-                <p className="text-xs text-amber-900 leading-relaxed">
-                  {priceState.response?.status_message ||
-                    "Machine learning price forecasting model is currently offline or undergoing training."}
-                </p>
-                <p className="text-[11px] text-amber-800 leading-relaxed pt-1 border-t border-amber-200/60">
-                  Our machine learning pipeline will forecast commodity prices ({snapshot.price_type} LKR/kg) for {cropMeta?.name_en || "your crop"} at {marketMeta?.name || "the market"} once trained time-series weights are deployed.
-                  <strong className="text-amber-950 ml-1">
-                    In accordance with our research integrity guidelines, no mock, synthetic, or estimated selling prices are displayed.
-                  </strong>
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Forecasted Price (LKR/kg):</span>
-                  <span className="text-xs font-bold text-slate-400">Unavailable (Model Offline)</span>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Valuation Tier:</span>
-                  <span className="text-xs font-bold text-slate-700 capitalize">{snapshot.price_type} Price</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* State 4: Request Failed (Error) */}
-          {priceState.status === "error" && (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 sm:p-5 space-y-3 animate-in fade-in duration-200">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <div className="text-sm font-bold text-rose-950">
-                    {priceState.classifiedError?.heading || "Unable to Connect to Price Forecasting Service"}
-                  </div>
-                  <p className="text-xs text-rose-800 leading-relaxed">
-                    {priceState.errorMessage}
-                  </p>
-                  <p className="text-[11px] text-rose-700 pt-1">
-                    {priceState.classifiedError?.actionGuidance ||
-                      "Please verify that the FastAPI backend service is running on port 8001 (or configured via NEXT_PUBLIC_MARKET_PROFIT_API_URL)."}
-                  </p>
-                </div>
-              </div>
-              <div className="pt-2 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleRetryPrice}
-                  className="inline-flex items-center gap-2 rounded-xl bg-rose-700 hover:bg-rose-800 active:scale-95 text-white px-4 py-2 text-xs font-bold shadow-xs transition-all cursor-pointer"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  <span>Retry Price Forecast</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ===================================================================== */}
-      {/* SECTION 5: PROFIT & RISK ASSESSMENT (LIVE FASTAPI INTEGRATION)       */}
-      {/* ===================================================================== */}
-      <div className="space-y-4">
-        <div>
-          <span className="text-xs font-bold text-[#15803d] uppercase tracking-wider">
-            Analytical Pipeline 3 of 3
-          </span>
-          <h2 className="text-xl font-extrabold text-slate-900 tracking-tight mt-0.5">
-            Profit &amp; Risk Assessment
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Live integration with FastAPI deterministic profit &amp; rule-based risk engines (<code>POST /api/v1/profit-analyses/assess-risk</code>)
-          </p>
-        </div>
-
-        {/* Profit & Risk Assessment Card */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs space-y-6">
-          {/* Card Header & Status Badge */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-                <ShieldCheck className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                  Financial Return &amp; Feasibility Risk
-                </h3>
-                <span className="text-xs text-slate-500">
-                  Target Destination: {marketMeta?.name || snapshot.target_market_id} &bull; Total Cultivation Budget: {formatLKR(snapshot.total_cultivation_cost)}
-                </span>
-              </div>
-            </div>
-
-            {/* Live State / Risk Classification Badge */}
-            <div>
-              {profitState.status === "loading" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-800 bg-sky-100/90 px-3 py-1.5 rounded-full border border-sky-200">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-600" />
-                  <span>Evaluating Returns...</span>
-                </span>
-              )}
-              {profitState.status === "available" && profitState.risk && (
-                <>
-                  {profitState.risk.risk_level === "Low" && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-full border border-emerald-300">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
-                      <span>Low Risk Classification</span>
-                    </span>
-                  )}
-                  {profitState.risk.risk_level === "Medium" && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-300">
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-700" />
-                      <span>Medium Risk Classification</span>
-                    </span>
-                  )}
-                  {profitState.risk.risk_level === "High" && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-800 bg-rose-100 px-3 py-1.5 rounded-full border border-rose-300">
-                      <AlertCircle className="h-3.5 w-3.5 text-rose-700" />
-                      <span>High Risk Classification</span>
-                    </span>
-                  )}
-                  {profitState.risk.risk_level === "insufficient_information" && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-300">
-                      <Clock className="h-3.5 w-3.5 text-slate-500" />
-                      <span>Insufficient Cost Data (ROI Undefined)</span>
-                    </span>
-                  )}
-                </>
-              )}
-              {profitState.status === "unavailable" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-100/90 px-3 py-1.5 rounded-full border border-amber-300">
-                  <Clock className="h-3.5 w-3.5 text-amber-700" />
-                  <span>Awaiting Price Forecast</span>
-                </span>
-              )}
-              {profitState.status === "error" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-800 bg-rose-100 px-3 py-1.5 rounded-full border border-rose-300">
-                  <AlertCircle className="h-3.5 w-3.5 text-rose-700" />
-                  <span>{profitState.classifiedError?.badgeLabel || "Calculation Error"}</span>
-                </span>
-              )}
-              {profitState.status === "idle" && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
-                  <Clock className="h-3.5 w-3.5 text-slate-500" />
-                  <span>Awaiting Price Forecast...</span>
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* 4 Financial Assessment Parameters */}
-          <div className="space-y-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Assessment Inputs
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Expected Yield</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
-                  {formatKg(snapshot.expected_yield_kg)}
-                </span>
-                <span className="text-[11px] text-slate-500 block truncate">
-                  Planned harvest volume
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Forecasted Price Basis</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
-                  {profitState.predictedPriceUsed !== null
-                    ? `${formatLKR(profitState.predictedPriceUsed)} / kg`
-                    : "Awaiting ML Price"}
-                </span>
-                <span className="text-[11px] text-slate-500 block truncate capitalize">
-                  {snapshot.price_type} valuation tier
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Cultivation Budget</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
-                  {formatLKR(snapshot.total_cultivation_cost)}
-                </span>
-                <span className="text-[11px] text-slate-500 block truncate capitalize">
-                  {snapshot.metadata.budget_mode === "detailed" ? "Detailed Budget" : "Quick Budget"}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Selling Market</span>
-                <span className="text-xs font-bold text-slate-900 block truncate mt-0.5">
-                  {marketMeta?.short_name || marketMeta?.name || snapshot.target_market_id}
-                </span>
-                <span className="text-[11px] text-slate-500 block truncate">
-                  {marketMeta?.region || "Economic Centre"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Dynamic State Views */}
-          {/* State 1: Loading */}
-          {profitState.status === "loading" && (
-            <div className="p-5 rounded-2xl bg-sky-50/70 border border-sky-200/80 flex items-start gap-4 animate-in fade-in duration-150">
-              <Loader2 className="h-5 w-5 text-sky-600 animate-spin shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <div className="text-sm font-bold text-sky-950">
-                  Evaluating Financial Feasibility &amp; Risk Assessment...
-                </div>
-                <p className="text-xs text-sky-800 leading-relaxed">
-                  Connecting to <code>POST /api/v1/profit-analyses/assess-risk</code> for {cropMeta?.name_en || "your crop"}. Evaluating net profit, return on investment (ROI), breakeven selling price, and margin of safety against preliminary thresholds.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* State 2: Prediction Available (Real Backend Calculated Results) */}
-          {profitState.status === "available" && profitState.calculation && profitState.risk && (
-            <div className="space-y-5 animate-in fade-in duration-200">
-              {/* 6 Deterministic Financial Metrics Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                {/* 1. Gross Revenue */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Projected Gross Revenue
-                  </span>
-                  <div className="text-2xl font-extrabold text-slate-900">
-                    {formatLKR(Number(profitState.calculation.gross_revenue))}
-                  </div>
-                  <p className="text-[11px] text-slate-500 leading-tight">
-                    {formatKg(snapshot.expected_yield_kg)} &times; {formatLKR(Number(profitState.calculation.selling_price_lkr_per_kg))}/kg
-                  </p>
-                </div>
-
-                {/* 2. Total Cultivation Cost */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Total Cultivation Cost
-                  </span>
-                  <div className="text-2xl font-extrabold text-slate-900">
-                    {formatLKR(Number(profitState.calculation.total_cultivation_cost))}
-                  </div>
-                  <p className="text-[11px] text-slate-500 leading-tight capitalize">
-                    {snapshot.metadata.budget_mode} budget expenditure
-                  </p>
-                </div>
-
-                {/* 3. Estimated Net Profit */}
-                <div
-                  className={`p-4 rounded-2xl border space-y-1.5 ${
-                    Number(profitState.calculation.net_profit) >= 0
-                      ? "border-emerald-200 bg-emerald-50/60 text-emerald-950"
-                      : "border-rose-200 bg-rose-50/70 text-rose-950"
-                  }`}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider block opacity-75">
-                    Estimated Net Profit / Return
-                  </span>
-                  <div className="text-2xl font-extrabold">
-                    {formatLKR(Number(profitState.calculation.net_profit))}
-                  </div>
-                  <p className="text-[11px] opacity-75 leading-tight">
-                    Projected Revenue &minus; Total Cultivation Cost
-                  </p>
-                </div>
-
-                {/* 4. ROI Percentage */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Return on Investment (ROI)
-                  </span>
-                  <div className="text-2xl font-extrabold text-slate-900">
-                    {profitState.calculation.roi_percentage !== null &&
-                    profitState.calculation.roi_percentage !== undefined
-                      ? `${Number(profitState.calculation.roi_percentage) >= 0 ? "+" : ""}${formatPercent(
-                          Number(profitState.calculation.roi_percentage)
-                        )}`
-                      : "Undefined"}
-                  </div>
-                  <p className="text-[11px] text-slate-500 leading-tight">
-                    {profitState.calculation.roi_percentage !== null
-                      ? "(Net Profit ÷ Total Cost) × 100"
-                      : "Total cost is Rs. 0 (mathematically undefined)"}
-                  </p>
-                </div>
-
-                {/* 5. Break-Even Price */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Break-Even Selling Price
-                  </span>
-                  <div className="text-2xl font-extrabold text-slate-900">
-                    {formatLKR(Number(profitState.calculation.breakeven_price_lkr_per_kg))}
-                    <span className="text-xs font-semibold text-slate-400 ml-1">/ kg</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 leading-tight">
-                    Minimum price required to recover all costs
-                  </p>
-                </div>
-
-                {/* 6. Profit Margin */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Profit Margin (%)
-                  </span>
-                  <div className="text-2xl font-extrabold text-slate-900">
-                    {formatPercent(Number(profitState.calculation.margin_of_safety_percentage))}
-                  </div>
-                  <p className="text-[11px] text-slate-500 leading-tight">
-                    Net profit as a percentage of gross revenue
-                  </p>
-                </div>
-              </div>
-
-              {/* Rule-Based Risk Evaluation Rationale Box */}
+            <div className="space-y-4">
+              {/* Prominent Visual Status Card */}
               <div
-                className={`p-4 sm:p-5 rounded-2xl border space-y-2.5 ${
-                  profitState.risk.risk_level === "Low"
-                    ? "bg-emerald-50/70 border-emerald-300 text-emerald-950"
-                    : profitState.risk.risk_level === "Medium"
-                    ? "bg-amber-50/70 border-amber-300 text-amber-950"
-                    : profitState.risk.risk_level === "High"
-                    ? "bg-rose-50/70 border-rose-300 text-rose-950"
-                    : "bg-slate-50 border-slate-300 text-slate-900"
+                className={`p-5 sm:p-6 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                  demandState.response.projected_demand_level === "High"
+                    ? "bg-gradient-to-r from-emerald-50 via-emerald-100/50 to-emerald-50 border-emerald-300 text-[#166534]"
+                    : demandState.response.projected_demand_level === "Medium"
+                    ? "bg-gradient-to-r from-blue-50 via-blue-100/50 to-blue-50 border-blue-300 text-blue-900"
+                    : "bg-gradient-to-r from-amber-50 via-amber-100/50 to-amber-50 border-amber-300 text-amber-950"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 shrink-0" />
-                  <span className="text-sm font-bold">
-                    Risk Classification Rationale ({profitState.risk.risk_level} Risk)
+                <div className="flex items-center gap-4">
+                  <div className="shrink-0">
+                    {demandState.response.projected_demand_level === "High" && (
+                      <div className="h-12 w-12 rounded-2xl bg-white text-[#166534] shadow-xs flex items-center justify-center">
+                        <CheckCircle2 className="h-7 w-7" />
+                      </div>
+                    )}
+                    {demandState.response.projected_demand_level === "Medium" && (
+                      <div className="h-12 w-12 rounded-2xl bg-white text-blue-700 shadow-xs flex items-center justify-center">
+                        <Info className="h-7 w-7" />
+                      </div>
+                    )}
+                    {demandState.response.projected_demand_level === "Low" && (
+                      <div className="h-12 w-12 rounded-2xl bg-white text-amber-700 shadow-xs flex items-center justify-center">
+                        <AlertTriangle className="h-7 w-7" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs uppercase font-extrabold tracking-wider opacity-75 block">
+                      Market Demand Result
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black tracking-tight block">
+                      {demandState.response.projected_demand_level === "High"
+                        ? "High Demand"
+                        : demandState.response.projected_demand_level === "Medium"
+                        ? "Medium Demand"
+                        : "Low Demand"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="sm:text-right max-w-sm">
+                  <p className="text-xs sm:text-sm font-medium leading-relaxed">
+                    {demandState.response.projected_demand_level === "High" &&
+                      `Strong wholesale buyer demand expected at ${marketMeta?.name || "the market"} around your harvest date.`}
+                    {demandState.response.projected_demand_level === "Medium" &&
+                      `Steady buyer demand expected at ${marketMeta?.name || "the market"} around your harvest date.`}
+                    {demandState.response.projected_demand_level === "Low" &&
+                      `Lower buyer demand expected at ${marketMeta?.name || "the market"}. Consider harvest timing carefully.`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Context Details Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs">
+                  <span className="text-slate-400 font-bold uppercase block text-[10px]">
+                    Reference Trading Hub
+                  </span>
+                  <span className="font-bold text-slate-900 block mt-0.5">
+                    {marketMeta?.name || snapshot.target_market_id}
+                  </span>
+                  <span className="text-slate-500 text-[11px] block mt-0.5">
+                    Forecast for harvest week ({formatDateDisplay(snapshot.harvest_date)})
                   </span>
                 </div>
-                <div className="text-xs space-y-1">
-                  <p className="leading-relaxed">
-                    <strong>Evaluation Outcome:</strong> {profitState.risk.factors.trigger_rationale}
-                  </p>
-                  <p className="text-[11px] opacity-80 pt-1 border-t border-black/10">
-                    <strong>Rule Evaluated:</strong> <code>{profitState.risk.factors.trigger_rule}</code>
-                  </p>
-                </div>
-              </div>
 
-              {/* Methodological Transparency Notice */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 space-y-1.5">
-                <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                  <Sparkles className="h-4 w-4 text-[#15803d]" />
-                  <span>Methodological Transparency &amp; Planning Advisory</span>
-                </div>
-                <p className="leading-relaxed">
-                  {profitState.risk.disclaimer}
-                </p>
-                <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
-                  All figures are projections based on AI commodity price forecasts and your planning inputs. They do not constitute guaranteed financial earnings or insurance underwriting.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* State 3: Prediction Unavailable */}
-          {profitState.status === "unavailable" && (
-            <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
-                  <Clock className="h-4 w-4 text-amber-700" />
-                  <span>Profit &amp; Risk Assessment is Awaiting Price Trend Forecast</span>
-                </div>
-                <p className="text-xs text-amber-900 leading-relaxed">
-                  Financial feasibility calculations, gross revenue, net profit, and risk classifications require a validated machine-learning predicted selling price from Pipeline 2.
-                </p>
-                <p className="text-[11px] text-amber-800 leading-relaxed pt-1 border-t border-amber-200/60">
-                  Because the price forecasting model is currently offline or undergoing training, financial returns and risk levels cannot be computed without making speculative assumptions.
-                  <strong className="text-amber-950 ml-1">
-                    In accordance with our research integrity guidelines, no fallback prices, sample profits, or fabricated risk labels are displayed.
-                  </strong>
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Projected Gross Revenue:</span>
-                  <span className="text-xs font-bold text-slate-400 mt-1">Awaiting Price Forecast</span>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Estimated Net Profit:</span>
-                  <span className="text-xs font-bold text-slate-400 mt-1">Awaiting Price Forecast</span>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Feasibility Risk Category:</span>
-                  <span className="text-xs font-bold text-slate-400 mt-1">Awaiting Price Forecast</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* State 4: Request Failed (Error) */}
-          {profitState.status === "error" && (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 sm:p-5 space-y-3 animate-in fade-in duration-200">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <div className="text-sm font-bold text-rose-950">
-                    {profitState.classifiedError?.heading || "Unable to Complete Profit & Risk Assessment"}
+                {demandState.response.projected_demand_volume_kg !== null &&
+                demandState.response.projected_demand_volume_kg !== undefined ? (
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs">
+                    <span className="text-slate-400 font-bold uppercase block text-[10px]">
+                      Estimated Market Arrival
+                    </span>
+                    <span className="font-bold text-slate-900 block mt-0.5">
+                      {formatKg(demandState.response.projected_demand_volume_kg)}
+                    </span>
+                    <span className="text-slate-500 text-[11px] block mt-0.5 leading-tight">
+                      Estimated regional market supply (not your individual harvest quantity or guaranteed purchases).
+                    </span>
                   </div>
-                  <p className="text-xs text-rose-800 leading-relaxed">
-                    {profitState.errorMessage}
+                ) : (
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs">
+                    <span className="text-slate-400 font-bold uppercase block text-[10px]">
+                      Demand Classification
+                    </span>
+                    <span className="font-bold text-slate-900 block mt-0.5">
+                      Standard regional market evaluation complete
+                    </span>
+                    <span className="text-slate-500 text-[11px] block mt-0.5">
+                      High demand indicates active buyer interest.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Unavailable State */}
+          {demandState.status === "unavailable" && (
+            <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
+              <span className="font-bold block text-sm">Prediction unavailable</span>
+              <p className="text-slate-600 leading-relaxed">
+                {demandState.response?.status_message ||
+                  "Demand prediction is currently unavailable for this crop, market, or date."}
+              </p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {demandState.status === "error" && (
+            <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-2">
+              <span className="font-bold block text-sm">Could not load market demand</span>
+              <p className="text-slate-600 leading-relaxed">
+                {demandState.errorMessage || "Unable to reach the forecasting service."}
+              </p>
+              <button
+                type="button"
+                onClick={handleRetryDemand}
+                className="inline-flex items-center gap-1.5 font-bold text-xs text-rose-700 hover:text-rose-900 underline cursor-pointer"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Retry demand analysis</span>
+              </button>
+            </div>
+          )}
+
+          {demandState.status === "idle" && (
+            <p className="text-xs text-slate-400 py-3 text-center">Waiting to start demand analysis...</p>
+          )}
+        </section>
+
+        {/* =================================================================== */}
+        {/* PANEL 2: PRICE TREND FORECAST                                       */}
+        {/* =================================================================== */}
+        <section className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-5">
+          {/* Section Header */}
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                <Coins className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+                  Price Trend Forecast
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Expected regional selling price for your reference trading centre on your harvest date.
+                </p>
+              </div>
+            </div>
+            {priceState.status === "available" && (
+              <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                {snapshot.price_type === "retail" ? "Retail Tier" : "Wholesale Tier"}
+              </span>
+            )}
+          </div>
+
+          {/* Loading State */}
+          {priceState.status === "loading" && (
+            <div className="py-8 text-center space-y-3">
+              <Loader2 className="h-8 w-8 animate-spin text-amber-600 mx-auto" />
+              <p className="text-sm font-bold text-slate-700">Getting price forecast...</p>
+            </div>
+          )}
+
+          {/* Available State: Prominent Forecasted Price */}
+          {priceState.status === "available" && priceState.response && (
+            <div className="space-y-4">
+              <div className="p-5 sm:p-6 rounded-2xl border-2 border-amber-200 bg-gradient-to-r from-amber-50/80 via-white to-amber-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-xs uppercase font-extrabold tracking-wider text-slate-500 block mb-1">
+                    Forecasted price per kg
+                  </span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                      {formatLKR(Number(priceState.response.forecasted_price_lkr_per_kg))}
+                    </span>
+                    <span className="text-base sm:text-lg font-bold text-slate-600">/ kg</span>
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#E7F5EB] text-[#166534] border border-[#22A06B]/30 capitalize">
+                      {snapshot.price_type}
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed">
+                    Projected regional selling price for {cropMeta?.name_en || "your crop"} at {marketMeta?.name || "the reference market"}.
                   </p>
-                  <p className="text-[11px] text-rose-700 pt-1">
-                    {profitState.classifiedError?.actionGuidance ||
-                      "Please verify that the FastAPI backend service is running on port 8001 (or configured via NEXT_PUBLIC_MARKET_PROFIT_API_URL)."}
+                </div>
+
+                <div className="sm:text-right border-t sm:border-t-0 pt-3 sm:pt-0 border-amber-100">
+                  <div className="text-xs text-slate-500">Forecast Horizon</div>
+                  <div className="text-sm font-bold text-slate-900 mt-0.5">
+                    {horizon.weeks} {horizon.weeks === 1 ? "week" : "weeks"} ahead
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    Target: {formatDateDisplay(snapshot.harvest_date)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Context Details Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-xs">
+                  <span className="text-slate-400 font-bold uppercase block text-[10px]">
+                    Commodity
+                  </span>
+                  <span className="font-bold text-slate-900 block mt-0.5 truncate">
+                    {cropMeta?.name_en}
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-xs">
+                  <span className="text-slate-400 font-bold uppercase block text-[10px]">
+                    Reference Market
+                  </span>
+                  <span className="font-bold text-slate-900 block mt-0.5 truncate">
+                    {marketMeta?.short_name || marketMeta?.name}
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-xs">
+                  <span className="text-slate-400 font-bold uppercase block text-[10px]">
+                    Price Tier
+                  </span>
+                  <span className="font-bold text-slate-900 block mt-0.5 capitalize truncate">
+                    {snapshot.price_type} tier
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-xs">
+                  <span className="text-slate-400 font-bold uppercase block text-[10px]">
+                    Currency &amp; Unit
+                  </span>
+                  <span className="font-bold text-slate-900 block mt-0.5 truncate">
+                    LKR / 1 Kilogram
+                  </span>
+                </div>
+              </div>
+
+              {/* Regional Forecasting Note */}
+              <div className="rounded-xl border border-amber-200/90 bg-amber-50/70 p-3 text-xs text-amber-950 flex items-center gap-2 shadow-2xs">
+                <Info className="h-4 w-4 text-amber-700 shrink-0" />
+                <span>Predictions are based on available regional historical data for Matara and Hambantota.</span>
+              </div>
+            </div>
+          )}
+
+          {/* Unavailable State */}
+          {priceState.status === "unavailable" && (
+            <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
+              <span className="font-bold block text-sm">Prediction unavailable</span>
+              <p className="text-slate-600 leading-relaxed">
+                {priceState.response?.status_message ||
+                  "Price forecast is currently unavailable for this crop, market, or date."}
+              </p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {priceState.status === "error" && (
+            <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-2">
+              <span className="font-bold block text-sm">Could not load price</span>
+              <p className="text-slate-600 leading-relaxed">
+                {priceState.errorMessage || "Unable to reach the price forecasting service."}
+              </p>
+              <button
+                type="button"
+                onClick={handleRetryPrice}
+                className="inline-flex items-center gap-1.5 font-bold text-xs text-rose-700 hover:text-rose-900 underline cursor-pointer"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Retry price forecast</span>
+              </button>
+            </div>
+          )}
+
+          {priceState.status === "idle" && (
+            <p className="text-xs text-slate-400 py-3 text-center">Waiting to start price forecast...</p>
+          )}
+        </section>
+
+        {/* =================================================================== */}
+        {/* PANEL 3: PROFIT RISK ASSESSMENT                                     */}
+        {/* =================================================================== */}
+        <section className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs space-y-5">
+          {/* Section Header */}
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-[#E7F5EB] text-[#166534] flex items-center justify-center">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+                  Profit Risk Assessment
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Financial outcome, farming income, cultivation cost, and risk evaluation.
+                </p>
+              </div>
+            </div>
+            {profitState.status === "available" && profitState.risk && (
+              <span
+                className={`hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                  profitState.risk.risk_level === "Low"
+                    ? "bg-[#E7F5EB] text-[#166534]"
+                    : profitState.risk.risk_level === "Medium"
+                    ? "bg-amber-100 text-amber-800"
+                    : profitState.risk.risk_level === "High"
+                    ? "bg-rose-100 text-rose-700"
+                    : "bg-slate-100 text-slate-700"
+                }`}
+              >
+                {profitState.risk.risk_level === "insufficient_information"
+                  ? "Zero Cost Input"
+                  : `${profitState.risk.risk_level} Risk Category`}
+              </span>
+            )}
+          </div>
+
+          {/* Loading State */}
+          {profitState.status === "loading" && (
+            <div className="py-8 text-center space-y-3">
+              <Loader2 className="h-8 w-8 animate-spin text-[#166534] mx-auto" />
+              <p className="text-sm font-bold text-slate-700">Calculating profit &amp; risk...</p>
+            </div>
+          )}
+
+          {/* Available State: Both Risk Category & Profit/Loss Substantial & Prominent */}
+          {profitState.status === "available" && profitState.calculation && profitState.risk && (
+            <div className="space-y-4">
+              {/* Dual Hero Cards: Risk Level (Card 1) & Estimated Outcome (Card 2) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. Substantial Profit Risk Category Card */}
+                <div
+                  className={`p-5 sm:p-6 rounded-2xl border-2 flex flex-col justify-between ${
+                    profitState.risk.risk_level === "Low"
+                      ? "bg-gradient-to-br from-emerald-50 via-white to-emerald-50/60 border-emerald-300"
+                      : profitState.risk.risk_level === "Medium"
+                      ? "bg-gradient-to-br from-amber-50 via-white to-amber-50/60 border-amber-300"
+                      : profitState.risk.risk_level === "High"
+                      ? "bg-gradient-to-br from-rose-50 via-white to-rose-50/60 border-rose-300"
+                      : "bg-gradient-to-br from-slate-50 via-white to-slate-50/60 border-slate-300"
+                  }`}
+                >
+                  <div>
+                    <span className="text-xs uppercase font-extrabold tracking-wider text-slate-500 block mb-2">
+                      Profit Risk Level
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${
+                          profitState.risk.risk_level === "Low"
+                            ? "bg-[#166534] text-white"
+                            : profitState.risk.risk_level === "Medium"
+                            ? "bg-amber-600 text-white"
+                            : profitState.risk.risk_level === "High"
+                            ? "bg-rose-600 text-white"
+                            : "bg-slate-600 text-white"
+                        }`}
+                      >
+                        {profitState.risk.risk_level === "Low" && <ShieldCheck className="h-6 w-6" />}
+                        {profitState.risk.risk_level === "Medium" && <AlertTriangle className="h-6 w-6" />}
+                        {profitState.risk.risk_level === "High" && <AlertCircle className="h-6 w-6" />}
+                        {profitState.risk.risk_level === "insufficient_information" && <Info className="h-6 w-6" />}
+                      </div>
+
+                      <span
+                        className={`text-2xl sm:text-3xl font-black tracking-tight ${
+                          profitState.risk.risk_level === "Low"
+                            ? "text-[#166534]"
+                            : profitState.risk.risk_level === "Medium"
+                            ? "text-amber-900"
+                            : profitState.risk.risk_level === "High"
+                            ? "text-rose-700"
+                            : "text-slate-800"
+                        }`}
+                      >
+                        {profitState.risk.risk_level === "insufficient_information"
+                          ? "Needs Cost Details"
+                          : `${profitState.risk.risk_level} Risk`}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-slate-600 mt-3 pt-3 border-t border-slate-200/70 leading-relaxed font-medium">
+                    {profitState.risk.risk_level === "Low" &&
+                      "Strong profit safety margin against unexpected market price drops."}
+                    {profitState.risk.risk_level === "Medium" &&
+                      "Profitable, but profit margin is sensitive to market price drops."}
+                    {profitState.risk.risk_level === "High" &&
+                      "High financial risk. Expected income may not cover cultivation costs."}
+                    {profitState.risk.risk_level === "insufficient_information" &&
+                      "Farming cost entered as Rs. 0. Enter your costs to calculate financial risk."}
+                  </p>
+                </div>
+
+                {/* 2. Substantial Estimated Profit / Estimated Loss Card */}
+                <div
+                  className={`p-5 sm:p-6 rounded-2xl border-2 flex flex-col justify-between ${
+                    isLoss
+                      ? "bg-gradient-to-br from-rose-50 via-white to-rose-50/60 border-rose-300"
+                      : isBreakEven
+                      ? "bg-gradient-to-br from-slate-50 via-white to-slate-50/60 border-slate-300"
+                      : "bg-gradient-to-br from-emerald-50 via-white to-emerald-50/60 border-emerald-300"
+                  }`}
+                >
+                  <div>
+                    <span className="text-xs uppercase font-extrabold tracking-wider text-slate-500 block mb-2">
+                      {isLoss ? "Estimated Loss" : isBreakEven ? "Estimated Outcome" : "Estimated Profit"}
+                    </span>
+                    <div
+                      className={`text-2xl sm:text-3xl font-black tracking-tight ${
+                        isLoss
+                          ? "text-rose-600"
+                          : isBreakEven
+                          ? "text-slate-800"
+                          : "text-[#166534]"
+                      }`}
+                    >
+                      {isLoss
+                        ? formatLKR(absLoss)
+                        : isBreakEven
+                        ? "Rs. 0 (Break-even)"
+                        : `+${formatLKR(netProfitValue || 0)}`}
+                    </div>
+                  </div>
+
+                  <p className="text-xs sm:text-sm mt-3 pt-3 border-t border-slate-200/70 leading-relaxed font-medium">
+                    {isLoss ? (
+                      <span className="text-rose-700">
+                        Your expected income is below your farming cost.
+                      </span>
+                    ) : isBreakEven ? (
+                      <span className="text-slate-600">
+                        Expected income exactly covers your farming cost.
+                      </span>
+                    ) : (
+                      <span className="text-slate-600">
+                        Calculated from your planned harvest yield and forecasted price.
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
-              <div className="pt-2 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleRetryProfit}
-                  className="inline-flex items-center gap-2 rounded-xl bg-rose-700 hover:bg-rose-800 active:scale-95 text-white px-4 py-2 text-xs font-bold shadow-xs transition-all cursor-pointer"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  <span>Retry Profit &amp; Risk Assessment</span>
-                </button>
+
+              {/* Financial Breakdown Bar */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs flex justify-between sm:flex-col sm:justify-start">
+                  <span className="text-slate-500 uppercase font-bold text-[10px]">
+                    Expected Income
+                  </span>
+                  <span className="font-extrabold text-slate-900 text-sm mt-0.5">
+                    {formatLKR(Number(profitState.calculation.gross_revenue))}
+                  </span>
+                  <span className="text-[11px] text-slate-400 hidden sm:block mt-0.5">
+                    {formatKg(snapshot.expected_yield_kg)} planned yield
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs flex justify-between sm:flex-col sm:justify-start">
+                  <span className="text-slate-500 uppercase font-bold text-[10px]">
+                    Total Farming Cost
+                  </span>
+                  <span className="font-extrabold text-slate-900 text-sm mt-0.5">
+                    {formatLKR(Number(profitState.calculation.total_cultivation_cost))}
+                  </span>
+                  <span className="text-[11px] text-slate-400 hidden sm:block mt-0.5 capitalize">
+                    {snapshot.metadata.budget_mode} budget mode
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs flex justify-between sm:flex-col sm:justify-start">
+                  <span className="text-slate-500 uppercase font-bold text-[10px]">
+                    Planned Land Extent
+                  </span>
+                  <span className="font-extrabold text-slate-900 text-sm mt-0.5">
+                    {snapshot.metadata.land_extent_acres_string} Acres
+                  </span>
+                  <span className="text-[11px] text-slate-400 hidden sm:block mt-0.5">
+                    {districtMeta?.name} District
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Unavailable State */}
+          {profitState.status === "unavailable" && (
+            <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
+              <span className="font-bold block text-sm">Prediction unavailable</span>
+              <p className="text-slate-600 leading-relaxed">
+                Profit and risk calculation requires a valid selling price forecast.
+              </p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {profitState.status === "error" && (
+            <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-2">
+              <span className="font-bold block text-sm">Could not calculate profit</span>
+              <p className="text-slate-600 leading-relaxed">
+                {profitState.errorMessage || "Unable to reach the calculation service."}
+              </p>
+              <button
+                type="button"
+                onClick={handleRetryProfit}
+                className="inline-flex items-center gap-1.5 font-bold text-xs text-rose-700 hover:text-rose-900 underline cursor-pointer"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Retry profit calculation</span>
+              </button>
+            </div>
+          )}
+
+          {profitState.status === "idle" && (
+            <p className="text-xs text-slate-400 py-3 text-center">Waiting for price forecast before calculating profit...</p>
+          )}
+        </section>
+      </div>
+
+      {/* ===================================================================== */}
+      {/* 3. MORE DETAILS (SECONDARY INFORMATION ACCORDION)                     */}
+      {/* ===================================================================== */}
+      <details className="group rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs">
+        <summary className="flex items-center justify-between font-bold text-sm text-slate-800 cursor-pointer list-none select-none">
+          <span className="flex items-center gap-2">
+            <Info className="h-4 w-4 text-[#166534]" />
+            <span>More details</span>
+          </span>
+          <span className="text-xs text-[#166534] font-semibold group-open:hidden">
+            Show details &darr;
+          </span>
+          <span className="text-xs text-[#166534] font-semibold hidden group-open:inline">
+            Hide details &uarr;
+          </span>
+        </summary>
+
+        <div className="pt-5 mt-4 border-t border-slate-100 space-y-5 text-xs text-slate-700 animate-in fade-in duration-200">
+          {/* Farm Details Grid */}
+          <div>
+            <h4 className="font-bold text-slate-900 text-sm mb-3">Your farm details</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Candidate Crop</span>
+                <span className="font-bold text-slate-900 block mt-0.5">{cropMeta?.name_en || snapshot.crop_id}</span>
+                <span className="text-[11px] text-slate-500 block">{cropMeta?.category}</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">District</span>
+                <span className="font-bold text-slate-900 block mt-0.5">{districtMeta?.name}</span>
+                <span className="text-[11px] text-slate-500 block">{districtMeta?.zone}</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Land Extent</span>
+                <span className="font-bold text-slate-900 block mt-0.5">{snapshot.metadata.land_extent_acres_string} Acres</span>
+                <span className="text-[11px] text-slate-500 block">Planned field size</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Expected Yield</span>
+                <span className="font-bold text-slate-900 block mt-0.5">{formatKg(snapshot.expected_yield_kg)}</span>
+                <span className="text-[11px] text-slate-500 block">Total production</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Break-Even Minimum Selling Price */}
+          {profitState.calculation?.breakeven_price_lkr_per_kg && (
+            <div className="p-3.5 rounded-xl bg-[#E7F5EB]/60 border border-[#22A06B]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span className="font-bold text-slate-900 block">
+                  Minimum selling price needed to cover costs
+                </span>
+                <span className="text-slate-600 text-[11.5px] block mt-0.5">
+                  You need to sell at or above this price to cover your farming costs.
+                </span>
+              </div>
+              <div className="text-lg font-extrabold text-[#166534]">
+                {formatLKR(Number(profitState.calculation.breakeven_price_lkr_per_kg))} / kg
+              </div>
+            </div>
+          )}
+
+          {/* Itemized Cost Breakdown (If Detailed Budget Mode was Used) */}
+          {activeDetailedItems.length > 0 && (
+            <div>
+              <h4 className="font-bold text-slate-900 text-sm mb-2">Itemized farming costs</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {activeDetailedItems.map((item) => (
+                  <div
+                    key={item.key}
+                    className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70"
+                  >
+                    <span className="text-[10px] text-slate-500 uppercase block truncate">
+                      {item.label}
+                    </span>
+                    <span className="font-bold text-slate-900 block mt-0.5">
+                      {formatLKR(item.value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Return on Investment and Margin */}
+          {profitState.calculation && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex justify-between items-center">
+                <span className="text-slate-600">Return on investment (ROI):</span>
+                <strong className="text-slate-900">
+                  {profitState.calculation.roi_percentage !== null &&
+                  profitState.calculation.roi_percentage !== undefined
+                    ? `${Number(profitState.calculation.roi_percentage) >= 0 ? "+" : ""}${formatPercent(
+                        Number(profitState.calculation.roi_percentage)
+                      )}`
+                    : "Undefined (cost Rs. 0)"}
+                </strong>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex justify-between items-center">
+                <span className="text-slate-600">Profit margin:</span>
+                <strong className="text-slate-900">
+                  {formatPercent(Number(profitState.calculation.margin_of_safety_percentage))}
+                </strong>
               </div>
             </div>
           )}
         </div>
+      </details>
+
+      {/* Brief Reminder Notice */}
+      <div className="text-center py-2">
+        <p className="text-xs text-slate-500 font-medium">
+          These are estimates. Actual prices and harvest may change.
+        </p>
       </div>
 
       {/* ===================================================================== */}
-      {/* SECTION 4: NAVIGATION & ACTION BUTTONS                               */}
+      {/* 4. ACTIONS BAR                                                        */}
       {/* ===================================================================== */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-slate-200 print:hidden">
         <Link
           href="/market-profit/new-analysis/cultivation-costs"
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-6 py-3 text-sm font-bold shadow-2xs transition-all text-center"
         >
           <ArrowLeft className="h-4 w-4 text-slate-500" />
-          <span>Back to Cultivation Costs</span>
+          <span>Change inputs</span>
         </Link>
 
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-          <Link
-            href="/market-profit"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-6 py-3 text-sm font-bold shadow-2xs transition-all text-center"
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-5 py-3 text-sm font-bold shadow-2xs transition-all text-center cursor-pointer"
           >
-            <span>Return to Dashboard</span>
-          </Link>
+            <Printer className="h-4 w-4 text-slate-500" />
+            <span>Print / Save PDF</span>
+          </button>
           <button
             type="button"
             onClick={handleStartNewAnalysis}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white px-7 py-3 text-sm font-bold shadow-sm shadow-emerald-800/20 transition-all cursor-pointer text-center"
           >
             <RotateCcw className="h-4 w-4" />
-            <span>Plan Another Crop</span>
+            <span>Start new analysis</span>
           </button>
         </div>
       </div>

@@ -1,16 +1,48 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, Sprout, MapPin } from "lucide-react";
+import { loadAnalysisSnapshot, loadStep1FromStorage } from "../lib/wizard";
+import { SRI_LANKA_DISTRICTS } from "../lib/constants";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
+  onOpenProfile?: () => void;
 }
 
-export function Header({ onToggleSidebar }: HeaderProps) {
+export function Header({ onToggleSidebar, onOpenProfile }: HeaderProps) {
   const pathname = usePathname();
   const isResults = pathname.includes("/results");
+  const isCultivationCosts = pathname.includes("/cultivation-costs");
+  const isSellingMarket = pathname.includes("/selling-market");
   const isHarvestDetails = pathname.includes("/harvest-details");
-  const isNewAnalysis = pathname.includes("/new-analysis");
+  const isStep1 = pathname === "/market-profit/new-analysis" || pathname.endsWith("/new-analysis");
+
+  const [activeDistrictName, setActiveDistrictName] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      // 1. Check saved snapshot first
+      const snapshot = loadAnalysisSnapshot();
+      let districtId = snapshot?.cultivation_district_id;
+
+      // 2. Fall back to current wizard step 1 storage
+      if (!districtId) {
+        const step1 = loadStep1FromStorage();
+        districtId = step1?.cultivation_district_id;
+      }
+
+      if (districtId) {
+        const found = SRI_LANKA_DISTRICTS.find((d) => d.id === districtId);
+        setActiveDistrictName(found ? found.name : null);
+      } else {
+        setActiveDistrictName(null);
+      }
+    } catch {
+      setActiveDistrictName(null);
+    }
+  }, [pathname]);
 
   return (
     <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-md sm:px-6 lg:px-8">
@@ -45,29 +77,40 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         <div className="hidden lg:flex items-center gap-2 text-sm text-slate-500 font-medium">
           <span className="text-slate-800 font-semibold">AgroDecision</span>
           <span>/</span>
-          <span>Market & Profit</span>
+          <span>Market &amp; Profit</span>
           <span>/</span>
           <span className="text-[#166534] font-semibold">
             {isResults
               ? "Analysis Results"
+              : isCultivationCosts
+              ? "Plan Cultivation Budget (Step 4 of 4)"
+              : isSellingMarket
+              ? "Select Selling Market (Step 3 of 4)"
               : isHarvestDetails
-              ? "New Analysis (Step 2: Harvest Details)"
-              : isNewAnalysis
-              ? "New Analysis (Step 1: Crop & District)"
+              ? "Harvest Details & Yield (Step 2 of 4)"
+              : isStep1
+              ? "Select Crop & District (Step 1 of 4)"
               : "Dashboard"}
           </span>
         </div>
       </div>
 
-      {/* Right section: Pilot Zone Tag + Logged-in Farmer Profile Pill */}
+      {/* Right section: Actual Cultivation District Tag (if selected) + Logged-in Farmer Profile Pill */}
       <div className="flex items-center gap-2.5 sm:gap-3">
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-[#166534]">
-          <MapPin className="h-3.5 w-3.5 text-[#15803d] shrink-0" />
-          <span>Southern Pilot</span>
-        </div>
+        {activeDistrictName && (
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-[#166534]">
+            <MapPin className="h-3.5 w-3.5 text-[#15803d] shrink-0" />
+            <span>{activeDistrictName}</span>
+          </div>
+        )}
 
         {/* Logged-In Farmer Profile Chip */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#22A06B]/25 bg-[#F7F5ED] pl-1 pr-2.5 py-1 text-xs font-semibold text-slate-800 shadow-2xs">
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          className="inline-flex items-center gap-2 rounded-full border border-[#22A06B]/25 bg-[#F7F5ED] hover:bg-[#E7F5EB] pl-1 pr-2.5 py-1 text-xs font-semibold text-slate-800 shadow-2xs transition-colors cursor-pointer"
+          title="View Farmer Profile"
+        >
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#166534] text-white text-[10px] font-extrabold">
             JB
           </div>
@@ -76,7 +119,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             <span className="text-[10px] text-slate-400 font-normal hidden sm:inline">•</span>
             <span className="text-[11px] text-[#166534] font-semibold">Farmer</span>
           </div>
-        </div>
+        </button>
       </div>
     </header>
   );

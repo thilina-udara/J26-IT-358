@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 
 import { WizardProgress } from "../../components/WizardProgress";
-import { AnalysisComingNextModal } from "../../components/AnalysisComingNextModal";
 import {
   SUPPORTED_FRONTEND_CROPS,
   SRI_LANKA_DISTRICTS,
@@ -126,7 +125,6 @@ export default function CultivationCostsPage() {
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isStep4Saved, setIsStep4Saved] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isComingNextModalOpen, setIsComingNextModalOpen] = useState(false);
 
   // Validate Step 1, 2, and 3 prerequisites on mount
   useEffect(() => {
@@ -336,7 +334,7 @@ export default function CultivationCostsPage() {
         saveAnalysisSnapshot(fullVal.snapshot);
       }
 
-      setIsComingNextModalOpen(true);
+      router.push("/market-profit/results");
     } finally {
       setIsSubmitting(false);
     }
@@ -951,21 +949,12 @@ export default function CultivationCostsPage() {
               </div>
               <div>
                 <h4 className="text-sm font-bold text-slate-900">
-                  Step 4 Confirmed &amp; Ready for Analysis
+                  Step 4 Confirmed &amp; Saved
                 </h4>
                 <p className="text-xs text-emerald-800">
-                  Effective cost: {formatLKR(effectiveTotalNumber)} ({budgetMode === "detailed" ? "Detailed Budget" : "Quick Budget"}) • Ready for Price Forecasting &amp; Profit Risk Analysis
+                  Farming cost: {formatLKR(effectiveTotalNumber)} ({budgetMode === "detailed" ? "Detailed Budget" : "Quick Budget"})
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setIsComingNextModalOpen(true)}
-                className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-emerald-100/70 text-[#166534] border border-emerald-300 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
-              >
-                View Analysis Summary
-              </button>
             </div>
           </div>
         )}
@@ -991,26 +980,6 @@ export default function CultivationCostsPage() {
           </button>
         </div>
       </form>
-
-      {/* Analysis Coming Next Modal */}
-      <AnalysisComingNextModal
-        isOpen={isComingNextModalOpen}
-        onClose={() => setIsComingNextModalOpen(false)}
-        cropName={selectedCropMeta?.name_en || "Selected Crop"}
-        cropNameSi={selectedCropMeta?.name_si || ""}
-        cropImage={cropImage}
-        districtName={selectedDistrictMeta?.name || step1Data.cultivation_district_id}
-        isPilotDistrict={Boolean(selectedDistrictMeta?.is_pilot)}
-        harvestDate={step2Data.harvest_date}
-        landExtentAcres={step2Data.land_extent_acres}
-        expectedYieldKg={step2Data.expected_yield_kg}
-        marketName={selectedMarketMeta?.name || targetMarketId || "Economic Centre"}
-        marketRegion={selectedMarketMeta?.region || ""}
-        isPilotMarket={Boolean(selectedMarketMeta?.is_pilot_recommended)}
-        priceType={step3Data.price_type}
-        budgetMode={budgetMode}
-        effectiveCultivationCost={effectiveTotalNumber}
-      />
     </div>
   );
 }
